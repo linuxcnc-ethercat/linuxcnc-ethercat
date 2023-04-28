@@ -112,8 +112,13 @@ int lcec_ep23xx_init(int comp_id, struct lcec_slave *slave, ec_pdo_entry_reg_t *
     // initialize POD entry
     int idx_offset = (i<<4);
     
-    LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x6000 + idx_offset, 0x01, &pin->in_pdo_os, &pin->in_pdo_bp);
-    LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x7000 + idx_offset, 0x01, &pin->out_pdo_os, &pin->out_pdo_bp);
+    if(slave->pid == LCEC_EP2316_PID) {
+      LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x6000, 0x01 + i, &pin->in_pdo_os, &pin->in_pdo_bp);
+      LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x7000, 0x01 + i, &pin->out_pdo_os, &pin->out_pdo_bp);
+    } else {
+      LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x6000 + idx_offset, 0x01, &pin->in_pdo_os, &pin->in_pdo_bp);
+      LCEC_PDO_INIT(pdo_entry_regs, slave->index, slave->vid, slave->pid, 0x7000 + idx_offset, 0x01, &pin->out_pdo_os, &pin->out_pdo_bp);
+    }
  
     // export pins
     if ((err = lcec_pin_newf_list(pin, slave_pins, LCEC_MODULE_NAME, master->name, slave->name, i)) != 0) {
