@@ -93,10 +93,7 @@ jobs:
                   add-apt-repository "deb http://linuxcnc.org $DIST 2.9-uspace"
                   apt --quiet update
 
-            # We need to get packages for the Ethercat code from *someplace*, and
-            # I'd rather not build them ourselves.  It looks like the version that
-            # bone11111 has in OpenSuSE's build system is the defacto standard, so let's
-            # use those.
+            # Add repositories from build.opensuse.org which provides EtherCAT master
             - name: Add build.opensuse.org Ethercat deb archive
               env:
                   DEBIAN_FRONTEND: noninteractive
@@ -106,25 +103,25 @@ jobs:
 
                   case "${{matrix.image}}" in
                   debian:sid)
-                    echo "deb [trusted=yes] http://download.opensuse.org/repositories/home:/bone11111:/branches:/science:/EtherLab/Debian_Unstable/ ./"> etherlab.list
+                    echo "deb [signed-by=/usr/share/keyrings/ethercat.gpg] http://download.opensuse.org/repositories/science:/EtherLab/Debian_Unstable/ ./"> etherlab.list
                     ;;
                   debian:bookworm)
-                    echo "deb [trusted=yes] http://download.opensuse.org/repositories/home:/bone11111:/branches:/science:/EtherLab/Debian_12/ ./"> etherlab.list
+                    echo "deb [signed-by=/usr/share/keyrings/ethercat.gpg] http://download.opensuse.org/repositories/science:/EtherLab/Debian_12/ ./"> etherlab.list
                     ;;
                   debian:bullseye)
-                    echo "deb [trusted=yes] http://download.opensuse.org/repositories/home:/bone11111:/branches:/science:/EtherLab/Debian_11/ ./"> etherlab.list
+                    echo "deb [signed-by=/usr/share/keyrings/ethercat.gpg] http://download.opensuse.org/repositories/science:/EtherLab/Debian_11/ ./"> etherlab.list
                     ;;
                   debian:buster)
-                    echo "deb [trusted=yes] http://download.opensuse.org/repositories/home:/bone11111:/branches:/science:/EtherLab/Debian_10/ ./"> etherlab.list
+                    echo "deb [signed-by=/usr/share/keyrings/ethercat.gpg] http://download.opensuse.org/repositories/science:/EtherLab/Debian_10/ ./"> etherlab.list
                     ;;
                   esac
 
                   sudo cp etherlab.list /etc/apt/sources.list.d/etherlab.list
-                  curl -fsSL "https://download.opensuse.org/repositories/home:/bone11111:/branches:/science:/EtherLab/Debian_10/Release.key" | gpg --dearmor > ec.gpg
+                  curl -fsSL "https://build.opensuse.org/projects/science:EtherLab/signing_keys/download?kind=gpg" | gpg --dearmor > ec.gpg
                   sudo cp ec.gpg /usr/share/keyrings/ethercat.gpg
 
                   apt --quiet update
-                  apt --yes --quiet install ethercat-master libethercat-dev libpdserv3-dev librtipc-dev etherlab2
+                  apt --yes --quiet install ethercat-master libethercat-dev libpdserv3-dev librtipc-dev etherlab
 
             - name: Install pre-dependencies
               env:
