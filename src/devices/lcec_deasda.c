@@ -24,8 +24,11 @@
 #include "../lcec.h"
 #include "lcec_class_enc.h"
 
-#define FLAG_LOWRES_ENC 1 << 0  // Device is A2 series
-#define FLAG_HIGHRES_ENC 1 << 1  // Device is A3 series
+#define FLAG_LOWRES_ENC 1 << 0  // Device uses low res encoder as default 
+#define FLAG_HIGHRES_ENC 1 << 1  // Device uses high res encoder as default x3 series
+
+#define FLAG_SERVO_X2 1 << 2    // A2 series drive
+#define FLAG_SERVO_X3 1 << 3    // x3 Series Drive, e.g. A3 or B3
 
 #define LCEC_DESDA_MODPARAM_OPERATIONMODE 0
 
@@ -64,9 +67,9 @@ static const drive_operationmodes_t drive_operationmodes[] = {
 // Note that DeASDA refers to A2-E series of drives and is deliberatly not refering to A2 in its name to ensure compatability with legace
 // configurations.
 static lcec_typelist_t types[] = {
-    {"DeASDA", LCEC_DELTA_VID, 0x10305070, LCEC_DEASDA_PDOS, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_LOWRES_ENC},
-    {"DeASDA3", LCEC_DELTA_VID, 0x00006010, LCEC_DEASDA_PDOS, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_HIGHRES_ENC},
-    {"DeASDB3", LCEC_DELTA_VID, 0x00006080, LCEC_DEASDA_PDOS, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_HIGHRES_ENC},    
+    {"DeASDA", LCEC_DELTA_VID, 0x10305070, LCEC_DEASDA_PDOS, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_LOWRES_ENC, FLAG_SERVO_X2},
+    {"DeASDA3", LCEC_DELTA_VID, 0x00006010, LCEC_DEASDA_PDOS, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_HIGHRES_ENC,FLAG_SERVO_X3},
+    {"DeASDB3", LCEC_DELTA_VID, 0x00006080, LCEC_DEASDA_PDOS, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_HIGHRES_ENC, FLAG_SERVO_X3},    
     {NULL},
 };
 
@@ -329,6 +332,9 @@ static int lcec_deasda_init(int comp_id, struct lcec_slave *slave, ec_pdo_entry_
     hal_data->pprev = DEASDA_PULSES_PER_REV_DEFLT_HIGHRES;
     rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "Setting pprev to High Res Encoder (16,777,216) for device %s.%s.\n", master->name, slave->name);
   }
+
+  // TODO: Add additional registers here if avialalbe: e.g. DIDO based on servo type FLAG_SERVO_X2/FLAG_SERVO_X3
+
 
   hal_data->last_switch_on = 0;
   hal_data->internal_fault = 0;
