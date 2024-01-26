@@ -24,13 +24,13 @@
 #include "../lcec.h"
 #include "lcec_class_enc.h"
 
-#define FLAG_A2 1 << 0  // Device is A2 series
-#define FLAG_A3 1 << 1  // Device is A3 series
+#define FLAG_LOWRES_ENC 1 << 0  // Device is A2 series
+#define FLAG_HIGHRES_ENC 1 << 1  // Device is A3 series
 
 #define LCEC_DESDA_MODPARAM_OPERATIONMODE 0
 
-#define DEASDA_PULSES_PER_REV_DEFLT_A2 (1280000)   // this is the default value for A2 (default value)
-#define DEASDA_PULSES_PER_REV_DEFLT_A3 (16777216)  // this is the default value for A3
+#define DEASDA_PULSES_PER_REV_DEFLT_LOWRES (1280000)   // this is the default value for A2 (default value)
+#define DEASDA_PULSES_PER_REV_DEFLT_HIGHRES (16777216)  // this is the default value for A3
 
 #define DEASDA_RPM_FACTOR (0.1)
 #define DEASDA_RPM_RCPT   (1.0 / DEASDA_RPM_FACTOR)
@@ -64,8 +64,9 @@ static const drive_operationmodes_t drive_operationmodes[] = {
 // Note that DeASDA refers to A2-E series of drives and is deliberatly not refering to A2 in its name to ensure compatability with legace
 // configurations.
 static lcec_typelist_t types[] = {
-    {"DeASDA", LCEC_DELTA_VID, 0x10305070, LCEC_DEASDA_PDOS, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_A2},
-    {"DeASDA3", LCEC_DELTA_VID, 0x00006010, LCEC_DEASDA_PDOS, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_A3},
+    {"DeASDA", LCEC_DELTA_VID, 0x10305070, LCEC_DEASDA_PDOS, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_LOWRES_ENC},
+    {"DeASDA3", LCEC_DELTA_VID, 0x00006010, LCEC_DEASDA_PDOS, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_HIGHRES_ENC},
+    {"DeASDB3", LCEC_DELTA_VID, 0x00006080, LCEC_DEASDA_PDOS, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_HIGHRES_ENC},    
     {NULL},
 };
 
@@ -320,13 +321,13 @@ static int lcec_deasda_init(int comp_id, struct lcec_slave *slave, ec_pdo_entry_
   hal_data->pos_scale_old = hal_data->pos_scale + 1.0;
   hal_data->pos_scale_rcpt = 1.0;
 
-  // change based on FLAG_A2/FLAG_A3
-  if (flags & FLAG_A2) {
-    hal_data->pprev = DEASDA_PULSES_PER_REV_DEFLT_A2;
-    rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "Setting A2 Preset for device %s.%s.\n", master->name, slave->name);
-  } else if (flags & FLAG_A3) {
-    hal_data->pprev = DEASDA_PULSES_PER_REV_DEFLT_A3;
-    rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "Setting A3 Preset for device %s.%s.\n", master->name, slave->name);
+  // change based on FLAG_LOWRES_ENC/FLAG_HIGHRES_ENC
+  if (flags & FLAG_LOWRES_ENC) {
+    hal_data->pprev = DEASDA_PULSES_PER_REV_DEFLT_LOWRES;
+    rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "Setting pprev to Low Res Encoder (1,280,000) for device %s.%s.\n", master->name, slave->name);
+  } else if (flags & FLAG_HIGHRES_ENC) {
+    hal_data->pprev = DEASDA_PULSES_PER_REV_DEFLT_HIGHRES;
+    rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "Setting pprev to High Res Encoder (16,777,216) for device %s.%s.\n", master->name, slave->name);
   }
 
   hal_data->last_switch_on = 0;
