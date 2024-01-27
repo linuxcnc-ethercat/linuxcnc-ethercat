@@ -166,16 +166,16 @@ static const lcec_pindesc_t slave_pins[] = {{HAL_FLOAT, HAL_OUT, offsetof(lcec_d
     {HAL_BIT, HAL_IN, offsetof(lcec_deasda_data_t, halt), "%s.%s.%s.srv-halt"},
     {HAL_U32, HAL_OUT, offsetof(lcec_deasda_data_t, operation_mode), "%s.%s.%s.srv-operation-mode"},
     {HAL_FLOAT, HAL_OUT, offsetof(lcec_deasda_data_t, torque), "%s.%s.%s.srv-torque-rel"}, // relative value (5) - hence current would be redundant
-    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, di_1), "%s.%s.%s.srv-di1"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, di_2), "%s.%s.%s.srv-di2"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, di_3), "%s.%s.%s.srv-di3"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, di_4), "%s.%s.%s.srv-di4"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, di_5), "%s.%s.%s.srv-di5"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, di_6), "%s.%s.%s.srv-di6"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, di_7), "%s.%s.%s.srv-di7"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, neg_lim_switch), "%s.%s.%s.srv-neg-lim"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, pos_lim_switch), "%s.%s.%s.srv-pos-lim"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, home_switch), "%s.%s.%s.srv-home"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, di_1), "%s.%s.%s.din-1"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, di_2), "%s.%s.%s.din-2"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, di_3), "%s.%s.%s.din-3"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, di_4), "%s.%s.%s.din-4"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, di_5), "%s.%s.%s.din-5"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, di_6), "%s.%s.%s.din-6"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, di_7), "%s.%s.%s.din-7"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, neg_lim_switch), "%s.%s.%s.din-neg-lim"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, pos_lim_switch), "%s.%s.%s.din-pos-lim"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, home_switch), "%s.%s.%s.din-home"},
     
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL}};
 

@@ -59,81 +59,84 @@ TODO()
 The following pins are exposed in both modes and for all drives
 
 Encoder values (servo motor and external encoder at CN5)
+
+_Encoder Pins_
 ```
-37    I/O  lcec.0.A3.enc-ext-hi
-37    I/O  lcec.0.A3.enc-ext-lo
-37    I/O  lcec.0.A3.enc-index-ena
-bit   OUT  lcec.0.A3.enc-on-home-neg
-bit   OUT  lcec.0.A3.enc-on-home-pos
-float OUT  lcec.0.A3.enc-pos
-float OUT  lcec.0.A3.enc-pos-abs
-float OUT  lcec.0.A3.enc-pos-enc
-bit   IN   lcec.0.A3.enc-pos-reset
-s32   OUT  lcec.0.A3.enc-raw
-u32   OUT  lcec.0.A3.enc-ref-hi
-u32   OUT  lcec.0.A3.enc-ref-lo
-37    I/O  lcec.0.A3.extenc-ext-hi
-37    I/O  lcec.0.A3.extenc-ext-lo
-37    I/O  lcec.0.A3.extenc-index-ena
-bit   OUT  lcec.0.A3.extenc-on-home-neg
-bit   OUT  lcec.0.A3.extenc-on-home-pos
-float OUT  lcec.0.A3.extenc-pos
-float OUT  lcec.0.A3.extenc-pos-abs
-float OUT  lcec.0.A3.extenc-pos-enc
-bit   IN   lcec.0.A3.extenc-pos-reset
-s32   OUT  lcec.0.A3.extenc-raw
-u32   OUT  lcec.0.A3.extenc-ref-hi
-u32   OUT  lcec.0.A3.extenc-ref-lo
+u32   I/O lcec.0.A3.enc-ext-hi
+u32   I/O lcec.0.A3.enc-ext-lo
+bit   I/O lcec.0.A3.enc-index-ena
+bit   OUT lcec.0.A3.enc-on-home-neg
+bit   OUT lcec.0.A3.enc-on-home-pos
+float OUT lcec.0.A3.enc-pos
+float OUT lcec.0.A3.enc-pos-abs 
+float OUT lcec.0.A3.enc-pos-enc
+bit   IN  lcec.0.A3.enc-pos-reset
+s32   OUT lcec.0.A3.enc-raw
+u32   OUT lcec.0.A3.enc-ref-hi
+u32   OUT lcec.0.A3.enc-ref-lo
+u32   I/O lcec.0.A3.extenc-ext-hi
+u32   I/O lcec.0.A3.extenc-ext-lo
+bit   I/O lcec.0.A3.extenc-index-ena
+bit   OUT lcec.0.A3.extenc-on-home-neg
+bit   OUT lcec.0.A3.extenc-on-home-pos
+float OUT lcec.0.A3.extenc-pos
+float OUT lcec.0.A3.extenc-pos-abs
+float OUT lcec.0.A3.extenc-pos-enc
+bit   IN  lcec.0.A3.extenc-pos-reset
+s32   OUT lcec.0.A3.extenc-raw
+u32   OUT lcec.0.A3.extenc-ref-hi
+u32   OUT lcec.0.A3.extenc-ref-lo
 ```
 _Slave Status_
 ```
-bit   OUT  lcec.0.A3.slave-online
-bit   OUT  lcec.0.A3.slave-oper
-bit   OUT  lcec.0.A3.slave-state-init
-bit   OUT  lcec.0.A3.slave-state-op
-bit   OUT  lcec.0.A3.slave-state-preop
-bit   OUT  lcec.0.A3.slave-state-safeop
+bit   OUT lcec.0.A3.slave-online
+bit   OUT lcec.0.A3.slave-oper
+bit   OUT lcec.0.A3.slave-state-init
+bit   OUT lcec.0.A3.slave-state-op
+bit   OUT lcec.0.A3.slave-state-preop
+bit   OUT lcec.0.A3.slave-state-safeop
 ```
 _Drive Status and Control_
 ```
-bit   OUT  lcec.0.A3.srv-at-speed
-bit   OUT  lcec.0.A3.srv-di1 | RO status of the DIx pin  on CN1
-bit   OUT  lcec.0.A3.srv-di2
-bit   OUT  lcec.0.A3.srv-di3
-bit   OUT  lcec.0.A3.srv-di4
-bit   OUT  lcec.0.A3.srv-di5
-bit   OUT  lcec.0.A3.srv-di6
-bit   OUT  lcec.0.A3.srv-di7
-bit   IN   lcec.0.A3.srv-enable  | needs to be high for the servo drive to operate
-bit   IN   lcec.0.A3.srv-enable-volt | needs to be high for the servo drive to operate
-bit   OUT  lcec.0.A3.srv-fault
-bit   IN   lcec.0.A3.srv-fault-reset 
-bit   IN   lcec.0.A3.srv-halt
-bit   OUT  lcec.0.A3.srv-home
-bit   OUT  lcec.0.A3.srv-limit-active
-bit   OUT  lcec.0.A3.srv-neg-lim
-bit   OUT  lcec.0.A3.srv-on-disabled
-bit   OUT  lcec.0.A3.srv-oper-enabled
-u32   OUT  lcec.0.A3.srv-operation-mode | return info on the operation mode (8=CSP, 9=CSV)
-bit   OUT  lcec.0.A3.srv-pos-lim
-bit   IN   lcec.0.A3.srv-quick-stop
-bit   OUT  lcec.0.A3.srv-quick-stoped
-bit   OUT  lcec.0.A3.srv-ready
-bit   OUT  lcec.0.A3.srv-remote
-bit   IN   lcec.0.A3.srv-switch-on | needs to be high for the servo drive to operate
-bit   OUT  lcec.0.A3.srv-switched-on
-float OUT  lcec.0.A3.srv-torque-rel
-float IN   lcec.0.A3.srv-vel-cmd
-float OUT  lcec.0.A3.srv-vel-fb
-float OUT  lcec.0.A3.srv-vel-fb-rpm
-float OUT  lcec.0.A3.srv-vel-fb-rpm-abs
-float OUT  lcec.0.A3.srv-vel-rpm
-bit   OUT  lcec.0.A3.srv-volt-enabled
-bit   OUT  lcec.0.A3.srv-warning
-bit   OUT  lcec.0.A3.srv-zero-speed
+bit   OUT lcec.0.A3.srv-at-speed
+bit   IN  lcec.0.A3.srv-enable 
+bit   IN  lcec.0.A3.srv-enable-volt
+bit   OUT lcec.0.A3.srv-fault
+bit   IN  lcec.0.A3.srv-fault-reset 
+bit   IN  lcec.0.A3.srv-halt
+bit   OUT lcec.0.A3.srv-on-disabled
+bit   OUT lcec.0.A3.srv-limit-active
+bit   OUT lcec.0.A3.srv-oper-enabled
+u32   OUT lcec.0.A3.srv-operation-mode
+bit   IN  lcec.0.A3.srv-quick-stop
+bit   OUT lcec.0.A3.srv-quick-stoped
+bit   OUT lcec.0.A3.srv-ready
+bit   OUT lcec.0.A3.srv-remote
+bit   IN  lcec.0.A3.srv-switch-on
+bit   OUT lcec.0.A3.srv-switched-on
+float OUT lcec.0.A3.srv-torque-rel
+float IN  lcec.0.A3.srv-vel-cmd 
+float OUT lcec.0.A3.srv-vel-fb
+float OUT lcec.0.A3.srv-vel-fb-rpm
+float OUT lcec.0.A3.srv-vel-fb-rpm-abs
+float OUT lcec.0.A3.srv-vel-rpm
+bit   OUT lcec.0.A3.srv-volt-enabled
+bit   OUT lcec.0.A3.srv-warning
+bit   OUT lcec.0.A3.srv-zero-speed
 ```
-
-
+_Digital In (RO) at CN1_
+```
+bit   OUT lcec.0.A3.din-1
+bit   OUT lcec.0.A3.din-2
+bit   OUT lcec.0.A3.din-3
+bit   OUT lcec.0.A3.din-4
+bit   OUT lcec.0.A3.din-5
+bit   OUT lcec.0.A3.din-6
+bit   OUT lcec.0.A3.din-7
+bit   OUT lcec.0.A3.din-home
+bit   OUT lcec.0.A3.din-neg-lim
+bit   OUT lcec.0.A3.din-pos-lim
+```
 
 
 ## CSV Mode (Default)
