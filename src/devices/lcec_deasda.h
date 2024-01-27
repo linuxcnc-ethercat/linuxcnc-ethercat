@@ -142,5 +142,5 @@ Parameters:
 
 #define LCEC_DEASDA_VID LCEC_DELTA_VID
 
-#define LCEC_DEASDA_PDOS 6
+#define LCEC_DEASDA_PDOS 8
 #endif
