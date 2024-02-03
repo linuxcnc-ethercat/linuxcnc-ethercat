@@ -15,8 +15,8 @@ Description | Driver | EtherCAT VID:PID | Device Type | Testing Status | Notes
 [Beckhoff AX5805 (Safety Drive Option)](http://beckhoff.com/AX5805) | [ax5805](../src/devices/lcec_ax5805.c) | 0x2:0x16ad6012 | Safety Terminals |  | 
 [Delta MS-300 AC Motor Drive](https://www.deltaww.com/en-us/products/AC-Motor-Drives/3449) | [dems300](../src/devices/lcec_dems300.c) | 0x1dd:0x10400200 | AC Motor Drive |  | 
 [Delta ASDA-A2-E](https://www.deltaww.com/en-us/products/Servo-Systems-AC-Servo-Motors-and-Drives/23) | [deasda](../src/devices/lcec_deasda.c) | 0x1dd:0x10305070 | Servo Drive |  | 
-[Delta ASDA-A3](https://www.deltaww.com/en-us/products/Servo-Systems-AC-Servo-Motors-and-Drives/23) | [deasda](../src/devices/lcec_deasda.c) | 0x1dd:0x00006010 | Servo Drive |  | 
-[Delta ASDA-B3](https://www.deltaww.com/en-us/products/Servo-Systems-AC-Servo-Motors-and-Drives/23) | [deasda](../src/devices/lcec_deasda.c) | 0x1dd:0x00006010 | Servo Drive |  | 
+[Delta ASDA-A3](https://www.deltaww.com/en-US/products/Servo-Systems-AC-Servo-Motors-and-Drives/4102) | [deasda](../src/devices/lcec_deasda.c) | 0x1dd:0x00006010 | Servo Drive |  | 
+[Delta ASDA-B3](https://www.deltaww.com/en-US/products/Servo-Systems-AC-Servo-Motors-and-Drives/5158) | [deasda](../src/devices/lcec_deasda.c) | 0x1dd:0x00006080 | Servo Drive |  | 
 [Beckhoff EJ1859 8Ch. Dig. Input 24V, 3ms, 8Ch. Dig. Output 24V, 0.5A](http://www.beckhoff.com/EJ1859) | [digitalcombo](../src/devices/lcec_digitalcombo.c) | 0x2:0x07432852 | Digital Input/Output |  | 
 [Beckhoff EJ3004 4Ch. Ana. Input +/-10V](http://www.beckhoff.com/EJ3004) | [el3xxx](../src/devices/lcec_el3xxx.c) | 0x2:0x0bbc2852 | Analog Input |  | 
 [Beckhoff EJ3202 2Ch. Ana. Input PT100 (RTD)](http://www.beckhoff.com/EJ3202) | [el3xxx](../src/devices/lcec_el3xxx.c) | 0x2:0x0c822852 | Analog Input | New, untested | 
