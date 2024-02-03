@@ -4,7 +4,7 @@ VendorID: "0x000001dd"
 VendorName: "Delta"
 PID: "0x00006010"
 Description: "Delta ASDA-A3"
-DocumentationURL: "https://www.deltaww.com/en-us/products/Servo-Systems-AC-Servo-Motors-and-Drives/23"
+DocumentationURL: "https://www.deltaww.com/en-US/products/Servo-Systems-AC-Servo-Motors-and-Drives/4102"
 DeviceType: "Servo Drive"
 Notes: ""
 SrcFile: src/devices/lcec_deasda.c
