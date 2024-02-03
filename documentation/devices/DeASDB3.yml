@@ -2,9 +2,9 @@
 Device: DeASDB3
 VendorID: "0x000001dd"
 VendorName: "Delta"
-PID: "0x00006010"
+PID: "0x00006080"
 Description: "Delta ASDA-B3"
-DocumentationURL: "https://www.deltaww.com/en-us/products/Servo-Systems-AC-Servo-Motors-and-Drives/23"
+DocumentationURL: "https://www.deltaww.com/en-US/products/Servo-Systems-AC-Servo-Motors-and-Drives/5158"
 DeviceType: "Servo Drive"
 Notes: ""
 SrcFile: src/devices/lcec_deasda.c
