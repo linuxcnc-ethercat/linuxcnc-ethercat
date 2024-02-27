@@ -2,7 +2,7 @@ Source: linuxcnc-ethercat
 Section: unknown
 Priority: extra
 Maintainer: Bjarne von Horn <vh@igh.de>
-Build-Depends: debhelper (>= 8.0.0), libexpat1-dev, linuxcnc-dev | linuxcnc-sim-dev | linuxcnc-uspace-dev | machinekit-dev, etherlabmaster-dev | libethercat-dev, golang-go | golang-any
+Build-Depends: debhelper (>= 8.0.0), libexpat1-dev, linuxcnc-dev | linuxcnc-sim-dev | linuxcnc-uspace-dev | machinekit-dev, etherlabmaster-dev | libethercat-dev
 Standards-Version: 3.9.3
 
 Package: linuxcnc-ethercat

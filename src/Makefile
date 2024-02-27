@@ -80,7 +80,7 @@ install: install-user install-realtime
 	true  # override 'install' from $(MODINC)
 
 realtime: lcec.so
-user: lcec_conf lcec_devices lcec_configgen
+user: lcec_conf lcec_devices # lcec_configgen
 
 # Run all tests (auto-generated above from tests/test_*.c).
 test: $(all-tests)
@@ -89,7 +89,7 @@ test: $(all-tests)
 install-user: user
 	mkdir -p $(DESTDIR)$(EMC2_HOME)/bin
 	cp lcec_conf $(DESTDIR)$(EMC2_HOME)/bin/
-	cp lcec_configgen $(DESTDIR)/usr/bin/
+	#cp lcec_configgen $(DESTDIR)/usr/bin/
 
 install-realtime: realtime
 	mkdir -p $(DESTDIR)$(RTLIBDIR)/
