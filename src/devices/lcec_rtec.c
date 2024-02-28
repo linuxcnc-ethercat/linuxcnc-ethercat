@@ -35,8 +35,6 @@
 
 #include "../lcec.h"
 #include "lcec_class_cia402.h"
-#include "lcec_class_din.h"
-#include "lcec_class_dout.h"
 
 #define M_PEAKCURRENT        0
 #define M_MOTOR_RESOLUTION   1
@@ -156,8 +154,6 @@ static const lcec_lookuptable_int_t rtec_controlmode[] = {
 
 typedef struct {
   lcec_class_cia402_channels_t *cia402;
-  lcec_class_din_channels_t *din;
-  lcec_class_dout_channels_t *dout;
   hal_u32_t *alarm_code;
   hal_u32_t *status_code;
   hal_u32_t *encoder_position;
@@ -168,7 +164,6 @@ typedef struct {
   unsigned int encoder_position_os;  ///<
   unsigned int current_rpm_os;       ///<
   unsigned int voltage_os;           ///<
-  unsigned int din_os;
 } lcec_rtec_data_t;
 
 static const lcec_pindesc_t slave_pins[] = {
@@ -432,6 +427,10 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
   options->channel[0]->enable_profile_accel = 1;
   options->channel[0]->enable_profile_decel = 1;
   options->channel[0]->enable_home_accel = 1;
+  options->channel[0]->enable_digital_input = 1;
+  options->channel[0]->enable_digital_output = 1;
+  options->channel[0]->digital_in_channels = 6;
+  options->channel[0]->digital_out_channels = 2;
   // options->channel[0]->enable_interpolation_time_period = 1;  // Should be supported but doesn't actually work.
   options->channel[0]->enable_actual_following_error = 1;
 
@@ -465,39 +464,12 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
 
   hal_data->cia402->channels[0] = lcec_cia402_register_channel(slave, 0x6000, options->channel[0]);
 
-  hal_data->din = lcec_din_allocate_channels(10);
-  if (hal_data->din == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "lcec_din_allocate_channels() for slave %s.%s failed\n", master->name, slave->name);
-    return -EIO;
-  }
-
-  hal_data->dout = lcec_dout_allocate_channels(3);
-  if (hal_data->din == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "lcec_din_allocate_channels() for slave %s.%s failed\n", master->name, slave->name);
-    return -EIO;
-  }
-
   // Register rtec-specific PDOs.
   lcec_pdo_init(slave, 0x200e, 0, &hal_data->alarm_code_os, NULL);
   lcec_pdo_init(slave, 0x200f, 0, &hal_data->status_code_os, NULL);
   lcec_pdo_init(slave, 0x2021, 0, &hal_data->encoder_position_os, NULL);
   lcec_pdo_init(slave, 0x2044, 0, &hal_data->current_rpm_os, NULL);
   lcec_pdo_init(slave, 0x2048, 0, &hal_data->voltage_os, NULL);
-
-  hal_data->din->channels[0] = lcec_din_register_channel_packed(slave, 0x60fd, 0, 0, "din-cw-limit");   // negative limit switch
-  hal_data->din->channels[1] = lcec_din_register_channel_packed(slave, 0x60fd, 0, 1, "din-ccw-limit");  // positive limit switch
-  hal_data->din->channels[2] = lcec_din_register_channel_packed(slave, 0x60fd, 0, 2, "din-home");       // home
-  hal_data->din->channels[3] = lcec_din_register_channel_packed(slave, 0x60fd, 0, 3, "din-interlock");  // interlock?
-  hal_data->din->channels[4] = lcec_din_register_channel_packed(slave, 0x60fd, 0, 16, "din-1");
-  hal_data->din->channels[5] = lcec_din_register_channel_packed(slave, 0x60fd, 0, 17, "din-2");
-  hal_data->din->channels[6] = lcec_din_register_channel_packed(slave, 0x60fd, 0, 18, "din-3");
-  hal_data->din->channels[7] = lcec_din_register_channel_packed(slave, 0x60fd, 0, 19, "din-4");
-  hal_data->din->channels[8] = lcec_din_register_channel_packed(slave, 0x60fd, 0, 20, "din-5");
-  hal_data->din->channels[9] = lcec_din_register_channel_packed(slave, 0x60fd, 0, 21, "din-6");
-
-  hal_data->dout->channels[0] = lcec_dout_register_channel_packed(slave, 0x60fe, 1, 16, "dout-brake");
-  hal_data->dout->channels[1] = lcec_dout_register_channel_packed(slave, 0x60fe, 1, 16, "dout-1");
-  hal_data->dout->channels[2] = lcec_dout_register_channel_packed(slave, 0x60fe, 1, 17, "dout-2");
 
   // export rtec-specific pins
   if ((err = lcec_pin_newf_list(hal_data, slave_pins, LCEC_MODULE_NAME, slave->master->name, slave->name)) != 0) {
@@ -523,7 +495,6 @@ static void lcec_rtec_read(lcec_slave_t *slave, long period) {
   *(hal_data->current_rpm) = EC_READ_S16(&pd[hal_data->current_rpm_os]);
   *(hal_data->voltage) = EC_READ_U16(&pd[hal_data->voltage_os]) / 100.0;
   lcec_cia402_read_all(slave, hal_data->cia402);
-  lcec_din_read_all(slave, hal_data->din);
 }
 
 static void lcec_rtec_write(lcec_slave_t *slave, long period) {
@@ -535,7 +506,6 @@ static void lcec_rtec_write(lcec_slave_t *slave, long period) {
   }
 
   lcec_cia402_write_all(slave, hal_data->cia402);
-  lcec_dout_write_all(slave, hal_data->dout);
 }
 
 /*

@@ -590,10 +590,6 @@ lcec_class_cia402_options_t *lcec_cia402_options(void) {
 }
 
 /// @brief Allocates a `lcec_class_cia402_channel_options_t` and initializes it.
-///
-/// Most of the defaults are actually coded in
-/// `lcec_cia402_register_channel`, so we can safely just memset
-/// everything to 0 here.
 lcec_class_cia402_channel_options_t *lcec_cia402_channel_options(void) {
   lcec_class_cia402_channel_options_t *opts = hal_malloc(sizeof(lcec_class_cia402_channel_options_t));
   if (opts == NULL) {
@@ -601,6 +597,8 @@ lcec_class_cia402_channel_options_t *lcec_cia402_channel_options(void) {
   }
   memset(opts, 0, sizeof(lcec_class_cia402_channel_options_t));
   opts->enable_opmode = 1;  // Should almost always be enabled.
+  opts->digital_in_channels = 16;
+  opts->digital_out_channels = 16;
 
   return opts;
 }
@@ -839,6 +837,58 @@ lcec_class_cia402_channel_t *lcec_cia402_register_channel(
     return NULL;
   }
 
+  // Set up digital in/out
+  if (enabled->enable_digital_input) {
+    char *dname;
+    data->din = lcec_din_allocate_channels(opt->digital_in_channels + 4);
+    if (data->din == NULL) {
+      rtapi_print_msg(
+          RTAPI_MSG_ERR, LCEC_MSG_PFX "lcec_din_allocate_channels() for slave %s.%s failed\n", slave->master->name, slave->name);
+      return NULL;
+    }
+
+    dname = hal_malloc(sizeof(char[20]));
+    snprintf(dname, 20, "%s-din-cw-limit", name_prefix);
+    data->din->channels[0] = lcec_din_register_channel_packed(slave, base_idx + 0xfd, 0, 0, dname);  // negative limit switch
+    dname = hal_malloc(sizeof(char[20]));
+    snprintf(dname, 20, "%s-din-ccw-limit", name_prefix);
+    data->din->channels[1] = lcec_din_register_channel_packed(slave, base_idx + 0xfd, 0, 1, dname);  // positive limit switch
+    dname = hal_malloc(sizeof(char[20]));
+    snprintf(dname, 20, "%s-din-home", name_prefix);
+    data->din->channels[2] = lcec_din_register_channel_packed(slave, base_idx + 0xfd, 0, 2, dname);  // home
+    dname = hal_malloc(sizeof(char[20]));
+    snprintf(dname, 20, "%s-din-interlock", name_prefix);
+    data->din->channels[3] = lcec_din_register_channel_packed(slave, base_idx + 0xfd, 0, 3, dname);  // interlock?
+
+    for (int channel = 0; channel < opt->digital_in_channels; channel++) {
+      dname = hal_malloc(sizeof(char[20]));
+      if (dname == NULL) return NULL;
+
+      snprintf(dname, 20, "%s-din-%d", name_prefix, channel);
+      data->din->channels[4 + channel] = lcec_din_register_channel_packed(slave, base_idx + 0xfd, 0, 16 + channel, dname);
+    }
+  }
+
+  if (enabled->enable_digital_output) {
+    char *dname;
+    data->dout = lcec_dout_allocate_channels(opt->digital_out_channels + 1);
+    if (data->din == NULL) {
+      rtapi_print_msg(
+          RTAPI_MSG_ERR, LCEC_MSG_PFX "lcec_din_allocate_channels() for slave %s.%s failed\n", slave->master->name, slave->name);
+      return NULL;
+    }
+    dname = hal_malloc(sizeof(char[20]));
+    snprintf(dname, 20, "%s-dout-brake", name_prefix);
+    data->dout->channels[0] = lcec_dout_register_channel_packed(slave, base_idx + 0xfe, 1, 0, dname);  // brake
+    for (int channel = 0; channel < opt->digital_out_channels; channel++) {
+      dname = hal_malloc(sizeof(char[20]));
+      if (dname == NULL) return NULL;
+
+      snprintf(dname, 20, "%s-dout-%d", name_prefix, channel);
+      data->dout->channels[1 + channel] = lcec_dout_register_channel_packed(slave, base_idx + 0xfe, 1, 16 + channel, dname);
+    }
+  }
+
 #define REGISTER_OPTIONAL_PINS(pin_name)                                                                                              \
   do {                                                                                                                                \
     if (enabled->enable_##pin_name) {                                                                                                 \
@@ -1001,6 +1051,10 @@ void lcec_cia402_read(lcec_slave_t *slave, lcec_class_cia402_channel_t *data) {
   READ_OPT(opmode_display);
   READ_OPT(torque_demand);
   READ_OPT(velocity_demand);
+
+  if (data->enabled->enable_digital_input) {
+    lcec_din_read_all(slave, data->din);
+  }
 }
 
 /// @brief Reads data from all CiA 402 input ports.
@@ -1090,6 +1144,10 @@ void lcec_cia402_write(lcec_slave_t *slave, lcec_class_cia402_channel_t *data) {
   WRITE_OPT_SDO(vl_decel);
   WRITE_OPT_SDO(vl_maximum);
   WRITE_OPT_SDO(vl_minimum);
+
+  if (data->enabled->enable_digital_output) {
+    lcec_dout_write_all(slave, data->dout);
+  }
 }
 
 /// @brief Writess data to all CiA 402 output ports.
@@ -1106,6 +1164,7 @@ void lcec_cia402_write_all(lcec_slave_t *slave, lcec_class_cia402_channels_t *ch
 
 /// @brief Modparams settings available via XML.
 static const lcec_modparam_desc_t per_channel_modparams[] = {
+    // Configuration modParams
     {"positionLimitMin", CIA402_MP_POSLIMIT_MIN, MODPARAM_TYPE_S32},
     {"positionLimitMax", CIA402_MP_POSLIMIT_MAX, MODPARAM_TYPE_S32},
     {"swPositionLimitMin", CIA402_MP_SWPOSLIMIT_MIN, MODPARAM_TYPE_S32},
@@ -1122,6 +1181,10 @@ static const lcec_modparam_desc_t per_channel_modparams[] = {
     {"probe1Negative", CIA402_MP_PROBE1_NEG, MODPARAM_TYPE_S32},
     {"probe2Positive", CIA402_MP_PROBE2_POS, MODPARAM_TYPE_S32},
     {"probe2Negative", CIA402_MP_PROBE2_NEG, MODPARAM_TYPE_S32},
+    {"digitalInChannels", CIA402_MP_DIGITAL_IN_CHANNELS, MODPARAM_TYPE_U32},
+    {"digitalOutChannels", CIA402_MP_DIGITAL_OUT_CHANNELS, MODPARAM_TYPE_U32},
+
+    // CiA 402 modParams for enabling entire modes.
     {"enablePP", CIA402_MP_ENABLE_PP, MODPARAM_TYPE_BIT},
     {"enablePV", CIA402_MP_ENABLE_PV, MODPARAM_TYPE_BIT},
     {"enableCSP", CIA402_MP_ENABLE_CSP, MODPARAM_TYPE_BIT},
@@ -1132,6 +1195,7 @@ static const lcec_modparam_desc_t per_channel_modparams[] = {
     {"enableTQ", CIA402_MP_ENABLE_TQ, MODPARAM_TYPE_BIT},
     {"enableCST", CIA402_MP_ENABLE_CST, MODPARAM_TYPE_BIT},
 
+    // CiA 402 modParams for enabling specific features.
     {"enableActualCurrent", CIA402_MP_ENABLE_ACTUAL_CURRENT, MODPARAM_TYPE_BIT},
     {"enableActualFollowingError", CIA402_MP_ENABLE_ACTUAL_FOLLOWING_ERROR, MODPARAM_TYPE_BIT},
     {"enableActualTorque", CIA402_MP_ENABLE_ACTUAL_TORQUE, MODPARAM_TYPE_BIT},
@@ -1139,6 +1203,8 @@ static const lcec_modparam_desc_t per_channel_modparams[] = {
     {"enableActualVelocitySensor", CIA402_MP_ENABLE_ACTUAL_VELOCITY_SENSOR, MODPARAM_TYPE_BIT},
     {"enableActualVoltage", CIA402_MP_ENABLE_ACTUAL_VOLTAGE, MODPARAM_TYPE_BIT},
     {"enableDemandVL", CIA402_MP_ENABLE_DEMAND_VL, MODPARAM_TYPE_BIT},
+    {"enableDigitalInput", CIA402_MP_ENABLE_DIGITAL_INPUT, MODPARAM_TYPE_BIT},
+    {"enableDigitalOutput", CIA402_MP_ENABLE_DIGITAL_OUTPUT, MODPARAM_TYPE_BIT},
     {"enableErrorCode", CIA402_MP_ENABLE_ERROR_CODE, MODPARAM_TYPE_BIT},
     {"enableFollowingErrorTimeout", CIA402_MP_ENABLE_FOLLOWING_ERROR_TIMEOUT, MODPARAM_TYPE_BIT},
     {"enableFollowingErrorWindow", CIA402_MP_ENABLE_FOLLOWING_ERROR_WINDOW, MODPARAM_TYPE_BIT},
@@ -1298,6 +1364,7 @@ int lcec_cia402_handle_modparam(lcec_slave_t *slave, const lcec_slave_modparam_t
   case mp_name:                                              \
     opt->channel[channel]->enable_##pin_name = p->value.bit; \
     return 0;
+
   switch (id) {
     CASE_MP_S32(CIA402_MP_POSLIMIT_MIN, base + 0x7b, 1);
     CASE_MP_S32(CIA402_MP_POSLIMIT_MAX, base + 0x7b, 2);
@@ -1331,6 +1398,8 @@ int lcec_cia402_handle_modparam(lcec_slave_t *slave, const lcec_slave_modparam_t
     CASE_MP_ENABLE_BIT(CIA402_MP_ENABLE_ACTUAL_VL, actual_vl);
     CASE_MP_ENABLE_BIT(CIA402_MP_ENABLE_ACTUAL_VOLTAGE, actual_voltage);
     CASE_MP_ENABLE_BIT(CIA402_MP_ENABLE_DEMAND_VL, demand_vl);
+    CASE_MP_ENABLE_BIT(CIA402_MP_ENABLE_DIGITAL_INPUT, digital_input);
+    CASE_MP_ENABLE_BIT(CIA402_MP_ENABLE_DIGITAL_OUTPUT, digital_output);
     CASE_MP_ENABLE_BIT(CIA402_MP_ENABLE_ERROR_CODE, error_code);
     CASE_MP_ENABLE_BIT(CIA402_MP_ENABLE_FOLLOWING_ERROR_TIMEOUT, following_error_timeout);
     CASE_MP_ENABLE_BIT(CIA402_MP_ENABLE_FOLLOWING_ERROR_WINDOW, following_error_window);
@@ -1365,6 +1434,13 @@ int lcec_cia402_handle_modparam(lcec_slave_t *slave, const lcec_slave_modparam_t
     CASE_MP_ENABLE_BIT(CIA402_MP_ENABLE_VL_DECEL, vl_decel);
     CASE_MP_ENABLE_BIT(CIA402_MP_ENABLE_VL_MAXIMUM, vl_maximum);
     CASE_MP_ENABLE_BIT(CIA402_MP_ENABLE_VL_MINIMUM, vl_minimum);
+
+    case CIA402_MP_DIGITAL_IN_CHANNELS:
+      opt->channel[channel]->digital_in_channels = p->value.u32;
+      return 0;
+    case CIA402_MP_DIGITAL_OUT_CHANNELS:
+      opt->channel[channel]->digital_out_channels = p->value.u32;
+      return 0;
 
     default:
       return 1;

@@ -19,6 +19,8 @@
 /// @file
 /// @brief Library for digital output devices
 
+#ifndef _LCEC_CLASS_DOUT_H_
+#define _LCEC_CLASS_DOUT_H_
 #include "../lcec.h"
 
 typedef struct {
@@ -41,3 +43,5 @@ lcec_class_dout_channel_t *lcec_dout_register_channel_named(struct lcec_slave *s
 lcec_class_dout_channel_t *lcec_dout_register_channel_packed(struct lcec_slave *slave, uint16_t idx, uint16_t sidx, int bit, char *name);
 void lcec_dout_write(struct lcec_slave *slave, lcec_class_dout_channel_t *data);
 void lcec_dout_write_all(struct lcec_slave *slave, lcec_class_dout_channels_t *pins);
+
+#endif

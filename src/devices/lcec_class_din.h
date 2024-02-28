@@ -19,6 +19,8 @@
 /// @file
 /// @brief Library for digital input devices
 
+#ifndef _LCEC_CLASS_DIN_H_
+#define _LCEC_CLASS_DIN_H_
 #include "../lcec.h"
 
 typedef struct {
@@ -42,3 +44,4 @@ lcec_class_din_channel_t *lcec_din_register_channel_packed(struct lcec_slave *sl
 
 void lcec_din_read(struct lcec_slave *slave, lcec_class_din_channel_t *data);
 void lcec_din_read_all(struct lcec_slave *slave, lcec_class_din_channels_t *channels);
+#endif

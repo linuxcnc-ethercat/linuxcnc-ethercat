@@ -20,9 +20,8 @@
 /// @brief Library for CiA 402 servo/stepper controllers
 
 #include "../lcec.h"
-
-extern ec_pdo_entry_info_t lcec_cia402_basic_in1[];
-extern ec_pdo_entry_info_t lcec_cia402_basic_out1[];
+#include "lcec_class_din.h"
+#include "lcec_class_dout.h"
 
 /// @brief This is the option list for CiA 402 devices.
 ///
@@ -53,6 +52,9 @@ extern ec_pdo_entry_info_t lcec_cia402_basic_out1[];
 /// More will follow as hardware support grows.
 typedef struct {
   char *name_prefix;  ///< Prefix for device naming, defaults to "srv".
+  int digital_in_channels;
+  int digital_out_channels;
+
   int enable_opmode;  ///< Enable opmode and opmode-display.  They're technically optional in the spec.
   int enable_pp;      ///< If true, enable required PP-mode pins: `-actual-position` and `-target-position`.
   int enable_pv;      ///< If true, enable required PV-mode pins: `-actual-velocity` and `-target-velocity`.
@@ -254,6 +256,9 @@ typedef struct {
 
   unsigned int base_idx;  ///< The PDO/SDO offset for this channel
 
+  lcec_class_din_channels_t *din;
+  lcec_class_dout_channels_t *dout;
+
   lcec_class_cia402_channel_options_t *options;  ///< The options used to create this device.
   lcec_class_cia402_enabled_t *enabled;
 } lcec_class_cia402_channel_t;
@@ -303,25 +308,27 @@ int lcec_cia402_add_input_sync(lcec_syncs_t *syncs, lcec_class_cia402_options_t 
 // creates additional versions of these for 8 different channels (or
 // axes).
 
-#define CIA402_MP_BASE              0x1000
-#define CIA402_MP_POSLIMIT_MIN      0x1000  // 0x607b:01 "Minimum position range limit" S32
-#define CIA402_MP_POSLIMIT_MAX      0x1010  // 0x607b:02 "Maximum position range limit" S32
-#define CIA402_MP_SWPOSLIMIT_MIN    0x1020  // 0x607d:01 "Minimum software position limit" S32
-#define CIA402_MP_SWPOSLIMIT_MAX    0x1030  // 0x607d:02 "Maximum software position limit" S32
-#define CIA402_MP_HOME_OFFSET       0x1040  // 0x607c:00 "home offset" S32
-#define CIA402_MP_MAXMOTORSPEED     0x1060  // 0x6080:00 "max motor speed" U32
-#define CIA402_MP_QUICKDECEL        0x10b0  // 0x6085:00 "quick stop deceleration" U32
-#define CIA402_MP_OPTCODE_QUICKSTOP 0x10c0  // 0x605a:00 "quick stop option code" S16
-#define CIA402_MP_OPTCODE_SHUTDOWN  0x10d0  // 0x605b:00 "shutdown option code" S16
-#define CIA402_MP_OPTCODE_DISABLE   0x10e0  // 0x605c:00 "disable operation option code" S16
-#define CIA402_MP_OPTCODE_HALT      0x10f0  // 0x605d:00 "halt option code" S16
-#define CIA402_MP_OPTCODE_FAULT     0x1100  // 0x605e:00 "fault option code" S16
-#define CIA402_MP_PROBE_FUNCTION    0x1150  // 0x60b8:00 "probe function" U16
-#define CIA402_MP_PROBE1_POS        0x1160  // 0x60ba:00 "touch probe 1 positive value" S32
-#define CIA402_MP_PROBE1_NEG        0x1170  // 0x60bb:00 "touch probe 1 negative value" S32
-#define CIA402_MP_PROBE2_POS        0x1180  // 0x60bc:00 "touch probe 2 positive value" S32
-#define CIA402_MP_PROBE2_NEG        0x1190  // 0x60bd:00 "touch probe 2 negative value" S32
-// next is 0x11a0
+#define CIA402_MP_BASE                 0x1000
+#define CIA402_MP_POSLIMIT_MIN         0x1000  // 0x607b:01 "Minimum position range limit" S32
+#define CIA402_MP_POSLIMIT_MAX         0x1010  // 0x607b:02 "Maximum position range limit" S32
+#define CIA402_MP_SWPOSLIMIT_MIN       0x1020  // 0x607d:01 "Minimum software position limit" S32
+#define CIA402_MP_SWPOSLIMIT_MAX       0x1030  // 0x607d:02 "Maximum software position limit" S32
+#define CIA402_MP_HOME_OFFSET          0x1040  // 0x607c:00 "home offset" S32
+#define CIA402_MP_MAXMOTORSPEED        0x1060  // 0x6080:00 "max motor speed" U32
+#define CIA402_MP_QUICKDECEL           0x10b0  // 0x6085:00 "quick stop deceleration" U32
+#define CIA402_MP_OPTCODE_QUICKSTOP    0x10c0  // 0x605a:00 "quick stop option code" S16
+#define CIA402_MP_OPTCODE_SHUTDOWN     0x10d0  // 0x605b:00 "shutdown option code" S16
+#define CIA402_MP_OPTCODE_DISABLE      0x10e0  // 0x605c:00 "disable operation option code" S16
+#define CIA402_MP_OPTCODE_HALT         0x10f0  // 0x605d:00 "halt option code" S16
+#define CIA402_MP_OPTCODE_FAULT        0x1100  // 0x605e:00 "fault option code" S16
+#define CIA402_MP_PROBE_FUNCTION       0x1150  // 0x60b8:00 "probe function" U16
+#define CIA402_MP_PROBE1_POS           0x1160  // 0x60ba:00 "touch probe 1 positive value" S32
+#define CIA402_MP_PROBE1_NEG           0x1170  // 0x60bb:00 "touch probe 1 negative value" S32
+#define CIA402_MP_PROBE2_POS           0x1180  // 0x60bc:00 "touch probe 2 positive value" S32
+#define CIA402_MP_PROBE2_NEG           0x1190  // 0x60bd:00 "touch probe 2 negative value" S32
+#define CIA402_MP_DIGITAL_IN_CHANNELS  0x11a0
+#define CIA402_MP_DIGITAL_OUT_CHANNELS 0x11b0
+// next is 0x11c0
 
 // "enable" modParams
 #define CIA402_MP_ENABLE_ACTUAL_CURRENT            0x22d0
@@ -334,6 +341,8 @@ int lcec_cia402_add_input_sync(lcec_syncs_t *syncs, lcec_class_cia402_options_t 
 #define CIA402_MP_ENABLE_CST                       0x2080
 #define CIA402_MP_ENABLE_CSV                       0x2030
 #define CIA402_MP_ENABLE_DEMAND_VL                 0x2320
+#define CIA402_MP_ENABLE_DIGITAL_INPUT             0x2490
+#define CIA402_MP_ENABLE_DIGITAL_OUTPUT            0x24a0
 #define CIA402_MP_ENABLE_ERROR_CODE                0x2480
 #define CIA402_MP_ENABLE_FOLLOWING_ERROR_TIMEOUT   0x2130
 #define CIA402_MP_ENABLE_FOLLOWING_ERROR_WINDOW    0x2140
@@ -374,4 +383,4 @@ int lcec_cia402_add_input_sync(lcec_syncs_t *syncs, lcec_class_cia402_options_t 
 #define CIA402_MP_ENABLE_VL_DECEL                  0x2370
 #define CIA402_MP_ENABLE_VL_MAXIMUM                0x2350
 #define CIA402_MP_ENABLE_VL_MINIMUM                0x2340
-// next is 0x2490
+// next is 0x24b0

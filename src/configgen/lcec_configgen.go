@@ -128,6 +128,8 @@ var (
 		EnableSDO{name: "enableActualVelocitySensor", offset: 0x69, subindex: 0},
 		EnableSDO{name: "enableActualVoltage", offset: 0x79, subindex: 0},
 		EnableSDO{name: "enableDemandVL", offset: 0x43, subindex: 0},
+		EnableSDO{name: "enableDigitalInput", offset: 0xfd, subindex: 0},
+		EnableSDO{name: "enableDigitalOutput", offset: 0xfe, subindex: 1},
 		EnableSDO{name: "enableErrorCode", offset: 0x3f, subindex: 0},
 		EnableSDO{name: "enableFollowingErrorTimeout", offset: 0x66, subindex: 0},
 		EnableSDO{name: "enableFollowingErrorWindow", offset: 0x65, subindex: 0},
@@ -358,6 +360,14 @@ func (s *EthercatSlave) CiAEnableModParams() []ConfigModParam {
 			sdo := fmt.Sprintf("0x%04x:%02x", feature.offset+base, feature.subindex)
 			if s.SDOs[sdo] != "" {
 				mp = append(mp, ConfigModParam{Name: prefix + feature.name, Value: "true"})
+			}
+
+			// Add additional modparams next to specific `enable` lines as needed.
+			if feature.name == "enableDigitalInput" {
+				mp = append(mp, ConfigModParam{Name: prefix + "digitalInChannels", Value: "16"})
+			}
+			if feature.name == "enableDigitalOutput" {
+				mp = append(mp, ConfigModParam{Name: prefix + "digitalOutChannels", Value: "16"})
 			}
 		}
 	}
