@@ -45,7 +45,7 @@ static const lcec_modparam_desc_t modparams_lcec_basic_cia402[] = {
     {NULL},
 };
 
-static int lcec_basic_cia402_init(int comp_id, struct lcec_slave *slave);
+static int lcec_basic_cia402_init(int comp_id, lcec_slave_t *slave);
 
 // When extending this, you will need to modify the number of PDOs
 // registered (the `8` here).  For now, the easiest way to do this is
@@ -66,8 +66,8 @@ static lcec_typelist_t types[] = {
 };
 ADD_TYPES_WITH_CIA402_MODPARAMS(types, modparams_lcec_basic_cia402)
 
-static void lcec_basic_cia402_read(struct lcec_slave *slave, long period);
-static void lcec_basic_cia402_write(struct lcec_slave *slave, long period);
+static void lcec_basic_cia402_read(lcec_slave_t *slave, long period);
+static void lcec_basic_cia402_write(lcec_slave_t *slave, long period);
 
 typedef struct {
   lcec_class_cia402_channels_t *cia402;
@@ -81,7 +81,7 @@ static const lcec_pindesc_t slave_pins[] = {
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
-static int handle_modparams(struct lcec_slave *slave, lcec_class_cia402_options_t *options) {
+static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *options) {
   lcec_master_t *master = slave->master;
   lcec_slave_modparam_t *p;
   int v;
@@ -113,7 +113,7 @@ static int handle_modparams(struct lcec_slave *slave, lcec_class_cia402_options_
   return 0;
 }
 
-static int lcec_basic_cia402_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_basic_cia402_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_basic_cia402_data_t *hal_data;
   int err;
@@ -251,7 +251,7 @@ static int lcec_basic_cia402_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_basic_cia402_read(struct lcec_slave *slave, long period) {
+static void lcec_basic_cia402_read(lcec_slave_t *slave, long period) {
   lcec_basic_cia402_data_t *hal_data = (lcec_basic_cia402_data_t *)slave->hal_data;
 
   // wait for slave to be operational
@@ -269,7 +269,7 @@ static void lcec_basic_cia402_read(struct lcec_slave *slave, long period) {
   //  lcec_din_read_all(slave, hal_data->din);
 }
 
-static void lcec_basic_cia402_write(struct lcec_slave *slave, long period) {
+static void lcec_basic_cia402_write(lcec_slave_t *slave, long period) {
   lcec_basic_cia402_data_t *hal_data = (lcec_basic_cia402_data_t *)slave->hal_data;
 
   // wait for slave to be operational

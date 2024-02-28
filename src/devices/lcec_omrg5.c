@@ -24,7 +24,7 @@
 #define OMRG5_PULSES_PER_REV_DEFLT     (1 << 20)
 #define OMRG5_FAULT_AUTORESET_DELAY_NS 100000000LL
 
-static int lcec_omrg5_init(int comp_id, struct lcec_slave *slave);
+static int lcec_omrg5_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"OmrG5_KNA5L", LCEC_OMRON_VID, 0x00000001, 0, NULL, lcec_omrg5_init},
@@ -204,10 +204,10 @@ static ec_sync_info_t lcec_omrg5_syncs[] = {
 
 static void lcec_omrg5_check_scales(lcec_omrg5_data_t *hal_data);
 
-static void lcec_omrg5_read(struct lcec_slave *slave, long period);
-static void lcec_omrg5_write(struct lcec_slave *slave, long period);
+static void lcec_omrg5_read(lcec_slave_t *slave, long period);
+static void lcec_omrg5_write(lcec_slave_t *slave, long period);
 
-static int lcec_omrg5_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_omrg5_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_omrg5_data_t *hal_data;
   int err;
@@ -283,7 +283,7 @@ static void lcec_omrg5_check_scales(lcec_omrg5_data_t *hal_data) {
   }
 }
 
-static void lcec_omrg5_read(struct lcec_slave *slave, long period) {
+static void lcec_omrg5_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_omrg5_data_t *hal_data = (lcec_omrg5_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
@@ -348,7 +348,7 @@ static void lcec_omrg5_read(struct lcec_slave *slave, long period) {
   }
 }
 
-static void lcec_omrg5_write(struct lcec_slave *slave, long period) {
+static void lcec_omrg5_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_omrg5_data_t *hal_data = (lcec_omrg5_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

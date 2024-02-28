@@ -25,9 +25,9 @@
 #include "lcec_ax5100.h"
 #include "lcec_ax5200.h"
 
-static void lcec_ax5805_read(struct lcec_slave *slave, long period);
-static int lcec_ax5805_preinit(struct lcec_slave *slave);
-static int lcec_ax5805_init(int comp_id, struct lcec_slave *slave);
+static void lcec_ax5805_read(lcec_slave_t *slave, long period);
+static int lcec_ax5805_preinit(lcec_slave_t *slave);
+static int lcec_ax5805_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"AX5805", LCEC_BECKHOFF_VID, 0x16AD6012, 0, lcec_ax5805_preinit, lcec_ax5805_init},
@@ -91,9 +91,9 @@ static const lcec_pindesc_t slave_pins_2ch[] = {
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
-static int lcec_ax5805_preinit(struct lcec_slave *slave) {
+static int lcec_ax5805_preinit(lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
-  struct lcec_slave *ax5n_slave;
+  lcec_slave_t *ax5n_slave;
 
   // try to find corresponding ax5n
   ax5n_slave = lcec_slave_by_index(master, slave->index - 1);
@@ -124,7 +124,7 @@ static int lcec_ax5805_preinit(struct lcec_slave *slave) {
   return 0;
 }
 
-static int lcec_ax5805_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_ax5805_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_ax5805_data_t *hal_data;
   int err;
@@ -169,7 +169,7 @@ static int lcec_ax5805_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_ax5805_read(struct lcec_slave *slave, long period) {
+static void lcec_ax5805_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_ax5805_data_t *hal_data = (lcec_ax5805_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

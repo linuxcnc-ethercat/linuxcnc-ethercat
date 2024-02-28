@@ -66,7 +66,7 @@ lcec_class_dout_channels_t *lcec_dout_allocate_channels(int count) {
 /// @param sindx The PDO sub-index for the digital output.
 ///
 /// See lcec_el2xxx.c for an example of use.
-lcec_class_dout_channel_t *lcec_dout_register_channel(struct lcec_slave *slave, int id, uint16_t idx, uint16_t sidx) {
+lcec_class_dout_channel_t *lcec_dout_register_channel(lcec_slave_t *slave, int id, uint16_t idx, uint16_t sidx) {
   char name[32];
 
   snprintf(name, 32, "dout-%d", id);
@@ -83,7 +83,7 @@ lcec_class_dout_channel_t *lcec_dout_register_channel(struct lcec_slave *slave, 
 /// @param name The base pin name to use, usually `dout-<ID>`.
 ///
 /// See lcec_el2xxx.c for an example of use.
-lcec_class_dout_channel_t *lcec_dout_register_channel_named(struct lcec_slave *slave, uint16_t idx, uint16_t sidx, char *name) {
+lcec_class_dout_channel_t *lcec_dout_register_channel_named(lcec_slave_t *slave, uint16_t idx, uint16_t sidx, char *name) {
   lcec_class_dout_channel_t *data;
   int err;
 
@@ -125,7 +125,7 @@ lcec_class_dout_channel_t *lcec_dout_register_channel_named(struct lcec_slave *s
 /// @param os  The offset from `LCEC_PDO_INIT()`.
 /// @param bit  The bit offset for the digital out channel.
 /// @param name The base name to use for the channel, `dout-<ID>` is common.
-lcec_class_dout_channel_t *lcec_dout_register_channel_packed(struct lcec_slave *slave, uint16_t idx, uint16_t sidx, int bit, char *name) {
+lcec_class_dout_channel_t *lcec_dout_register_channel_packed(lcec_slave_t *slave, uint16_t idx, uint16_t sidx, int bit, char *name) {
   lcec_class_dout_channel_t *data;
   int err;
 
@@ -159,7 +159,7 @@ lcec_class_dout_channel_t *lcec_dout_register_channel_packed(struct lcec_slave *
 ///
 /// @param slave The slave, passed from the per-device `_write`.
 /// @param data A lcec_class_dout_channel_t *, as returned by lcec_dout_register_channel.
-void lcec_dout_write(struct lcec_slave *slave, lcec_class_dout_channel_t *data) {
+void lcec_dout_write(lcec_slave_t *slave, lcec_class_dout_channel_t *data) {
   lcec_master_t *master = slave->master;
   uint8_t *pd = master->process_data;
   hal_bit_t s;
@@ -187,7 +187,7 @@ void lcec_dout_write(struct lcec_slave *slave, lcec_class_dout_channel_t *data) 
 /// @param slave The slave, passed from the per-device `_write`.
 /// @param channels A `lcec_class_dout_channels_t *`, as returned by
 /// `lcec_dout_register_channel`.
-void lcec_dout_write_all(struct lcec_slave *slave, lcec_class_dout_channels_t *channels) {
+void lcec_dout_write_all(lcec_slave_t *slave, lcec_class_dout_channels_t *channels) {
   for (int i = 0; i < channels->count; i++) {
     lcec_class_dout_channel_t *channel = channels->channels[i];
 

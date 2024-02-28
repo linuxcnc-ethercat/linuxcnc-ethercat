@@ -43,7 +43,7 @@
 #define DEASDA_OPMODE_CSP 8
 #define DEASDA_OPMODE_CSV 9
 
-static int lcec_deasda_init(int comp_id, struct lcec_slave *slave);
+static int lcec_deasda_init(int comp_id, lcec_slave_t *slave);
 
 static const lcec_modparam_desc_t lcec_deasda_modparams[] = {
     {"opmode", LCEC_DESDA_MODPARAM_OPERATIONMODE, MODPARAM_TYPE_STRING},
@@ -250,13 +250,13 @@ static ec_sync_info_t lcec_deasda_syncs_csp[] = {
 
 static void lcec_deasda_check_scales(lcec_deasda_data_t *hal_data);
 
-static void lcec_deasda_read(struct lcec_slave *slave, long period);
-static void lcec_deasda_write_csv(struct lcec_slave *slave, long period);
-static void lcec_deasda_write_csp(struct lcec_slave *slave, long period);
+static void lcec_deasda_read(lcec_slave_t *slave, long period);
+static void lcec_deasda_write_csv(lcec_slave_t *slave, long period);
+static void lcec_deasda_write_csp(lcec_slave_t *slave, long period);
 
 static const drive_operationmodes_t *drive_opmode(char *drivemode);
 
-static int lcec_deasda_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_deasda_data_t *hal_data;
   int err;
@@ -420,7 +420,7 @@ void lcec_deasda_check_scales(lcec_deasda_data_t *hal_data) {
   }
 }
 
-static void lcec_deasda_read(struct lcec_slave *slave, long period) {
+static void lcec_deasda_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_deasda_data_t *hal_data = (lcec_deasda_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
@@ -516,7 +516,7 @@ static void lcec_deasda_read(struct lcec_slave *slave, long period) {
   *(hal_data->di_7) = (status_di >> 22) & 0x01;
 }
 
-static void lcec_deasda_write_csv(struct lcec_slave *slave, long period) {
+static void lcec_deasda_write_csv(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_deasda_data_t *hal_data = (lcec_deasda_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
@@ -566,7 +566,7 @@ static void lcec_deasda_write_csv(struct lcec_slave *slave, long period) {
   EC_WRITE_S32(&pd[hal_data->cmdvalue_pdo_os], (int32_t)speed_raw);
 }
 
-static void lcec_deasda_write_csp(struct lcec_slave *slave, long period) {
+static void lcec_deasda_write_csp(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_deasda_data_t *hal_data = (lcec_deasda_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

@@ -21,10 +21,10 @@
 
 #include "../lcec.h"
 
-static void lcec_el2904_read(struct lcec_slave *slave, long period);
-static void lcec_el2904_write(struct lcec_slave *slave, long period);
-static int lcec_el2904_preinit(struct lcec_slave *slave);
-static int lcec_el2904_init(int comp_id, struct lcec_slave *slave);
+static void lcec_el2904_read(lcec_slave_t *slave, long period);
+static void lcec_el2904_write(lcec_slave_t *slave, long period);
+static int lcec_el2904_preinit(lcec_slave_t *slave);
+static int lcec_el2904_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"EL2904", LCEC_BECKHOFF_VID, 0x0B583052, 0, lcec_el2904_preinit, lcec_el2904_init},
@@ -96,14 +96,14 @@ static const lcec_pindesc_t slave_pins[] = {{HAL_U32, HAL_OUT, offsetof(lcec_el2
 
 static const LCEC_CONF_FSOE_T fsoe_conf = {.slave_data_len = 1, .master_data_len = 1, .data_channels = 1};
 
-static int lcec_el2904_preinit(struct lcec_slave *slave) {
+static int lcec_el2904_preinit(lcec_slave_t *slave) {
   // set fsoe config
   slave->fsoeConf = &fsoe_conf;
 
   return 0;
 }
 
-static int lcec_el2904_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el2904_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_el2904_data_t *hal_data;
   int err;
@@ -144,7 +144,7 @@ static int lcec_el2904_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_el2904_read(struct lcec_slave *slave, long period) {
+static void lcec_el2904_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el2904_data_t *hal_data = (lcec_el2904_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
@@ -165,7 +165,7 @@ static void lcec_el2904_read(struct lcec_slave *slave, long period) {
   *(hal_data->fsoe_out_3) = EC_READ_BIT(&pd[hal_data->fsoe_out_3_os], hal_data->fsoe_out_3_bp);
 }
 
-static void lcec_el2904_write(struct lcec_slave *slave, long period) {
+static void lcec_el2904_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el2904_data_t *hal_data = (lcec_el2904_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

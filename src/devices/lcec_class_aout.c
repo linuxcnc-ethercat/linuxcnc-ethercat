@@ -89,7 +89,7 @@ lcec_class_aout_options_t *lcec_aout_options(void) {
 /// @return A `lcec_class_aout_channel_t` that contains all per-channel data and can be used with `lcec_aout_write()`.
 ///
 /// See lcec_el3xxx.c for an example of use.
-lcec_class_aout_channel_t *lcec_aout_register_channel(struct lcec_slave *slave, int id, uint16_t idx, lcec_class_aout_options_t *opt) {
+lcec_class_aout_channel_t *lcec_aout_register_channel(lcec_slave_t *slave, int id, uint16_t idx, lcec_class_aout_options_t *opt) {
   lcec_class_aout_channel_t *data;
   int err;
 
@@ -161,7 +161,7 @@ lcec_class_aout_channel_t *lcec_aout_register_channel(struct lcec_slave *slave, 
 ///
 /// Call this once per channel registered, from inside of your device's
 /// read function.  Use `lcec_aout_write_all` to read all pins.
-void lcec_aout_write(struct lcec_slave *slave, lcec_class_aout_channel_t *data) {
+void lcec_aout_write(lcec_slave_t *slave, lcec_class_aout_channel_t *data) {
   uint8_t *pd = slave->master->process_data;
   int max_value = data->options->max_value;
   double tmpval, tmpdc, raw_val;
@@ -237,7 +237,7 @@ void lcec_aout_write(struct lcec_slave *slave, lcec_class_aout_channel_t *data) 
 ///
 /// @param slave The `slave`, passed from the per-device `_read`.
 /// @param channels An `lcec_class_aout_channel_t *`, as returned by lcec_aout_register_channel.
-void lcec_aout_write_all(struct lcec_slave *slave, lcec_class_aout_channels_t *channels) {
+void lcec_aout_write_all(lcec_slave_t *slave, lcec_class_aout_channels_t *channels) {
   for (int i = 0; i < channels->count; i++) {
     lcec_class_aout_channel_t *channel = channels->channels[i];
 

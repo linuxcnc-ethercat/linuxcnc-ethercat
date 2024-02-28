@@ -22,7 +22,7 @@
 #include "../lcec.h"
 #include "lcec_class_aout.h"
 
-static int lcec_el4xxx_init(int comp_id, struct lcec_slave *slave);
+static int lcec_el4xxx_init(int comp_id, lcec_slave_t *slave);
 
 /// Flags for describing devices
 #define F_S11         1 << 8  ///< Uses subindex 11 instead of sub-index 1 for ports.
@@ -78,9 +78,9 @@ static lcec_typelist_t types[] = {
 };
 ADD_TYPES(types);
 
-static void lcec_el4xxx_write(struct lcec_slave *slave, long period);
+static void lcec_el4xxx_write(lcec_slave_t *slave, long period);
 
-static int lcec_el4xxx_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el4xxx_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_class_aout_channels_t *hal_data;
   int i;
@@ -107,7 +107,7 @@ static int lcec_el4xxx_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_el4xxx_write(struct lcec_slave *slave, long period) {
+static void lcec_el4xxx_write(lcec_slave_t *slave, long period) {
   lcec_class_aout_channels_t *hal_data = (lcec_class_aout_channels_t *)slave->hal_data;
 
   // wait for slave to be operational

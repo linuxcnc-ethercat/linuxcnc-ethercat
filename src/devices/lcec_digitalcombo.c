@@ -63,7 +63,7 @@
 #include "lcec_class_din.h"
 #include "lcec_class_dout.h"
 
-static int lcec_digitalcombo_init(int comp_id, struct lcec_slave *slave);
+static int lcec_digitalcombo_init(int comp_id, lcec_slave_t *slave);
 
 #define F_IN(x)     (x)       // Input channels
 #define F_OUT(x)    (x * 32)  // Output channels
@@ -113,10 +113,10 @@ typedef struct {
   lcec_class_dout_channels_t *channels_out;
 } lcec_digitalcombo_data_t;
 
-static void lcec_digitalcombo_read(struct lcec_slave *slave, long period);
-static void lcec_digitalcombo_write(struct lcec_slave *slave, long period);
+static void lcec_digitalcombo_read(lcec_slave_t *slave, long period);
+static void lcec_digitalcombo_write(lcec_slave_t *slave, long period);
 
-static int lcec_digitalcombo_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_digitalcombo_init(int comp_id, lcec_slave_t *slave) {
   lcec_digitalcombo_data_t *hal_data;
   int i;
   int in_channels = INPORTS(slave->flags);
@@ -174,7 +174,7 @@ static int lcec_digitalcombo_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_digitalcombo_read(struct lcec_slave *slave, long period) {
+static void lcec_digitalcombo_read(lcec_slave_t *slave, long period) {
   lcec_digitalcombo_data_t *hal_data = (lcec_digitalcombo_data_t *)slave->hal_data;
 
   // wait for slave to be operational
@@ -185,7 +185,7 @@ static void lcec_digitalcombo_read(struct lcec_slave *slave, long period) {
   if (hal_data->channels_in != NULL) lcec_din_read_all(slave, hal_data->channels_in);
 }
 
-static void lcec_digitalcombo_write(struct lcec_slave *slave, long period) {
+static void lcec_digitalcombo_write(lcec_slave_t *slave, long period) {
   lcec_digitalcombo_data_t *hal_data = (lcec_digitalcombo_data_t *)slave->hal_data;
 
   // wait for slave to be operational

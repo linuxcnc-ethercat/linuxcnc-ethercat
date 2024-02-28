@@ -90,7 +90,7 @@ static const lcec_modparam_desc_t modparams_rtec[] = {
     {NULL},
 };
 
-static int lcec_rtec_init(int comp_id, struct lcec_slave *slave);
+static int lcec_rtec_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"ECR60", LCEC_RTELLIGENT_VID, 0x0a880001, 0, NULL, lcec_rtec_init, /* modparams_rtec */},
@@ -105,8 +105,8 @@ static lcec_typelist_t types[] = {
 };
 ADD_TYPES_WITH_CIA402_MODPARAMS(types, modparams_rtec)
 
-static void lcec_rtec_read(struct lcec_slave *slave, long period);
-static void lcec_rtec_write(struct lcec_slave *slave, long period);
+static void lcec_rtec_read(lcec_slave_t *slave, long period);
+static void lcec_rtec_write(lcec_slave_t *slave, long period);
 
 static const lcec_lookuptable_int_t rtec_outputfunc[] = {
     {"custom", 0},
@@ -180,7 +180,7 @@ static const lcec_pindesc_t slave_pins[] = {
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
-static int handle_modparams(struct lcec_slave *slave, lcec_class_cia402_options_t *opt) {
+static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *opt) {
   lcec_master_t *master = slave->master;
   lcec_slave_modparam_t *p;
   uint16_t input_polarity = 0, input_polarity_set = 0;
@@ -401,7 +401,7 @@ static int handle_modparams(struct lcec_slave *slave, lcec_class_cia402_options_
   return 0;
 }
 
-static int lcec_rtec_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_rtec_data_t *hal_data;
   int err;
@@ -508,7 +508,7 @@ static int lcec_rtec_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_rtec_read(struct lcec_slave *slave, long period) {
+static void lcec_rtec_read(lcec_slave_t *slave, long period) {
   lcec_rtec_data_t *hal_data = (lcec_rtec_data_t *)slave->hal_data;
   uint8_t *pd = slave->master->process_data;
 
@@ -526,7 +526,7 @@ static void lcec_rtec_read(struct lcec_slave *slave, long period) {
   lcec_din_read_all(slave, hal_data->din);
 }
 
-static void lcec_rtec_write(struct lcec_slave *slave, long period) {
+static void lcec_rtec_write(lcec_slave_t *slave, long period) {
   lcec_rtec_data_t *hal_data = (lcec_rtec_data_t *)slave->hal_data;
 
   // wait for slave to be operational

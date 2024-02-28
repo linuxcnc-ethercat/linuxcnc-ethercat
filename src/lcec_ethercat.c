@@ -27,7 +27,7 @@ static int lcec_param_newfv_list(void *base, const lcec_pindesc_t *list, va_list
 int lcec_comp_id = -1;
 
 /// @brief Find the slave with a specified index underneath a specific master.
-lcec_slave_t *lcec_slave_by_index(struct lcec_master *master, int index) {
+lcec_slave_t *lcec_slave_by_index(lcec_master_t *master, int index) {
   lcec_slave_t *slave;
 
   for (slave = master->first_slave; slave != NULL; slave = slave->next) {
@@ -40,7 +40,7 @@ lcec_slave_t *lcec_slave_by_index(struct lcec_master *master, int index) {
 }
 
 /// @brief Copy FSoE (Safety over EtherCAT / FailSafe over EtherCAT) data between slaves and masters.
-void copy_fsoe_data(struct lcec_slave *slave, unsigned int slave_offset, unsigned int master_offset) {
+void copy_fsoe_data(lcec_slave_t *slave, unsigned int slave_offset, unsigned int master_offset) {
   lcec_master_t *master = slave->master;
   uint8_t *pd = master->process_data;
   const LCEC_CONF_FSOE_T *fsoeConf = slave->fsoeConf;
@@ -122,7 +122,7 @@ void lcec_syncs_add_pdo_entry(lcec_syncs_t *syncs, uint16_t index, uint8_t subin
 }
 
 /// @brief Read an SDO configuration from a slave device.
-int lcec_read_sdo(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint8_t *target, size_t size) {
+int lcec_read_sdo(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint8_t *target, size_t size) {
   lcec_master_t *master = slave->master;
   int err;
   size_t result_size;
@@ -144,22 +144,22 @@ int lcec_read_sdo(struct lcec_slave *slave, uint16_t index, uint8_t subindex, ui
 }
 
 /// @brief Read an 8-bit SDO from a slave device.
-/// @param slave The `struct lcec_slave` passed to `_init`, `_read`, etc.
+/// @param slave The `lcec_slave_t` passed to `_init`, `_read`, etc.
 /// @param index The CoE object index to read.  For `0x6010:02`, this would be `0x6010`.
 /// @param subindex The CoE object subindex to read.  For `0x6010:02`, this would be `0x02`.
 /// @param result A pointer to a `uint8_t` to write the result into.
 /// @return 0 for success, <0 for failure.
-int lcec_read_sdo8(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint8_t *result) {
+int lcec_read_sdo8(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint8_t *result) {
   return lcec_read_sdo(slave, index, subindex, result, 1);
 }
 
 /// @brief Read a 16-bit SDO from a slave device.
-/// @param slave The `struct lcec_slave` passed to `_init`, `_read`, etc.
+/// @param slave The `lcec_slave_t` passed to `_init`, `_read`, etc.
 /// @param index The CoE object index to read.  For `0x6010:02`, this would be `0x6010`.
 /// @param subindex The CoE object subindex to read.  For `0x6010:02`, this would be `0x02`.
 /// @param result A pointer to a `uint16_t` to write the result into.
 /// @return 0 for success, <0 for failure.
-int lcec_read_sdo16(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint16_t *result) {
+int lcec_read_sdo16(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint16_t *result) {
   uint8_t data[2];
   int err = lcec_read_sdo(slave, index, subindex, data, 2);
   *result = EC_READ_U16(data);
@@ -168,12 +168,12 @@ int lcec_read_sdo16(struct lcec_slave *slave, uint16_t index, uint8_t subindex, 
 }
 
 /// @brief Read a 32-bit SDO from a slave device.
-/// @param slave The `struct lcec_slave` passed to `_init`, `_read`, etc.
+/// @param slave The `lcec_slave_t` passed to `_init`, `_read`, etc.
 /// @param index The CoE object index to read.  For `0x6010:02`, this would be `0x6010`.
 /// @param subindex The CoE object subindex to read.  For `0x6010:02`, this would be `0x02`.
 /// @param result A pointer to a `uint32_t` to write the result into.
 /// @return 0 for success, <0 for failure.
-int lcec_read_sdo32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint32_t *result) {
+int lcec_read_sdo32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint32_t *result) {
   uint8_t data[4];
   int err = lcec_read_sdo(slave, index, subindex, data, 4);
   *result = EC_READ_U32(data);
@@ -187,12 +187,12 @@ int lcec_read_sdo32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, 
 /// paramater is a 32-bit integer, and it's declared `volatile` to
 /// reduce the number of warnings that GCC produces.
 ///
-/// @param slave The `struct lcec_slave` passed to `_init`, `_read`, etc.
+/// @param slave The `lcec_slave_t` passed to `_init`, `_read`, etc.
 /// @param index The CoE object index to read.  For `0x6010:02`, this would be `0x6010`.
 /// @param subindex The CoE object subindex to read.  For `0x6010:02`, this would be `0x02`.
 /// @param result A pointer to a `uint32_t` to write the result into.
 /// @return 0 for success, <0 for failure.
-int lcec_read_sdo8_pin_U32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, volatile uint32_t *result) {
+int lcec_read_sdo8_pin_U32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, volatile uint32_t *result) {
   uint8_t data;
   int err = lcec_read_sdo(slave, index, subindex, &data, 1);
   *result = data;
@@ -206,12 +206,12 @@ int lcec_read_sdo8_pin_U32(struct lcec_slave *slave, uint16_t index, uint8_t sub
 /// paramater is a 32-bit integer, and it's declared `volatile` to
 /// reduce the number of warnings that GCC produces.
 ///
-/// @param slave The `struct lcec_slave` passed to `_init`, `_read`, etc.
+/// @param slave The `lcec_slave_t` passed to `_init`, `_read`, etc.
 /// @param index The CoE object index to read.  For `0x6010:02`, this would be `0x6010`.
 /// @param subindex The CoE object subindex to read.  For `0x6010:02`, this would be `0x02`.
 /// @param result A pointer to a `uint32_t` to write the result into.
 /// @return 0 for success, <0 for failure.
-int lcec_read_sdo8_pin_S32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, volatile int32_t *result) {
+int lcec_read_sdo8_pin_S32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, volatile int32_t *result) {
   uint8_t data;
   int err = lcec_read_sdo(slave, index, subindex, &data, 1);
   *result = data;
@@ -225,12 +225,12 @@ int lcec_read_sdo8_pin_S32(struct lcec_slave *slave, uint16_t index, uint8_t sub
 /// paramater is a 32-bit integer, and it's declared `volatile` to
 /// reduce the number of warnings that GCC produces.
 ///
-/// @param slave The `struct lcec_slave` passed to `_init`, `_read`, etc.
+/// @param slave The `lcec_slave_t` passed to `_init`, `_read`, etc.
 /// @param index The CoE object index to read.  For `0x6010:02`, this would be `0x6010`.
 /// @param subindex The CoE object subindex to read.  For `0x6010:02`, this would be `0x02`.
 /// @param result A pointer to a `uint32_t` to write the result into.
 /// @return 0 for success, <0 for failure.
-int lcec_read_sdo16_pin_U32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, volatile uint32_t *result) {
+int lcec_read_sdo16_pin_U32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, volatile uint32_t *result) {
   uint8_t data[2];
   int err = lcec_read_sdo(slave, index, subindex, data, 2);
   *result = EC_READ_U16(data);
@@ -244,12 +244,12 @@ int lcec_read_sdo16_pin_U32(struct lcec_slave *slave, uint16_t index, uint8_t su
 /// paramater is a 32-bit integer, and it's declared `volatile` to
 /// reduce the number of warnings that GCC produces.
 ///
-/// @param slave The `struct lcec_slave` passed to `_init`, `_read`, etc.
+/// @param slave The `lcec_slave_t` passed to `_init`, `_read`, etc.
 /// @param index The CoE object index to read.  For `0x6010:02`, this would be `0x6010`.
 /// @param subindex The CoE object subindex to read.  For `0x6010:02`, this would be `0x02`.
 /// @param result A pointer to a `uint32_t` to write the result into.
 /// @return 0 for success, <0 for failure.
-int lcec_read_sdo16_pin_S32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, volatile int32_t *result) {
+int lcec_read_sdo16_pin_S32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, volatile int32_t *result) {
   uint8_t data[2];
   int err = lcec_read_sdo(slave, index, subindex, data, 2);
   *result = EC_READ_U16(data);
@@ -263,12 +263,12 @@ int lcec_read_sdo16_pin_S32(struct lcec_slave *slave, uint16_t index, uint8_t su
 /// paramater is a 32-bit integer, and it's declared `volatile` to
 /// reduce the number of warnings that GCC produces.
 ///
-/// @param slave The `struct lcec_slave` passed to `_init`, `_read`, etc.
+/// @param slave The `lcec_slave_t` passed to `_init`, `_read`, etc.
 /// @param index The CoE object index to read.  For `0x6010:02`, this would be `0x6010`.
 /// @param subindex The CoE object subindex to read.  For `0x6010:02`, this would be `0x02`.
 /// @param result A pointer to a `uint32_t` to write the result into.
 /// @return 0 for success, <0 for failure.
-int lcec_read_sdo32_pin_U32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, volatile uint32_t *result) {
+int lcec_read_sdo32_pin_U32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, volatile uint32_t *result) {
   uint8_t data[4];
   int err = lcec_read_sdo(slave, index, subindex, data, 4);
   *result = EC_READ_U32(data);
@@ -282,12 +282,12 @@ int lcec_read_sdo32_pin_U32(struct lcec_slave *slave, uint16_t index, uint8_t su
 /// paramater is a 32-bit integer, and it's declared `volatile` to
 /// reduce the number of warnings that GCC produces.
 ///
-/// @param slave The `struct lcec_slave` passed to `_init`, `_read`, etc.
+/// @param slave The `lcec_slave_t` passed to `_init`, `_read`, etc.
 /// @param index The CoE object index to read.  For `0x6010:02`, this would be `0x6010`.
 /// @param subindex The CoE object subindex to read.  For `0x6010:02`, this would be `0x02`.
 /// @param result A pointer to a `uint32_t` to write the result into.
 /// @return 0 for success, <0 for failure.
-int lcec_read_sdo32_pin_S32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, volatile int32_t *result) {
+int lcec_read_sdo32_pin_S32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, volatile int32_t *result) {
   uint8_t data[4];
   int err = lcec_read_sdo(slave, index, subindex, data, 4);
   *result = EC_READ_U32(data);
@@ -318,7 +318,7 @@ int lcec_read_sdo32_pin_S32(struct lcec_slave *slave, uint16_t index, uint8_t su
 /// @param value A pointer to the value to be set.
 /// @param size The number of bytes to set.
 /// @return 0 for success or -1 for failure.
-int lcec_write_sdo(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint8_t *value, size_t size) {
+int lcec_write_sdo(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint8_t *value, size_t size) {
   lcec_master_t *master = slave->master;
   int err;
   uint32_t abort_code;
@@ -348,7 +348,7 @@ int lcec_write_sdo(struct lcec_slave *slave, uint16_t index, uint8_t subindex, u
 /// @param subindex The SDO sub-index to be set.
 /// @param value An 8-bit value to set.
 /// @return 0 for success or -1 for failure.
-int lcec_write_sdo8(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint8_t value) {
+int lcec_write_sdo8(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint8_t value) {
   uint8_t data[1];
 
   EC_WRITE_U8(data, value);
@@ -364,7 +364,7 @@ int lcec_write_sdo8(struct lcec_slave *slave, uint16_t index, uint8_t subindex, 
 /// @param subindex The SDO sub-index to be set.
 /// @param value A 16-bit value to set.
 /// @return 0 for success or -1 for failure.
-int lcec_write_sdo16(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint16_t value) {
+int lcec_write_sdo16(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint16_t value) {
   uint8_t data[2];
 
   EC_WRITE_U16(data, value);
@@ -380,7 +380,7 @@ int lcec_write_sdo16(struct lcec_slave *slave, uint16_t index, uint8_t subindex,
 /// @param subindex The SDO sub-index to be set.
 /// @param value A 32-bit value to set.
 /// @return 0 for success or -1 for failure.
-int lcec_write_sdo32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint32_t value) {
+int lcec_write_sdo32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint32_t value) {
   uint8_t data[4];
 
   EC_WRITE_U32(data, value);
@@ -397,7 +397,7 @@ int lcec_write_sdo32(struct lcec_slave *slave, uint16_t index, uint8_t subindex,
 /// @param value An 8-bit value to set.
 /// @param mpname The XML name of the modparam that triggered this.  Used for error messages.
 /// @return 0 for success or -1 for failure.
-int lcec_write_sdo8_modparam(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint8_t value, const char *mpname) {
+int lcec_write_sdo8_modparam(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint8_t value, const char *mpname) {
   if (lcec_write_sdo8(slave, index, subindex, value) < 0) {
     rtapi_print_msg(RTAPI_MSG_ERR,
         LCEC_MSG_PFX "slave %s.%s: Failed to set SDO for <modParam name=\"%s\": sdo write of %04x:%02x = %d rejected by slave\n",
@@ -417,7 +417,7 @@ int lcec_write_sdo8_modparam(struct lcec_slave *slave, uint16_t index, uint8_t s
 /// @param value A 16-bit value to set.
 /// @param mpname The XML name of the modparam that triggered this.  Used for error messages.
 /// @return 0 for success or -1 for failure.
-int lcec_write_sdo16_modparam(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint16_t value, const char *mpname) {
+int lcec_write_sdo16_modparam(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint16_t value, const char *mpname) {
   if (lcec_write_sdo16(slave, index, subindex, value) < 0) {
     rtapi_print_msg(RTAPI_MSG_ERR,
         LCEC_MSG_PFX "slave %s.%s: Failed to set SDO for <modParam name=\"%s\": sdo write of %04x:%02x = %d rejected by slave\n",
@@ -437,7 +437,7 @@ int lcec_write_sdo16_modparam(struct lcec_slave *slave, uint16_t index, uint8_t 
 /// @param value A 32-bit value to set.
 /// @param mpname The XML name of the modparam that triggered this.  Used for error messages.
 /// @return 0 for success or -1 for failure.
-int lcec_write_sdo32_modparam(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint32_t value, const char *mpname) {
+int lcec_write_sdo32_modparam(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint32_t value, const char *mpname) {
   if (lcec_write_sdo32(slave, index, subindex, value) < 0) {
     rtapi_print_msg(RTAPI_MSG_ERR,
         LCEC_MSG_PFX "slave %s.%s: Failed to set SDO for <modParam name=\"%s\": sdo write of %04x:%02x = %d rejected by slave\n",
@@ -451,7 +451,7 @@ int lcec_write_sdo32_modparam(struct lcec_slave *slave, uint16_t index, uint8_t 
 ///
 /// IDNs ("Identification Number") are similar to SDOs, but for SoE
 /// (Servo over EtherCAT) devices, not CoE (CanOPEN over EtherCAT).
-int lcec_read_idn(struct lcec_slave *slave, uint8_t drive_no, uint16_t idn, uint8_t *target, size_t size) {
+int lcec_read_idn(lcec_slave_t *slave, uint8_t drive_no, uint16_t idn, uint8_t *target, size_t size) {
   lcec_master_t *master = slave->master;
   int err;
   size_t result_size;
@@ -553,7 +553,7 @@ int lcec_param_newf_list(void *base, const lcec_pindesc_t *list, ...) {
 }
 
 /// @brief Get an XML `<modParam>` value for a specified slave.
-LCEC_CONF_MODPARAM_VAL_T *lcec_modparam_get(struct lcec_slave *slave, int id) {
+LCEC_CONF_MODPARAM_VAL_T *lcec_modparam_get(lcec_slave_t *slave, int id) {
   lcec_slave_modparam_t *p;
 
   if (slave->modparams == NULL) {
@@ -591,7 +591,7 @@ lcec_pdo_entry_reg_t *lcec_allocate_pdo_entry_reg(int size) {
 /// checking and takes a *slave instead of pos/vid/pid, but fills the
 /// same function and should be relatively simple to swap in.
 ///
-/// @param slave The `struct lcec_slave` this is passed into `_init`.
+/// @param slave The `lcec_slave_t` this is passed into `_init`.
 /// @param idx The CoE object index that we want to register.  If we're trying to register `0x6010:12`, then the index should be `0x6010`.
 /// @param sidx The object subindex that we want to register.  In the previous example, this would be `0x12`.
 /// @param os The offset for this PDO entry.  This should point to an unsigned int in your `hal_data` structure, and it will be filled in
@@ -599,7 +599,7 @@ lcec_pdo_entry_reg_t *lcec_allocate_pdo_entry_reg(int size) {
 /// @param bp The bit offset for this PDO entry.  This should point to an unsigned int in your `hal_data` structure if this is a <8 bit
 /// type, or it may be NULL for 8-bit or larger types.  Attempting to use NULL with a boolean will trigger an error at runtime.
 /// @return 0 for succeess, <0 for failure.
-int lcec_pdo_init(struct lcec_slave *slave, uint16_t idx, uint16_t sidx, unsigned int *os, unsigned int *bp) {
+int lcec_pdo_init(lcec_slave_t *slave, uint16_t idx, uint16_t sidx, unsigned int *os, unsigned int *bp) {
   if (slave->regs->current >= slave->regs->max) {
     // We specifically want to log this, because most users don't
     // bother checking the return value, and this is an init bug.

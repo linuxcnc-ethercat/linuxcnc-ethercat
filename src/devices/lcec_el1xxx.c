@@ -22,7 +22,7 @@
 #include "../lcec.h"
 #include "lcec_class_din.h"
 
-static int lcec_el1xxx_init(int comp_id, struct lcec_slave *slave);
+static int lcec_el1xxx_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"EL1002", LCEC_BECKHOFF_VID, 0x03EA3052, 0, NULL, lcec_el1xxx_init, NULL, 2},
@@ -54,9 +54,9 @@ static lcec_typelist_t types[] = {
 
 ADD_TYPES(types)
 
-static void lcec_el1xxx_read(struct lcec_slave *slave, long period);
+static void lcec_el1xxx_read(lcec_slave_t *slave, long period);
 
-static int lcec_el1xxx_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el1xxx_init(int comp_id, lcec_slave_t *slave) {
   lcec_class_din_channels_t *hal_data;
   int i;
 
@@ -81,7 +81,7 @@ static int lcec_el1xxx_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_el1xxx_read(struct lcec_slave *slave, long period) {
+static void lcec_el1xxx_read(lcec_slave_t *slave, long period) {
   lcec_class_din_channels_t *hal_data = (lcec_class_din_channels_t *)slave->hal_data;
 
   // wait for slave to be operational

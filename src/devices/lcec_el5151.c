@@ -23,7 +23,7 @@
 
 #include "../lcec.h"
 
-static int lcec_el5151_init(int comp_id, struct lcec_slave *slave);
+static int lcec_el5151_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"EL5151", LCEC_BECKHOFF_VID, 0x141f3052, 0, NULL, lcec_el5151_init},
@@ -171,10 +171,10 @@ static ec_sync_info_t lcec_el5151_syncs[] = {
     {0xff},
 };
 
-static void lcec_el5151_read(struct lcec_slave *slave, long period);
-static void lcec_el5151_write(struct lcec_slave *slave, long period);
+static void lcec_el5151_read(lcec_slave_t *slave, long period);
+static void lcec_el5151_write(lcec_slave_t *slave, long period);
 
-static int lcec_el5151_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el5151_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_el5151_data_t *hal_data;
   int err;
@@ -234,7 +234,7 @@ static int lcec_el5151_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_el5151_read(struct lcec_slave *slave, long period) {
+static void lcec_el5151_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el5151_data_t *hal_data = (lcec_el5151_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
@@ -329,7 +329,7 @@ static void lcec_el5151_read(struct lcec_slave *slave, long period) {
   hal_data->last_operational = 1;
 }
 
-static void lcec_el5151_write(struct lcec_slave *slave, long period) {
+static void lcec_el5151_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el5151_data_t *hal_data = (lcec_el5151_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

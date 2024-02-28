@@ -7,7 +7,7 @@
 
 #include "lcec.h"
 
-static int lcec_ex260_init(int comp_id, struct lcec_slave *slave);
+static int lcec_ex260_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"EX260-SEC1", LCEC_SMC_VID, 0x01000001, 0, NULL, lcec_ex260_init, NULL, 4},
@@ -44,9 +44,9 @@ static const lcec_pindesc_t slave_pins[] = {
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
-static void lcec_ex260_write(struct lcec_slave *slave, long period);
+static void lcec_ex260_write(lcec_slave_t *slave, long period);
 
-static int lcec_ex260_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_ex260_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_ex260_pin_t *hal_data;
   lcec_ex260_pin_t *pin;
@@ -77,7 +77,7 @@ static int lcec_ex260_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_ex260_write(struct lcec_slave *slave, long period) {
+static void lcec_ex260_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_ex260_pin_t *hal_data = (lcec_ex260_pin_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

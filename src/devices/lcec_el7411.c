@@ -24,7 +24,7 @@
 #include "../lcec.h"
 #include "hal.h"
 
-static int lcec_el7411_init(int comp_id, struct lcec_slave *slave);
+static int lcec_el7411_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_modparam_desc_t lcec_el7411_modparams[] = {
     {"dcLinkNominal", LCEC_EL7411_PARAM_DCLINK_NOM, MODPARAM_TYPE_U32},
@@ -53,7 +53,7 @@ static lcec_typelist_t types[] = {
 };
 ADD_TYPES(types);
 
-static int lcec_el7411_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el7411_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_slave_modparam_t *p;
 

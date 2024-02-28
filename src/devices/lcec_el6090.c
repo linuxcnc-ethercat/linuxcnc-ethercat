@@ -24,9 +24,9 @@
 
 #include "../lcec.h"
 
-static void lcec_el6090_read(struct lcec_slave *slave, long period);
-static void lcec_el6090_write(struct lcec_slave *slave, long period);
-static int lcec_el6090_init(int comp_id, struct lcec_slave *slave);
+static void lcec_el6090_read(lcec_slave_t *slave, long period);
+static void lcec_el6090_write(lcec_slave_t *slave, long period);
+static int lcec_el6090_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"EL6090", LCEC_BECKHOFF_VID, 0x17ca3052, 0, NULL, lcec_el6090_init},
@@ -249,7 +249,7 @@ static ec_sync_info_t lcec_el6090_syncs[] = {
     {0xff},
 };
 
-static int lcec_el6090_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el6090_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_el6090_data_t *hal_data;
   lcec_el6090_chan_t *chan;
@@ -343,7 +343,7 @@ static int lcec_el6090_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_el6090_read(struct lcec_slave *slave, long period) {
+static void lcec_el6090_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el6090_data_t *hal_data = (lcec_el6090_data_t *)slave->hal_data;
   lcec_el6090_chan_t *chan;
@@ -383,7 +383,7 @@ static void lcec_el6090_read(struct lcec_slave *slave, long period) {
   hal_data->last_operational = 1;
 }
 
-static void lcec_el6090_write(struct lcec_slave *slave, long period) {
+static void lcec_el6090_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el6090_data_t *hal_data = (lcec_el6090_data_t *)slave->hal_data;
   lcec_el6090_chan_t *chan;

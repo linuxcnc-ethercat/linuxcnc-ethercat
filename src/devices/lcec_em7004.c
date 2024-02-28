@@ -23,9 +23,9 @@
 
 #include "../lcec.h"
 
-static void lcec_em7004_read(struct lcec_slave *slave, long period);
-static void lcec_em7004_write(struct lcec_slave *slave, long period);
-static int lcec_em7004_init(int comp_id, struct lcec_slave *slave);
+static void lcec_em7004_read(lcec_slave_t *slave, long period);
+static void lcec_em7004_write(lcec_slave_t *slave, long period);
+static int lcec_em7004_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"EM7004", LCEC_BECKHOFF_VID, 0x1B5C3452, 0, NULL, lcec_em7004_init},
@@ -167,7 +167,7 @@ static const lcec_pindesc_t slave_enc_pins[] = {
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
-static int lcec_em7004_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_em7004_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_em7004_data_t *hal_data;
   lcec_em7004_din_t *din;
@@ -271,7 +271,7 @@ static int lcec_em7004_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_em7004_read(struct lcec_slave *slave, long period) {
+static void lcec_em7004_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_em7004_data_t *hal_data = (lcec_em7004_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
@@ -363,7 +363,7 @@ static void lcec_em7004_read(struct lcec_slave *slave, long period) {
   hal_data->last_operational = 1;
 }
 
-static void lcec_em7004_write(struct lcec_slave *slave, long period) {
+static void lcec_em7004_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_em7004_data_t *hal_data = (lcec_em7004_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

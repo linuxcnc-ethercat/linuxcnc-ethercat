@@ -54,7 +54,7 @@ static const lcec_pindesc_t slave_fb2_params[] = {
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
-static int get_param_flag(struct lcec_slave *slave, int id) {
+static int get_param_flag(lcec_slave_t *slave, int id) {
   LCEC_CONF_MODPARAM_VAL_T *pval;
 
   pval = lcec_modparam_get(slave, id);
@@ -65,7 +65,7 @@ static int get_param_flag(struct lcec_slave *slave, int id) {
   return pval->bit;
 }
 
-int lcec_class_ax5_pdos(struct lcec_slave *slave) {
+int lcec_class_ax5_pdos(lcec_slave_t *slave) {
   int pdo_count = 5;
 
   if (get_param_flag(slave, LCEC_AX5_PARAM_ENABLE_FB2)) {
@@ -79,7 +79,7 @@ int lcec_class_ax5_pdos(struct lcec_slave *slave) {
   return pdo_count;
 }
 
-int lcec_class_ax5_init(struct lcec_slave *slave, lcec_class_ax5_chan_t *chan, int index, const char *pfx) {
+int lcec_class_ax5_init(lcec_slave_t *slave, lcec_class_ax5_chan_t *chan, int index, const char *pfx) {
   lcec_master_t *master = slave->master;
   int err;
   uint8_t idn_buf[4];
@@ -190,7 +190,7 @@ void lcec_class_ax5_check_scales(lcec_class_ax5_chan_t *chan) {
   }
 }
 
-void lcec_class_ax5_read(struct lcec_slave *slave, lcec_class_ax5_chan_t *chan) {
+void lcec_class_ax5_read(lcec_slave_t *slave, lcec_class_ax5_chan_t *chan) {
   lcec_master_t *master = slave->master;
   uint8_t *pd = master->process_data;
   uint32_t pos_cnt;
@@ -241,7 +241,7 @@ void lcec_class_ax5_read(struct lcec_slave *slave, lcec_class_ax5_chan_t *chan) 
   *(chan->torque_fb_pct) = ((double)EC_READ_S16(&pd[chan->torque_fb_pdo_os])) * 0.1;
 }
 
-void lcec_class_ax5_write(struct lcec_slave *slave, lcec_class_ax5_chan_t *chan) {
+void lcec_class_ax5_write(lcec_slave_t *slave, lcec_class_ax5_chan_t *chan) {
   lcec_master_t *master = slave->master;
   uint8_t *pd = master->process_data;
   uint16_t ctrl;

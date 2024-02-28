@@ -29,8 +29,8 @@ static lcec_typelist_t types[] = {
 };
 ADD_TYPES(types)
 
-void lcec_generic_read(struct lcec_slave *slave, long period);
-void lcec_generic_write(struct lcec_slave *slave, long period);
+void lcec_generic_read(lcec_slave_t *slave, long period);
+void lcec_generic_write(lcec_slave_t *slave, long period);
 
 hal_s32_t lcec_generic_read_s32(uint8_t *pd, lcec_generic_pin_t *hal_data);
 hal_u32_t lcec_generic_read_u32(uint8_t *pd, lcec_generic_pin_t *hal_data);
@@ -41,7 +41,7 @@ void lcec_generic_write_u32(uint8_t *pd, lcec_generic_pin_t *hal_data, hal_u32_t
 ///
 /// Not static because it's called directly from `lcec_main`, unlike
 /// "normal" devices.
-int lcec_generic_init(int comp_id, struct lcec_slave *slave) {
+int lcec_generic_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_generic_pin_t *hal_data = (lcec_generic_pin_t *)slave->hal_data;
   int i, j;
@@ -119,7 +119,7 @@ int lcec_generic_init(int comp_id, struct lcec_slave *slave) {
 }
 
 /// @brief Read from a generic device.
-void lcec_generic_read(struct lcec_slave *slave, long period) {
+void lcec_generic_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_generic_pin_t *hal_data = (lcec_generic_pin_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
@@ -172,7 +172,7 @@ void lcec_generic_read(struct lcec_slave *slave, long period) {
 }
 
 /// @brief Write to a generic device.
-void lcec_generic_write(struct lcec_slave *slave, long period) {
+void lcec_generic_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_generic_pin_t *hal_data = (lcec_generic_pin_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

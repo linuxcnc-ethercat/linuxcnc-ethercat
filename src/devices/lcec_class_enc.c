@@ -50,7 +50,7 @@ static int32_t raw_diff(int shift, uint32_t raw_a, uint32_t raw_b);
 static void set_ref(lcec_class_enc_data_t *hal_data, long long ref);
 static long long signed_mod_64(long long val, unsigned long div);
 
-int class_enc_init(struct lcec_slave *slave, lcec_class_enc_data_t *hal_data, int raw_bits, const char *pfx) {
+int class_enc_init(lcec_slave_t *slave, lcec_class_enc_data_t *hal_data, int raw_bits, const char *pfx) {
   lcec_master_t *master = slave->master;
   int err;
 

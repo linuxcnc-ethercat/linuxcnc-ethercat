@@ -23,7 +23,7 @@
 
 #define LCEC_EL3255_CHANS 5
 
-static int lcec_el3255_init(int comp_id, struct lcec_slave *slave);
+static int lcec_el3255_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"EL3255", LCEC_BECKHOFF_VID, 0x0CB73052, 0, NULL, lcec_el3255_init},
@@ -143,9 +143,9 @@ static ec_pdo_info_t lcec_el3255_pdos_in[] = {{0x1A00, 11, lcec_el3255_channel1}
 static ec_sync_info_t lcec_el3255_syncs[] = {{0, EC_DIR_OUTPUT, 0, NULL}, {1, EC_DIR_INPUT, 0, NULL}, {2, EC_DIR_OUTPUT, 0, NULL},
     {3, EC_DIR_INPUT, 5, lcec_el3255_pdos_in}, {0xff}};
 
-static void lcec_el3255_read(struct lcec_slave *slave, long period);
+static void lcec_el3255_read(lcec_slave_t *slave, long period);
 
-static int lcec_el3255_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el3255_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_el3255_data_t *hal_data;
   lcec_el3255_chan_t *chan;
@@ -189,7 +189,7 @@ static int lcec_el3255_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_el3255_read(struct lcec_slave *slave, long period) {
+static void lcec_el3255_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el3255_data_t *hal_data = (lcec_el3255_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

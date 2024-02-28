@@ -23,7 +23,7 @@
 
 #include "../lcec.h"
 
-static int lcec_dems300_init(int comp_id, struct lcec_slave *slave);
+static int lcec_dems300_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"DeMS300", LCEC_DELTA_VID, 0x10400200, 0, NULL, lcec_dems300_init},
@@ -171,10 +171,10 @@ static ec_sync_info_t lcec_dems300_syncs[] = {
 
 static void lcec_dems300_check_scales(lcec_dems300_data_t *hal_data);
 
-static void lcec_dems300_read(struct lcec_slave *slave, long period);
-static void lcec_dems300_write(struct lcec_slave *slave, long period);
+static void lcec_dems300_read(lcec_slave_t *slave, long period);
+static void lcec_dems300_write(lcec_slave_t *slave, long period);
 
-static int lcec_dems300_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_dems300_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_dems300_data_t *hal_data;
   int err;
@@ -244,7 +244,7 @@ static void lcec_dems300_check_scales(lcec_dems300_data_t *hal_data) {
   }
 }
 
-static void lcec_dems300_read(struct lcec_slave *slave, long period) {
+static void lcec_dems300_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_dems300_data_t *hal_data = (lcec_dems300_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
@@ -318,7 +318,7 @@ static void lcec_dems300_read(struct lcec_slave *slave, long period) {
   *(hal_data->vel_fb_rpm_abs) = fabs(rpm);
 }
 
-static void lcec_dems300_write(struct lcec_slave *slave, long period) {
+static void lcec_dems300_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_dems300_data_t *hal_data = (lcec_dems300_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

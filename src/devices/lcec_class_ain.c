@@ -112,7 +112,7 @@ lcec_class_ain_options_t *lcec_ain_options(void) {
 /// @return A `lcec_class_ain_channel_t` that contains all per-channel data and can be used with `lcec_ain_read()`.
 ///
 /// See lcec_el3xxx.c for an example of use.
-lcec_class_ain_channel_t *lcec_ain_register_channel(struct lcec_slave *slave, int id, uint16_t idx, lcec_class_ain_options_t *opt) {
+lcec_class_ain_channel_t *lcec_ain_register_channel(lcec_slave_t *slave, int id, uint16_t idx, lcec_class_ain_options_t *opt) {
   lcec_class_ain_channel_t *data;
   int err;
 
@@ -250,7 +250,7 @@ lcec_class_ain_channel_t *lcec_ain_register_channel(struct lcec_slave *slave, in
 ///
 /// Call this once per channel registered, from inside of your device's
 /// read function.  Use `lcec_ain_read_all` to read all pins.
-void lcec_ain_read(struct lcec_slave *slave, lcec_class_ain_channel_t *data) {
+void lcec_ain_read(lcec_slave_t *slave, lcec_class_ain_channel_t *data) {
   uint8_t *pd = slave->master->process_data;
   int value;  // Needs to be large enough to hold either a uint16_t or an sint16_t without loss.
   int max_value = data->options->max_value;
@@ -291,7 +291,7 @@ void lcec_ain_read(struct lcec_slave *slave, lcec_class_ain_channel_t *data) {
 ///
 /// @param slave The `slave`, passed from the per-device `_read`.
 /// @param channels An `lcec_class_ain_channel_t *`, as returned by lcec_ain_register_channel.
-void lcec_ain_read_all(struct lcec_slave *slave, lcec_class_ain_channels_t *channels) {
+void lcec_ain_read_all(lcec_slave_t *slave, lcec_class_ain_channels_t *channels) {
   for (int i = 0; i < channels->count; i++) {
     lcec_class_ain_channel_t *channel = channels->channels[i];
 

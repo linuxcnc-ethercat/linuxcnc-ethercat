@@ -37,9 +37,9 @@
 #define INFO_SEL_DCM_SWORD     150
 #define INFO_SEL_DCM_STATE     151
 
-static void lcec_el7342_read(struct lcec_slave *slave, long period);
-static void lcec_el7342_write(struct lcec_slave *slave, long period);
-static int lcec_el7342_init(int comp_id, struct lcec_slave *slave);
+static void lcec_el7342_read(lcec_slave_t *slave, long period);
+static void lcec_el7342_write(lcec_slave_t *slave, long period);
+static int lcec_el7342_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"EL7342", LCEC_BECKHOFF_VID, 0x1cae3052, 0, NULL, lcec_el7342_init},
@@ -382,7 +382,7 @@ static ec_sync_info_t lcec_el7342_syncs[] = {
 
 static void lcec_el7342_set_info(lcec_el7342_chan_t *chan, hal_s32_t *raw_info, hal_u32_t *sel_info);
 
-static int lcec_el7342_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el7342_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_el7342_data_t *hal_data;
   int i;
@@ -497,7 +497,7 @@ static int lcec_el7342_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_el7342_read(struct lcec_slave *slave, long period) {
+static void lcec_el7342_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el7342_data_t *hal_data = (lcec_el7342_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
@@ -607,7 +607,7 @@ static void lcec_el7342_read(struct lcec_slave *slave, long period) {
   hal_data->last_operational = 1;
 }
 
-static void lcec_el7342_write(struct lcec_slave *slave, long period) {
+static void lcec_el7342_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el7342_data_t *hal_data = (lcec_el7342_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

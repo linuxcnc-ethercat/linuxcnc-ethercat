@@ -23,11 +23,11 @@
 
 #include "../lcec.h"
 
-static int lcec_el70x1_init(int comp_id, struct lcec_slave *slave);
-static int lcec_el7031_init(int comp_id, struct lcec_slave *slave);
-static int lcec_el7041_0052_init(int comp_id, struct lcec_slave *slave);
-static void lcec_el70x1_read(struct lcec_slave *slave, long period);
-static void lcec_el70x1_write(struct lcec_slave *slave, long period);
+static int lcec_el70x1_init(int comp_id, lcec_slave_t *slave);
+static int lcec_el7031_init(int comp_id, lcec_slave_t *slave);
+static int lcec_el7041_0052_init(int comp_id, lcec_slave_t *slave);
+static void lcec_el70x1_read(lcec_slave_t *slave, long period);
+static void lcec_el70x1_write(lcec_slave_t *slave, long period);
 
 static lcec_modparam_desc_t lcec_el70x1_modparams[] = {
     {"maxCurrent", LCEC_EL70x1_PARAM_MAX_CURR, MODPARAM_TYPE_U32},
@@ -253,21 +253,21 @@ static const lcec_pindesc_t slave_params[] = {
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
-static int lcec_el7031_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el7031_init(int comp_id, lcec_slave_t *slave) {
   // initialize sync info
   slave->sync_info = lcec_el70x1_syncs;
 
   return lcec_el70x1_init(comp_id, slave);
 }
 
-static int lcec_el7041_0052_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el7041_0052_init(int comp_id, lcec_slave_t *slave) {
   // initialize sync info
   slave->sync_info = lcec_el7041_0052_syncs;
 
   return lcec_el70x1_init(comp_id, slave);
 }
 
-static int lcec_el70x1_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el70x1_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_slave_modparam_t *p;
   lcec_el70x1_data_t *hal_data;
@@ -366,7 +366,7 @@ static int lcec_el70x1_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_el70x1_read(struct lcec_slave *slave, long period) {
+static void lcec_el70x1_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el70x1_data_t *hal_data = (lcec_el70x1_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
@@ -384,7 +384,7 @@ static void lcec_el70x1_read(struct lcec_slave *slave, long period) {
   *(hal_data->stm_tx_toggle) = EC_READ_BIT(&pd[hal_data->stm_tx_toggle_pdo_os], hal_data->stm_tx_toggle_pdo_bp);
 }
 
-static void lcec_el70x1_write(struct lcec_slave *slave, long period) {
+static void lcec_el70x1_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el70x1_data_t *hal_data = (lcec_el70x1_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

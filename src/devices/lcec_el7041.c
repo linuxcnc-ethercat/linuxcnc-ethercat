@@ -22,9 +22,9 @@
 
 #include "../lcec.h"
 
-static int lcec_el7041_init(int comp_id, struct lcec_slave *s);
-static void lcec_el7041_read(struct lcec_slave *s, long period);
-static void lcec_el7041_write(struct lcec_slave *s, long period);
+static int lcec_el7041_init(int comp_id, lcec_slave_t *s);
+static void lcec_el7041_read(lcec_slave_t *s, long period);
+static void lcec_el7041_write(lcec_slave_t *s, long period);
 
 #define MODPARAM_MAX_CURRENT        1
 #define MODPARAM_REDUCED_CURRENT    2
@@ -346,7 +346,7 @@ static ec_sync_info_t lcec_el7041_syncs[] = {
     {0xff},
 };
 
-static int handle_modparams(struct lcec_slave *slave) {
+static int handle_modparams(lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_slave_modparam_t *p;
 
@@ -492,7 +492,7 @@ static int handle_modparams(struct lcec_slave *slave) {
   return 0;
 }
 
-static int lcec_el7041_init(int comp_id, struct lcec_slave *s) {
+static int lcec_el7041_init(int comp_id, lcec_slave_t *s) {
   lcec_master_t *m = s->master;
   lcec_el7041_data_t *hd;
   int err;
@@ -592,7 +592,7 @@ static int lcec_el7041_init(int comp_id, struct lcec_slave *s) {
   return 0;
 }
 
-static void lcec_el7041_read(struct lcec_slave *s, long period) {
+static void lcec_el7041_read(lcec_slave_t *s, long period) {
   lcec_master_t *m = s->master;
   lcec_el7041_data_t *hd = (lcec_el7041_data_t *)s->hal_data;
   uint8_t *pd = m->process_data;
@@ -714,7 +714,7 @@ static void lcec_el7041_read(struct lcec_slave *s, long period) {
   hd->last_operational = 1;
 }
 
-static void lcec_el7041_write(struct lcec_slave *s, long period) {
+static void lcec_el7041_write(lcec_slave_t *s, long period) {
   lcec_master_t *m = s->master;
   lcec_el7041_data_t *hd = (lcec_el7041_data_t *)s->hal_data;
   uint8_t *pd = m->process_data;

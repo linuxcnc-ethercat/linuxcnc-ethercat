@@ -23,7 +23,7 @@
 
 #define LCEC_EL31x2_CHANS 2
 
-static int lcec_el31x2_init(int comp_id, struct lcec_slave *slave);
+static int lcec_el31x2_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"EL3102", LCEC_BECKHOFF_VID, 0x0C1E3052, 0, NULL, lcec_el31x2_init},
@@ -86,9 +86,9 @@ static ec_sync_info_t lcec_el31x2_syncs[] = {
     {0xff},
 };
 
-static void lcec_el31x2_read(struct lcec_slave *slave, long period);
+static void lcec_el31x2_read(lcec_slave_t *slave, long period);
 
-static int lcec_el31x2_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el31x2_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_el31x2_data_t *hal_data;
   lcec_el31x2_chan_t *chan;
@@ -129,7 +129,7 @@ static int lcec_el31x2_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_el31x2_read(struct lcec_slave *slave, long period) {
+static void lcec_el31x2_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el31x2_data_t *hal_data = (lcec_el31x2_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

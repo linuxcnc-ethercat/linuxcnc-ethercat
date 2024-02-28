@@ -23,7 +23,7 @@
 
 #include "../lcec.h"
 
-static int lcec_el5032_init(int comp_id, struct lcec_slave *slave);
+static int lcec_el5032_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"EL5032", LCEC_BECKHOFF_VID, 0x13a83052, 0, NULL, lcec_el5032_init},
@@ -125,9 +125,9 @@ static ec_sync_info_t lcec_el5032_syncs[] = {
     {0xff},
 };
 
-static void lcec_el5032_read(struct lcec_slave *slave, long period);
+static void lcec_el5032_read(lcec_slave_t *slave, long period);
 
-static int lcec_el5032_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el5032_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_el5032_data_t *hal_data;
   int i;
@@ -182,7 +182,7 @@ static int lcec_el5032_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_el5032_read(struct lcec_slave *slave, long period) {
+static void lcec_el5032_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el5032_data_t *hal_data = (lcec_el5032_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

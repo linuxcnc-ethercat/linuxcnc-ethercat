@@ -22,7 +22,7 @@
 #include "../lcec.h"
 #include "lcec_class_dout.h"
 
-static int lcec_el2xxx_init(int comp_id, struct lcec_slave *slave);
+static int lcec_el2xxx_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"EL2002", LCEC_BECKHOFF_VID, 0x07D23052, 0, NULL, lcec_el2xxx_init, NULL, 2},
@@ -50,9 +50,9 @@ static lcec_typelist_t types[] = {
 };
 ADD_TYPES(types);
 
-static void lcec_el2xxx_write(struct lcec_slave *slave, long period);
+static void lcec_el2xxx_write(lcec_slave_t *slave, long period);
 
-static int lcec_el2xxx_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el2xxx_init(int comp_id, lcec_slave_t *slave) {
   lcec_class_dout_channels_t *hal_data;
   int i;
 
@@ -73,7 +73,7 @@ static int lcec_el2xxx_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_el2xxx_write(struct lcec_slave *slave, long period) {
+static void lcec_el2xxx_write(lcec_slave_t *slave, long period) {
   lcec_class_dout_channels_t *hal_data = (lcec_class_dout_channels_t *)slave->hal_data;
 
   if (!slave->state.operational) {

@@ -25,8 +25,8 @@
 #define LCEC_STMDS5K_PARAM_MULTITURN 1
 #define LCEC_STMDS5K_PARAM_EXTENC    2
 
-static int lcec_stmds5k_preinit(struct lcec_slave *slave);
-static int lcec_stmds5k_init(int comp_id, struct lcec_slave *slave);
+static int lcec_stmds5k_preinit(lcec_slave_t *slave);
+static int lcec_stmds5k_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_modparam_desc_t lcec_stmds5k_modparams[] = {
     {"isMultiturn", LCEC_STMDS5K_PARAM_MULTITURN, MODPARAM_TYPE_BIT}, {"extEnc", LCEC_STMDS5K_PARAM_EXTENC, MODPARAM_TYPE_U32}, {NULL}};
@@ -226,10 +226,10 @@ static const lcec_stmds5k_extenc_conf_t lcec_stmds5k_extenc_conf[] = {
 static const lcec_stmds5k_extenc_conf_t *lcec_stmds5k_get_extenc_conf(uint32_t type);
 static void lcec_stmds5k_check_scales(lcec_stmds5k_data_t *hal_data);
 
-static void lcec_stmds5k_read(struct lcec_slave *slave, long period);
-static void lcec_stmds5k_write(struct lcec_slave *slave, long period);
+static void lcec_stmds5k_read(lcec_slave_t *slave, long period);
+static void lcec_stmds5k_write(lcec_slave_t *slave, long period);
 
-static int lcec_stmds5k_preinit(struct lcec_slave *slave) {
+static int lcec_stmds5k_preinit(lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   LCEC_CONF_MODPARAM_VAL_T *pval;
 
@@ -245,7 +245,7 @@ static int lcec_stmds5k_preinit(struct lcec_slave *slave) {
   return 0;
 }
 
-static int lcec_stmds5k_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_stmds5k_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_stmds5k_data_t *hal_data;
   int err;
@@ -414,7 +414,7 @@ static void lcec_stmds5k_check_scales(lcec_stmds5k_data_t *hal_data) {
   }
 }
 
-static void lcec_stmds5k_read(struct lcec_slave *slave, long period) {
+static void lcec_stmds5k_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_stmds5k_data_t *hal_data = (lcec_stmds5k_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
@@ -478,7 +478,7 @@ static void lcec_stmds5k_read(struct lcec_slave *slave, long period) {
   }
 }
 
-static void lcec_stmds5k_write(struct lcec_slave *slave, long period) {
+static void lcec_stmds5k_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_stmds5k_data_t *hal_data = (lcec_stmds5k_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

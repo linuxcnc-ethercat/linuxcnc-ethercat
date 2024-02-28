@@ -23,7 +23,7 @@
 
 #include "../lcec.h"
 
-static int lcec_el5102_init(int comp_id, struct lcec_slave *slave);
+static int lcec_el5102_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"EL5102", LCEC_BECKHOFF_VID, 0x13ee3052, 0, NULL, lcec_el5102_init},
@@ -127,12 +127,12 @@ static const lcec_pindesc_t slave_pins[] = {
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
-static void lcec_el5102_read(struct lcec_slave *slave, long period);
-static void lcec_el5102_read_channel(struct lcec_slave *slave, long period, int channel);
-static void lcec_el5102_write(struct lcec_slave *slave, long period);
-static void lcec_el5102_write_channel(struct lcec_slave *slave, long period, int channel);
+static void lcec_el5102_read(lcec_slave_t *slave, long period);
+static void lcec_el5102_read_channel(lcec_slave_t *slave, long period, int channel);
+static void lcec_el5102_write(lcec_slave_t *slave, long period);
+static void lcec_el5102_write_channel(lcec_slave_t *slave, long period, int channel);
 
-static int lcec_el5102_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el5102_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_el5102_data_t *hal_data;
   int err;
@@ -210,12 +210,12 @@ static int lcec_el5102_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_el5102_read(struct lcec_slave *slave, long period) {
+static void lcec_el5102_read(lcec_slave_t *slave, long period) {
   lcec_el5102_read_channel(slave, period, 0);
   lcec_el5102_read_channel(slave, period, 1);
 }
 
-static void lcec_el5102_read_channel(struct lcec_slave *slave, long period, int channel) {
+static void lcec_el5102_read_channel(lcec_slave_t *slave, long period, int channel) {
   lcec_master_t *master = slave->master;
   lcec_el5102_channel_data_t *data = &((lcec_el5102_data_t *)slave->hal_data)->channel[channel];
   uint8_t *pd = master->process_data;
@@ -312,12 +312,12 @@ static void lcec_el5102_read_channel(struct lcec_slave *slave, long period, int 
   data->last_operational = 1;
 }
 
-static void lcec_el5102_write(struct lcec_slave *slave, long period) {
+static void lcec_el5102_write(lcec_slave_t *slave, long period) {
   lcec_el5102_write_channel(slave, period, 0);
   lcec_el5102_write_channel(slave, period, 1);
 }
 
-static void lcec_el5102_write_channel(struct lcec_slave *slave, long period, int channel) {
+static void lcec_el5102_write_channel(lcec_slave_t *slave, long period, int channel) {
   lcec_master_t *master = slave->master;
   lcec_el5102_channel_data_t *data = &((lcec_el5102_data_t *)slave->hal_data)->channel[channel];
   uint8_t *pd = master->process_data;

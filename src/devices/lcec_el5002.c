@@ -23,7 +23,7 @@
 
 #include "../lcec.h"
 
-static int lcec_el5002_init(int comp_id, struct lcec_slave *slave);
+static int lcec_el5002_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_modparam_desc_t lcec_el5002_modparams[] = {
     {"ch0DisFrameErr", LCEC_EL5002_PARAM_CH_0 || LCEC_EL5002_PARAM_DIS_FRAME_ERR, MODPARAM_TYPE_BIT},
@@ -150,9 +150,9 @@ static ec_sync_info_t lcec_el5002_syncs[] = {
     {0xff},
 };
 
-static void lcec_el5002_read(struct lcec_slave *slave, long period);
+static void lcec_el5002_read(lcec_slave_t *slave, long period);
 
-static int lcec_el5002_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el5002_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_slave_modparam_t *p;
   lcec_el5002_data_t *hal_data;
@@ -282,7 +282,7 @@ static int lcec_el5002_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_el5002_read(struct lcec_slave *slave, long period) {
+static void lcec_el5002_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el5002_data_t *hal_data = (lcec_el5002_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

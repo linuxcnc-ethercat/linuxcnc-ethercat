@@ -35,7 +35,7 @@ typedef struct {
   lcec_class_aout_channels_t *analog_out;
 } lcec_easyio_data_t;
 
-static int lcec_easyio_init(int comp_id, struct lcec_slave *slave);
+static int lcec_easyio_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"EasyIO", LCEC_ABET_VID, 0x0debacca, 0, NULL, lcec_easyio_init},
@@ -43,10 +43,10 @@ static lcec_typelist_t types[] = {
 };
 ADD_TYPES(types)
 
-static void lcec_easyio_write(struct lcec_slave *slave, long period);
-static void lcec_easyio_read(struct lcec_slave *slave, long period);
+static void lcec_easyio_write(lcec_slave_t *slave, long period);
+static void lcec_easyio_read(lcec_slave_t *slave, long period);
 
-static int lcec_easyio_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_easyio_init(int comp_id, lcec_slave_t *slave) {
   lcec_easyio_data_t *hal_data;
   int i;
 
@@ -100,7 +100,7 @@ static int lcec_easyio_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_easyio_write(struct lcec_slave *slave, long period) {
+static void lcec_easyio_write(lcec_slave_t *slave, long period) {
   lcec_easyio_data_t *hal_data = (lcec_easyio_data_t *)slave->hal_data;
 
   if (!slave->state.operational) {
@@ -110,7 +110,7 @@ static void lcec_easyio_write(struct lcec_slave *slave, long period) {
   lcec_aout_write_all(slave, hal_data->analog_out);
 }
 
-static void lcec_easyio_read(struct lcec_slave *slave, long period) {
+static void lcec_easyio_read(lcec_slave_t *slave, long period) {
   lcec_easyio_data_t *hal_data = (lcec_easyio_data_t *)slave->hal_data;
 
   if (!slave->state.operational) {

@@ -38,7 +38,7 @@
 
 #define LCEC_EL3XXX_MAXCHANS 8  // for sizing arrays
 
-static int lcec_el3xxx_init(int comp_id, struct lcec_slave *slave);
+static int lcec_el3xxx_init(int comp_id, lcec_slave_t *slave);
 
 /// @brief Modparams settings available via XML.
 static const lcec_modparam_desc_t modparams_temperature[] = {
@@ -213,13 +213,13 @@ static lcec_typelist_t types[] = {
 };
 ADD_TYPES(types)
 
-static void lcec_el3xxx_read(struct lcec_slave *slave, long period);
+static void lcec_el3xxx_read(lcec_slave_t *slave, long period);
 static int set_sensor_type(lcec_slave_t *slave, char *sensortype, lcec_class_ain_channel_t *chan, int idx, int sidx);
 static int set_resolution(lcec_slave_t *slave, char *resolution_name, lcec_class_ain_channel_t *chan, int idx, int sidx);
 static int set_wires(lcec_slave_t *slave, char *wires_name, lcec_class_ain_channel_t *chan, int idx, int sidx);
 
 /// @brief Initialize an EL3xxx device.
-static int lcec_el3xxx_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el3xxx_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_class_ain_channels_t *hal_data;
   uint64_t flags;
@@ -284,7 +284,7 @@ static int lcec_el3xxx_init(int comp_id, struct lcec_slave *slave) {
 }
 
 /// @brief Read values from the device.
-static void lcec_el3xxx_read(struct lcec_slave *slave, long period) {
+static void lcec_el3xxx_read(lcec_slave_t *slave, long period) {
   lcec_class_ain_channels_t *hal_data = (lcec_class_ain_channels_t *)slave->hal_data;
 
   // wait for slave to be operational

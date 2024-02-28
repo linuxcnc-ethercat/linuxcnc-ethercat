@@ -82,13 +82,13 @@
 #define LCEC_MAX_PDO_INFO_COUNT  16    ///< The maximum number of PDOs in a sync.
 #define LCEC_MAX_SYNC_COUNT      4    ///< The maximum number of syncs.
 
-struct lcec_master;
-struct lcec_slave;
+typedef struct lcec_master lcec_master_t;
+typedef struct lcec_slave lcec_slave_t;
 
-typedef int (*lcec_slave_preinit_t)(struct lcec_slave *slave);
-typedef int (*lcec_slave_init_t)(int comp_id, struct lcec_slave *slave);
-typedef void (*lcec_slave_cleanup_t)(struct lcec_slave *slave);
-typedef void (*lcec_slave_rw_t)(struct lcec_slave *slave, long period);
+typedef int (*lcec_slave_preinit_t)(lcec_slave_t *slave);
+typedef int (*lcec_slave_init_t)(int comp_id, lcec_slave_t *slave);
+typedef void (*lcec_slave_cleanup_t)(lcec_slave_t *slave);
+typedef void (*lcec_slave_rw_t)(lcec_slave_t *slave, long period);
 
 typedef enum {
   MODPARAM_TYPE_BIT,    ///< Modparam value is a single bit.
@@ -156,8 +156,8 @@ typedef struct lcec_slave_state {
 } lcec_slave_state_t;
 
 typedef struct lcec_master {
-  struct lcec_master *prev;         ///< Next master.
-  struct lcec_master *next;         ///< Previous master.
+  lcec_master_t *prev;         ///< Next master.
+  lcec_master_t *next;         ///< Previous master.
   int index;                        ///< Index of this mater.
   char name[LCEC_CONF_STR_MAXLEN];  ///< Name of master.
   ec_master_t *master;              ///< EtherCAT master structure.
@@ -166,8 +166,8 @@ typedef struct lcec_master {
   ec_domain_t *domain;
   uint8_t *process_data;
   int process_data_len;
-  struct lcec_slave *first_slave;
-  struct lcec_slave *last_slave;
+  lcec_slave_t *first_slave;
+  lcec_slave_t *last_slave;
   lcec_master_data_t *hal_data;
   uint64_t app_time_base;
   uint32_t app_time_period;
@@ -230,9 +230,9 @@ typedef struct {
 
 /// @brief EtherCAT slave.
 typedef struct lcec_slave {
-  struct lcec_slave *prev;                   ///< Next slave
-  struct lcec_slave *next;                   ///< Previous slave
-  struct lcec_master *master;                ///< Master for this slave
+  lcec_slave_t *prev;                   ///< Next slave
+  lcec_slave_t *next;                   ///< Previous slave
+  lcec_master_t *master;                ///< Master for this slave
   int index;                                 ///< Index of this slave.
   char name[LCEC_CONF_STR_MAXLEN];           ///< Slave name.
   uint32_t vid;                              ///< Slave's vendor ID
@@ -300,33 +300,33 @@ typedef struct {
   const double value;
 } lcec_lookuptable_double_t;
 
-lcec_slave_t *lcec_slave_by_index(struct lcec_master *master, int index) __attribute__((nonnull));
+lcec_slave_t *lcec_slave_by_index(lcec_master_t *master, int index) __attribute__((nonnull));
 
-int lcec_read_sdo(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint8_t *target, size_t size);
-int lcec_read_sdo8(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint8_t *result);
-int lcec_read_sdo8_pin_U32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, volatile uint32_t *result);
-int lcec_read_sdo8_pin_S32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, volatile int32_t *result);
-int lcec_read_sdo16(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint16_t *result);
-int lcec_read_sdo16_pin_U32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, volatile uint32_t *result);
-int lcec_read_sdo16_pin_S32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, volatile int32_t *result);
-int lcec_read_sdo32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint32_t *result);
-int lcec_read_sdo32_pin_U32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, volatile uint32_t *result);
-int lcec_read_sdo32_pin_S32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, volatile int32_t *result);
-int lcec_read_idn(struct lcec_slave *slave, uint8_t drive_no, uint16_t idn, uint8_t *target, size_t size);
-int lcec_write_sdo(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint8_t *value, size_t size);
-int lcec_write_sdo8(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint8_t value);
-int lcec_write_sdo16(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint16_t value);
-int lcec_write_sdo32(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint32_t value);
-int lcec_write_sdo8_modparam(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint8_t value, const char *mpname);
-int lcec_write_sdo16_modparam(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint16_t value, const char *mpname);
-int lcec_write_sdo32_modparam(struct lcec_slave *slave, uint16_t index, uint8_t subindex, uint32_t value, const char *mpname);
+int lcec_read_sdo(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint8_t *target, size_t size);
+int lcec_read_sdo8(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint8_t *result);
+int lcec_read_sdo8_pin_U32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, volatile uint32_t *result);
+int lcec_read_sdo8_pin_S32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, volatile int32_t *result);
+int lcec_read_sdo16(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint16_t *result);
+int lcec_read_sdo16_pin_U32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, volatile uint32_t *result);
+int lcec_read_sdo16_pin_S32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, volatile int32_t *result);
+int lcec_read_sdo32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint32_t *result);
+int lcec_read_sdo32_pin_U32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, volatile uint32_t *result);
+int lcec_read_sdo32_pin_S32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, volatile int32_t *result);
+int lcec_read_idn(lcec_slave_t *slave, uint8_t drive_no, uint16_t idn, uint8_t *target, size_t size);
+int lcec_write_sdo(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint8_t *value, size_t size);
+int lcec_write_sdo8(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint8_t value);
+int lcec_write_sdo16(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint16_t value);
+int lcec_write_sdo32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint32_t value);
+int lcec_write_sdo8_modparam(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint8_t value, const char *mpname);
+int lcec_write_sdo16_modparam(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint16_t value, const char *mpname);
+int lcec_write_sdo32_modparam(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint32_t value, const char *mpname);
 
 int lcec_pin_newf(hal_type_t type, hal_pin_dir_t dir, void **data_ptr_addr, const char *fmt, ...);
 int lcec_pin_newf_list(void *base, const lcec_pindesc_t *list, ...);
 int lcec_param_newf(hal_type_t type, hal_pin_dir_t dir, void *data_addr, const char *fmt, ...);
 int lcec_param_newf_list(void *base, const lcec_pindesc_t *list, ...);
 
-void copy_fsoe_data(struct lcec_slave *slave, unsigned int slave_offset, unsigned int master_offset) __attribute__((nonnull));
+void copy_fsoe_data(lcec_slave_t *slave, unsigned int slave_offset, unsigned int master_offset) __attribute__((nonnull));
 void lcec_syncs_init(lcec_slave_t *slave, lcec_syncs_t *syncs) __attribute__((nonnull));
 void lcec_syncs_add_sync(lcec_syncs_t *syncs, ec_direction_t dir, ec_watchdog_mode_t watchdog_mode);
 void lcec_syncs_add_pdo_info(lcec_syncs_t *syncs, uint16_t index);
@@ -341,12 +341,12 @@ int lcec_lookupint_i(const lcec_lookuptable_int_t *table, const char *key, int d
 double lcec_lookupdouble(const lcec_lookuptable_double_t *table, const char *key, double default_value) __attribute__((nonnull));
 double lcec_lookupdouble_i(const lcec_lookuptable_double_t *table, const char *key, double default_value) __attribute__((nonnull));
 
-LCEC_CONF_MODPARAM_VAL_T *lcec_modparam_get(struct lcec_slave *slave, int id) __attribute__((nonnull));
+LCEC_CONF_MODPARAM_VAL_T *lcec_modparam_get(lcec_slave_t *slave, int id) __attribute__((nonnull));
 int lcec_modparam_desc_len(const lcec_modparam_desc_t *mp) __attribute__((nonnull));
 lcec_modparam_desc_t *lcec_modparam_desc_concat(lcec_modparam_desc_t const *a, lcec_modparam_desc_t const *b) __attribute__((nonnull));
 
 lcec_pdo_entry_reg_t *lcec_allocate_pdo_entry_reg(int size);
-int lcec_pdo_init(struct lcec_slave *slave, uint16_t idx, uint16_t sidx, unsigned int *os, unsigned int *bp);
+int lcec_pdo_init(lcec_slave_t *slave, uint16_t idx, uint16_t sidx, unsigned int *os, unsigned int *bp);
 int lcec_pdo_entry_reg_len(lcec_pdo_entry_reg_t *reg);
 int lcec_append_pdo_entry_reg(lcec_pdo_entry_reg_t *dest, lcec_pdo_entry_reg_t *src);
 

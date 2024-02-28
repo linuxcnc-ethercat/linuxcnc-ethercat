@@ -21,7 +21,7 @@
 
 #include "../lcec.h"
 
-static int lcec_fr4000_init(int comp_id, struct lcec_slave *slave);
+static int lcec_fr4000_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"EpoCAT", LCEC_ABET_VID, 0x04decade, 0, NULL, lcec_fr4000_init},
@@ -364,10 +364,10 @@ static ec_sync_info_t lcec_fr4000_syncs[] = {
 static uint16_t raw_counts_old[5];
 static int32_t counts[5];
 
-void lcec_fr4000_read(struct lcec_slave *slave, long period);
-void lcec_fr4000_write(struct lcec_slave *slave, long period);
+void lcec_fr4000_read(lcec_slave_t *slave, long period);
+void lcec_fr4000_write(lcec_slave_t *slave, long period);
 
-int lcec_fr4000_init(int comp_id, struct lcec_slave *slave) {
+int lcec_fr4000_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_fr4000_data_t *hal_data;
   int err;
@@ -454,7 +454,7 @@ int lcec_fr4000_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-void lcec_fr4000_read(struct lcec_slave *slave, long period) {
+void lcec_fr4000_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_fr4000_data_t *hal_data = (lcec_fr4000_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
@@ -597,7 +597,7 @@ double calculateFvalue(double dac_value, double enc_scale, double dac_scale) {
   return value;
 }
 
-void lcec_fr4000_write(struct lcec_slave *slave, long period) {
+void lcec_fr4000_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_fr4000_data_t *hal_data = (lcec_fr4000_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

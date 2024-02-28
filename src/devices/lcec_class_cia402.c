@@ -721,7 +721,7 @@ int lcec_cia402_add_input_sync(lcec_syncs_t *syncs, lcec_class_cia402_options_t 
 ///   `lcec_class_cia402_channel_options_t` from
 ///   `lcec_cia402_channel_options()`.
 lcec_class_cia402_channel_t *lcec_cia402_register_channel(
-    struct lcec_slave *slave, uint16_t base_idx, lcec_class_cia402_channel_options_t *opt) {
+    lcec_slave_t *slave, uint16_t base_idx, lcec_class_cia402_channel_options_t *opt) {
   lcec_class_cia402_channel_t *data;
   int err;
   lcec_class_cia402_enabled_t *enabled;
@@ -970,7 +970,7 @@ lcec_class_cia402_channel_t *lcec_cia402_register_channel(
 ///
 /// Call this once per channel registered, from inside of your device's
 /// read function.  Use `lcec_cia402_read_all` to read all channels.
-void lcec_cia402_read(struct lcec_slave *slave, lcec_class_cia402_channel_t *data) {
+void lcec_cia402_read(lcec_slave_t *slave, lcec_class_cia402_channel_t *data) {
   uint8_t *pd = slave->master->process_data;
 
 #define READ_OPT(pin_name)              \
@@ -996,7 +996,7 @@ void lcec_cia402_read(struct lcec_slave *slave, lcec_class_cia402_channel_t *dat
 ///
 /// @param slave The `slave`, passed from the per-device `_read`.
 /// @param channels An `lcec_class_cia402_channel_t *`, as returned by lcec_cia402_register_channel.
-void lcec_cia402_read_all(struct lcec_slave *slave, lcec_class_cia402_channels_t *channels) {
+void lcec_cia402_read_all(lcec_slave_t *slave, lcec_class_cia402_channels_t *channels) {
   for (int i = 0; i < channels->count; i++) {
     lcec_cia402_read(slave, channels->channels[i]);
   }
@@ -1034,7 +1034,7 @@ void lcec_cia402_read_all(struct lcec_slave *slave, lcec_class_cia402_channels_t
     } \
   } while(0)
 
-void lcec_cia402_write(struct lcec_slave *slave, lcec_class_cia402_channel_t *data) {
+void lcec_cia402_write(lcec_slave_t *slave, lcec_class_cia402_channel_t *data) {
   uint8_t *pd = slave->master->process_data;
 
   EC_WRITE_U16(&pd[data->controlword_os], (uint16_t)(*(data->controlword)));
@@ -1085,7 +1085,7 @@ void lcec_cia402_write(struct lcec_slave *slave, lcec_class_cia402_channel_t *da
 ///
 /// @param slave The `slave`, passed from the per-device `_read`.
 /// @param channels An `lcec_class_cia402_channel_t *`, as returned by lcec_cia402_register_channel.
-void lcec_cia402_write_all(struct lcec_slave *slave, lcec_class_cia402_channels_t *channels) {
+void lcec_cia402_write_all(lcec_slave_t *slave, lcec_class_cia402_channels_t *channels) {
   for (int i = 0; i < channels->count; i++) {
     lcec_class_cia402_channel_t *channel = channels->channels[i];
 
@@ -1246,7 +1246,7 @@ lcec_modparam_desc_t *lcec_cia402_modparams(lcec_modparam_desc_t const *device_m
 /// @param p The current modparam being processed.
 ///
 /// @return 0 if the modparam was handled, 1 if it was not handled, and <0 if an error occurred.
-int lcec_cia402_handle_modparam(struct lcec_slave *slave, const lcec_slave_modparam_t *p, lcec_class_cia402_options_t *opt) {
+int lcec_cia402_handle_modparam(lcec_slave_t *slave, const lcec_slave_modparam_t *p, lcec_class_cia402_options_t *opt) {
   if (p->id < CIA402_MP_BASE) {
     return 0;
   }

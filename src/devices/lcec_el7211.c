@@ -27,8 +27,8 @@
 
 #define FAULT_RESET_PERIOD_NS 100000000
 
-/*static*/ int lcec_el7211_init(int comp_id, struct lcec_slave *slave);
-static int lcec_el7201_9014_init(int comp_id, struct lcec_slave *slave);
+/*static*/ int lcec_el7211_init(int comp_id, lcec_slave_t *slave);
+static int lcec_el7201_9014_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
     {"EL7201_9014", LCEC_BECKHOFF_VID, 0x1C213052, 0, NULL, lcec_el7201_9014_init},
@@ -199,14 +199,14 @@ static ec_sync_info_t lcec_el7201_9014_syncs[] = {
     {0xff},
 };
 
-static lcec_el7211_data_t *lcec_el7211_alloc_hal(lcec_master_t *master, struct lcec_slave *slave);
-static int lcec_el7211_export_pins(lcec_master_t *master, struct lcec_slave *slave, lcec_el7211_data_t *hal_data);
+static lcec_el7211_data_t *lcec_el7211_alloc_hal(lcec_master_t *master, lcec_slave_t *slave);
+static int lcec_el7211_export_pins(lcec_master_t *master, lcec_slave_t *slave, lcec_el7211_data_t *hal_data);
 static void lcec_el7211_check_scales(lcec_el7211_data_t *hal_data);
-static void lcec_el7211_read(struct lcec_slave *slave, long period);
-static void lcec_el7201_9014_read(struct lcec_slave *slave, long period);
-static void lcec_el7211_write(struct lcec_slave *slave, long period);
+static void lcec_el7211_read(lcec_slave_t *slave, long period);
+static void lcec_el7201_9014_read(lcec_slave_t *slave, long period);
+static void lcec_el7211_write(lcec_slave_t *slave, long period);
 
-static lcec_el7211_data_t *lcec_el7211_alloc_hal(lcec_master_t *master, struct lcec_slave *slave) {
+static lcec_el7211_data_t *lcec_el7211_alloc_hal(lcec_master_t *master, lcec_slave_t *slave) {
   lcec_el7211_data_t *hal_data;
 
   // alloc hal memory
@@ -219,7 +219,7 @@ static lcec_el7211_data_t *lcec_el7211_alloc_hal(lcec_master_t *master, struct l
   return hal_data;
 }
 
-static int lcec_el7211_export_pins(lcec_master_t *master, struct lcec_slave *slave, lcec_el7211_data_t *hal_data) {
+static int lcec_el7211_export_pins(lcec_master_t *master, lcec_slave_t *slave, lcec_el7211_data_t *hal_data) {
   int err;
   uint8_t sdo_buf[4];
   uint32_t sdo_vel_resolution;
@@ -275,7 +275,7 @@ static int lcec_el7211_export_pins(lcec_master_t *master, struct lcec_slave *sla
 }
 
 // TODO: lcec_el7411_init calls this.  Fix?
-/*static*/ int lcec_el7211_init(int comp_id, struct lcec_slave *slave) {
+/*static*/ int lcec_el7211_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_el7211_data_t *hal_data;
   int err;
@@ -307,7 +307,7 @@ static int lcec_el7211_export_pins(lcec_master_t *master, struct lcec_slave *sla
   return 0;
 }
 
-static int lcec_el7201_9014_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el7201_9014_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_el7211_data_t *hal_data;
   int err;
@@ -373,7 +373,7 @@ static void lcec_el7211_check_scales(lcec_el7211_data_t *hal_data) {
   }
 }
 
-static void lcec_el7211_read(struct lcec_slave *slave, long period) {
+static void lcec_el7211_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el7211_data_t *hal_data = (lcec_el7211_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
@@ -438,7 +438,7 @@ static void lcec_el7211_read(struct lcec_slave *slave, long period) {
   class_enc_update(&hal_data->enc, hal_data->pos_resolution, hal_data->scale_rcpt, pos_cnt, 0, 0);
 }
 
-static void lcec_el7201_9014_read(struct lcec_slave *slave, long period) {
+static void lcec_el7201_9014_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el7211_data_t *hal_data = (lcec_el7211_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
@@ -461,7 +461,7 @@ static inline double clamp(double v, double sub, double sup) {
   return v;
 }
 
-static void lcec_el7211_write(struct lcec_slave *slave, long period) {
+static void lcec_el7211_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el7211_data_t *hal_data = (lcec_el7211_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;

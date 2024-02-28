@@ -23,7 +23,7 @@
 
 #include "../lcec.h"
 
-static int lcec_ax5200_init(int comp_id, struct lcec_slave *slave);
+static int lcec_ax5200_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_modparam_desc_t lcec_ax5200_modparams[] = {
     {"enableFB2", LCEC_AX5_PARAM_ENABLE_FB2, MODPARAM_TYPE_BIT},
@@ -49,10 +49,10 @@ static const LCEC_CONF_FSOE_T fsoe_conf = {
     .data_channels = 2,
 };
 
-static void lcec_ax5200_read(struct lcec_slave *slave, long period);
-static void lcec_ax5200_write(struct lcec_slave *slave, long period);
+static void lcec_ax5200_read(lcec_slave_t *slave, long period);
+static void lcec_ax5200_write(lcec_slave_t *slave, long period);
 
-/*static*/ int lcec_ax5200_preinit(struct lcec_slave *slave) {
+/*static*/ int lcec_ax5200_preinit(lcec_slave_t *slave) {
   // check if already initialized
   if (slave->fsoeConf != NULL) {
     return 0;
@@ -64,7 +64,7 @@ static void lcec_ax5200_write(struct lcec_slave *slave, long period);
   return 0;
 }
 
-static int lcec_ax5200_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_ax5200_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_ax5200_data_t *hal_data;
   int i;
@@ -138,7 +138,7 @@ static int lcec_ax5200_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-static void lcec_ax5200_read(struct lcec_slave *slave, long period) {
+static void lcec_ax5200_read(lcec_slave_t *slave, long period) {
   lcec_ax5200_data_t *hal_data = (lcec_ax5200_data_t *)slave->hal_data;
   int i;
   lcec_class_ax5_chan_t *chan;
@@ -150,7 +150,7 @@ static void lcec_ax5200_read(struct lcec_slave *slave, long period) {
   }
 }
 
-static void lcec_ax5200_write(struct lcec_slave *slave, long period) {
+static void lcec_ax5200_write(lcec_slave_t *slave, long period) {
   lcec_ax5200_data_t *hal_data = (lcec_ax5200_data_t *)slave->hal_data;
   int i;
   lcec_class_ax5_chan_t *chan;

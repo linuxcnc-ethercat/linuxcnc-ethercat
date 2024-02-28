@@ -23,10 +23,10 @@
 
 #include "../lcec.h"
 
-static void lcec_el6900_read(struct lcec_slave *slave, long period);
-static void lcec_el6900_write(struct lcec_slave *slave, long period);
-static int lcec_el6900_preinit(struct lcec_slave *slave);
-static int lcec_el6900_init(int comp_id, struct lcec_slave *slave);
+static void lcec_el6900_read(lcec_slave_t *slave, long period);
+static void lcec_el6900_write(lcec_slave_t *slave, long period);
+static int lcec_el6900_preinit(lcec_slave_t *slave);
+static int lcec_el6900_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_modparam_desc_t lcec_el6900_modparams[] = {
     {"fsoeSlaveIdx", LCEC_EL6900_PARAM_SLAVEID, MODPARAM_TYPE_U32},
@@ -57,7 +57,7 @@ typedef struct {
 } lcec_el6900_fsoe_crc_t;
 
 typedef struct {
-  struct lcec_slave *fsoe_slave;
+  lcec_slave_t *fsoe_slave;
 
   hal_u32_t *fsoe_master_cmd;
   hal_u32_t *fsoe_master_connid;
@@ -125,7 +125,7 @@ static const lcec_pindesc_t fsoe_crc_pins[] = {
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
-static int init_std_pdos(struct lcec_slave *slave, int pid, lcec_el6900_fsoe_io_t *io, int index, hal_pin_dir_t dir) {
+static int init_std_pdos(lcec_slave_t *slave, int pid, lcec_el6900_fsoe_io_t *io, int index, hal_pin_dir_t dir) {
   lcec_master_t *master = slave->master;
   lcec_slave_modparam_t *p;
   int count, err;
@@ -153,11 +153,11 @@ static int init_std_pdos(struct lcec_slave *slave, int pid, lcec_el6900_fsoe_io_
   return count;
 }
 
-static int lcec_el6900_preinit(struct lcec_slave *slave) {
+static int lcec_el6900_preinit(lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_slave_modparam_t *p;
   int index, stdin_count, stdout_count;
-  struct lcec_slave *fsoe_slave;
+  lcec_slave_t *fsoe_slave;
   const LCEC_CONF_FSOE_T *fsoeConf;
 
   stdin_count = 0;
@@ -204,14 +204,14 @@ static int lcec_el6900_preinit(struct lcec_slave *slave) {
   return 0;
 }
 
-static int lcec_el6900_init(int comp_id, struct lcec_slave *slave) {
+static int lcec_el6900_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_el6900_data_t *hal_data;
   lcec_el6900_fsoe_t *fsoe_data;
   lcec_slave_modparam_t *p;
   int fsoe_idx, index, err;
   lcec_el6900_fsoe_crc_t *crc;
-  struct lcec_slave *fsoe_slave;
+  lcec_slave_t *fsoe_slave;
   const LCEC_CONF_FSOE_T *fsoeConf;
 
   // initialize callbacks
@@ -302,7 +302,7 @@ static int lcec_el6900_init(int comp_id, struct lcec_slave *slave) {
   return 0;
 }
 
-void lcec_el6900_read(struct lcec_slave *slave, long period) {
+void lcec_el6900_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el6900_data_t *hal_data = (lcec_el6900_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
@@ -310,7 +310,7 @@ void lcec_el6900_read(struct lcec_slave *slave, long period) {
   int i, crc_idx;
   lcec_el6900_fsoe_io_t *io;
   lcec_el6900_fsoe_crc_t *crc;
-  struct lcec_slave *fsoe_slave;
+  lcec_slave_t *fsoe_slave;
   const LCEC_CONF_FSOE_T *fsoeConf;
 
   *(hal_data->state) = EC_READ_U8(&pd[hal_data->state_os]) & 0x03;
@@ -336,7 +336,7 @@ void lcec_el6900_read(struct lcec_slave *slave, long period) {
   }
 }
 
-void lcec_el6900_write(struct lcec_slave *slave, long period) {
+void lcec_el6900_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el6900_data_t *hal_data = (lcec_el6900_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
