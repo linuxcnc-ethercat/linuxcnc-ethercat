@@ -401,6 +401,11 @@ var Drivers=map[string]EthercatDriver{
     ProductID: "0x0a3e3052",
     Type: "EL2622",
   },
+  "EL2624": EthercatDriver{
+    VendorID: "0x00000002",
+    ProductID: "0x0a403052",
+    Type: "EL2624",
+  },
   "EL2634": EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0a4a3052",

@@ -84,6 +84,7 @@ Description | Driver | EtherCAT VID:PID | Device Type | Testing Status | Notes
 [Beckhoff EL2521 1Ch. Pulse Train Output](http://www.beckhoff.com/EL2521) | [el2521](../src/devices/lcec_el2521.c) | 0x2:0x09d93052 | Digital Output |  | 
 [Beckhoff EL2612 2Ch. Relay Output, CO (125V AC / 30V DC)](http://www.beckhoff.com/EL2612) | [el2xxx](../src/devices/lcec_el2xxx.c) | 0x2:0x0a343052 | Digital Output |  | 
 [Beckhoff EL2622 2Ch. Relay Output, NO (230V AC / 30V DC)](http://www.beckhoff.com/EL2622) | [el2xxx](../src/devices/lcec_el2xxx.c) | 0x2:0x0a3e3052 | Digital Output |  | 
+[Beckhoff EL2624 4Ch. Relay Output, NO (125V AC / 30V DC)](http://www.beckhoff.com/EL2624) | [el2xxx](../devices/lcec_el2xxx.c) | 0x2:0x0a403052 | Digital Output |  | 
 [Beckhoff EL2634 4Ch. Relay Output, NO (250V AC / 30V DC)](http://www.beckhoff.com/EL2634) | [el2xxx](../src/devices/lcec_el2xxx.c) | 0x2:0x0a4a3052 | Digital Output |  | 
 [Beckhoff EL2652 2Ch. Relay Output, CO (230V AC / 30V DC)](http://www.beckhoff.com/EL2652) | [el2xxx](../src/devices/lcec_el2xxx.c) | 0x2:0x0a5c3052 | Digital Output |  | 
 [Beckhoff EL2798 8Ch. Dig. Output 24V AC/DC, 2A, potential-free](http://www.beckhoff.com/EL2798) | [el2xxx](../src/devices/lcec_el2xxx.c) | 0x2:0x0aee3052 | Digital Output | Part of @scottlaird's test suite. | 

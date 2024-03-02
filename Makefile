@@ -1,7 +1,9 @@
-.PHONY: all configure install clean test
+.PHONY: all configure install clean test docs
 
-all: configure
+build: configure
 	@$(MAKE) -C src all
+
+all: build docs
 
 clean:
 	@$(MAKE) -C src -f Makefile.clean clean
@@ -20,3 +22,8 @@ config.mk: configure.mk
 	@$(MAKE) -s -f configure.mk > config.mk.tmp
 	@mv config.mk.tmp config.mk
 
+docs: documentation/DEVICES.md
+
+documentation/DEVICES.md: src/lcec_devices documentation/devices/*.yml
+	(cd scripts; ./update-devicelist.sh)
+	(cd scripts; ./update-devicetable.sh)

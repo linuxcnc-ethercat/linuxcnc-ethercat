@@ -41,6 +41,9 @@ scripts/devicetable/devicetable
 scripts/devicelist/devicelist
 scripts/deviceequivs/deviceequivs
 
+# Generated documentation
+documentation/doxygen
+
 # emacs tmp files
 \#*\#
 .\#*
