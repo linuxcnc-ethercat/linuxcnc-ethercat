@@ -40,13 +40,11 @@ $(lcec-conf-objs): EXTRA_CFLAGS := $(filter-out -Wframe-larger-than=%,$(EXTRA_CF
 #        Without this, the target for 'devices/lcec_generic.o' would just
 #        be 'lcec_generic.o', which breaks the makefile.
 #   -MM: generate dependencies, but ignore system .h files
-#   -MG: assume that missing header files are generated and add them without
-#        throwing an error.
 #   -MP: add a dummy rule for each .h that will keep make from throwing
 #        errors if headers are deleted without 'make clean'.
 %.d: %.c
 	@set -e; rm -f $@; \
-	$(CC) -MT $(subst .d,.o,$@) -MM -MG -MP $(EXTRA_CFLAGS) $< > $@.$$$$; \
+	$(CC) -MT $(subst .d,.o,$@) -MM -MP $(EXTRA_CFLAGS) $< > $@.$$$$; \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
