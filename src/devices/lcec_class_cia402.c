@@ -434,9 +434,9 @@ lcec_class_cia402_channel_t *lcec_cia402_register_channel(
   if (enabled->enable_digital_output) {
     char *dname;
     data->dout = lcec_dout_allocate_channels(opt->digital_out_channels + 1);
-    if (data->din == NULL) {
+    if (data->dout == NULL) {
       rtapi_print_msg(
-          RTAPI_MSG_ERR, LCEC_MSG_PFX "lcec_din_allocate_channels() for slave %s.%s failed\n", slave->master->name, slave->name);
+          RTAPI_MSG_ERR, LCEC_MSG_PFX "lcec_dout_allocate_channels() for slave %s.%s failed\n", slave->master->name, slave->name);
       return NULL;
     }
     dname = hal_malloc(sizeof(char[20]));
