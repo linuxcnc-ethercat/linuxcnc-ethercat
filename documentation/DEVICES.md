@@ -32,7 +32,7 @@ Description | Driver | EtherCAT VID:PID | Device Type | Testing Status | Notes
 [Beckhoff EJ4008 8Ch. Ana. Output 0-10V, 12bit](http://www.beckhoff.com/EJ4008) | [el4xxx](../devices/lcec_el4xxx.c) | 0x2:0x0fa82852 | Analog Output |  | 
 [Beckhoff EJ4018 8Ch. Ana. Output 0-20mA, 12bit](http://www.beckhoff.com/EJ4018) | [el4xxx](../devices/lcec_el4xxx.c) | 0x2:0x0fb22852 | Analog Output |  | 
 [Beckhoff EJ4024 4Ch. Ana. Output 4-20mA, 12bit](http://www.beckhoff.com/EJ4024) | [el4xxx](../devices/lcec_el4xxx.c) | 0x2:0x0fb82852 | Analog Output |  | 
-[Beckhoff EJ4132 2Ch. Ana. Output -10/+10V, 16bit](http://www.beckhoff.com/EJ4132) | [el4xxx](../devices/lcec_el4xxx.c) | 0x2:0x10242852 | Analog Output |  | 
+[Beckhoff EJ4132 2Ch. Ana. Output -10/+10V, 16bit](http://www.beckhoff.com/EJ4132) | [el41x2](../devices/lcec_el41x2.c) | 0x2:0x10242852 | Analog Output |  | 
 [Beckhoff EJ4134 4Ch. Ana. Output -10/+10V, 16bit](http://www.beckhoff.com/EJ4134) | [el4xxx](../devices/lcec_el4xxx.c) | 0x2:0x10262852 | Analog Output |  | 
 [Beckhoff EJ5002 2Ch. SSI Encoder](http://www.beckhoff.com/EJ5002) | [el5002](../src/devices/lcec_el5002.c) | 0x2:0x138a2852 | Encoder Input |  | 
 [Beckhoff EK1100 EtherCAT Coupler (0.5A E-Bus)](http://www.beckhoff.com/EK1100) | [passive](../src/devices/lcec_passive.c) | 0x2:0x044c2c52 | System Terminals | Part of @scottlaird's test suite. | Passive device
@@ -156,13 +156,13 @@ Description | Driver | EtherCAT VID:PID | Device Type | Testing Status | Notes
 [Beckhoff EL4032 2Ch. Ana. Output -10/+10V, 12bit](http://www.beckhoff.com/EL4032) | [el4xxx](../src/devices/lcec_el4xxx.c) | 0x2:0x0fc03052 | Analog Output |  | 
 [Beckhoff EL4034 4Ch. Ana. Output +/-10V, 12bit](http://www.beckhoff.com/EL4034) | [el4xxx](../src/devices/lcec_el4xxx.c) | 0x2:0x0fc23052 | Analog Output |  | 
 [Beckhoff EL4038 8Ch. Ana. Output -10/+10V, 12bit](http://www.beckhoff.com/EL4038) | [el4xxx](../src/devices/lcec_el4xxx.c) | 0x2:0x0fc63052 | Analog Output |  | 
-[Beckhoff EL4102 2Ch. Ana. Output 0-10V](http://www.beckhoff.com/EL4102) | [el4xxx](../src/devices/lcec_el4xxx.c) | 0x2:0x10063052 | Analog Output |  | 
+[Beckhoff EL4102 2Ch. Ana. Output 0-10V](http://www.beckhoff.com/EL4102) | [el41x2](../src/devices/lcec_el41x2.c) | 0x2:0x10063052 | Analog Output |  | 
 [Beckhoff EL4104 4Ch. Ana. Output 0-10V, 16bit](http://www.beckhoff.com/EL4104) | [el4xxx](../src/devices/lcec_el4xxx.c) | 0x2:0x10083052 | Analog Output |  | 
-[Beckhoff EL4112 2Ch. Ana. Output 0-20mA](http://www.beckhoff.com/EL4112) | [el4xxx](../src/devices/lcec_el4xxx.c) | 0x2:0x10103052 | Analog Output |  | 
+[Beckhoff EL4112 2Ch. Ana. Output 0-20mA](http://www.beckhoff.com/EL4112) | [el41x2](../src/devices/lcec_el41x2.c) | 0x2:0x10103052 | Analog Output |  | 
 [Beckhoff EL4114 4Ch. Ana. Output 0-20mA, 16bit](http://www.beckhoff.com/EL4114) | [el4xxx](../src/devices/lcec_el4xxx.c) | 0x2:0x10123052 | Analog Output |  | 
-[Beckhoff EL4122 2Ch. Ana. Output 4-20mA](http://www.beckhoff.com/EL4122) | [el4xxx](../src/devices/lcec_el4xxx.c) | 0x2:0x101a3052 | Analog Output |  | 
+[Beckhoff EL4122 2Ch. Ana. Output 4-20mA](http://www.beckhoff.com/EL4122) | [el41x2](../src/devices/lcec_el41x2.c) | 0x2:0x101a3052 | Analog Output |  | 
 [Beckhoff EL4124 4Ch. Ana. Output 4-20mA, 16bit](http://www.beckhoff.com/EL4124) | [el4xxx](../src/devices/lcec_el4xxx.c) | 0x2:0x101c3052 | Analog Output |  | 
-[Beckhoff EL4132 2Ch. Ana. Output +/-10V](http://www.beckhoff.com/EL4132) | [el4xxx](../src/devices/lcec_el4xxx.c) | 0x2:0x10243052 | Analog Output |  | 
+[Beckhoff EL4132 2Ch. Ana. Output +/-10V](http://www.beckhoff.com/EL4132) | [el41x2](../src/devices/lcec_el41x2.c) | 0x2:0x10243052 | Analog Output |  | 
 [Beckhoff EL4134 4Ch. Ana. Output -10/+10V, 16bit](http://www.beckhoff.com/EL4134) | [el4xxx](../src/devices/lcec_el4xxx.c) | 0x2:0x10263052 | Analog Output |  | 
 [Beckhoff EL5002 2Ch. SSI Encoder](http://www.beckhoff.com/EL5002) | [el5002](../src/devices/lcec_el5002.c) | 0x2:0x138a3052 | Encoder Input |  | 
 [Beckhoff EL5032 2Ch. EnDat Encoder](http://www.beckhoff.com/EL5032) | [el5032](../src/devices/lcec_el5032.c) | 0x2:0x13a83052 | Encoder Input |  | 

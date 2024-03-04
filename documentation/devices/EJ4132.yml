@@ -7,5 +7,5 @@ Description: Beckhoff EJ4132 2Ch. Ana. Output -10/+10V, 16bit
 DocumentationURL: http://www.beckhoff.com/EJ4132
 DeviceType: Analog Output
 Notes: ""
-SrcFile: devices/lcec_el4xxx.c
+SrcFile: devices/lcec_el41x2.c
 TestingStatus: ""
