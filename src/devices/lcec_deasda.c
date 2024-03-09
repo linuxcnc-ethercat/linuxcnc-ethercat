@@ -310,7 +310,7 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
   memset(hal_data, 0, sizeof(lcec_deasda_data_t));
   slave->hal_data = hal_data;
 
-  // Set up digital outputs
+  // Set up digital outputs.  These names should match the A3, unclear about other models.
   hal_data->dout = lcec_dout_allocate_channels(4);
   hal_data->dout->channels[0] = lcec_dout_register_channel_packed(slave, 0x60fe, 0x01, 16, "dout-d01");
   hal_data->dout->channels[1] = lcec_dout_register_channel_packed(slave, 0x60fe, 0x01, 17, "dout-d02");
