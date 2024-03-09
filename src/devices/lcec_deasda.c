@@ -22,6 +22,7 @@
 #include "lcec_deasda.h"
 
 #include "../lcec.h"
+#include "lcec_class_dout.h"
 #include "lcec_class_enc.h"
 
 #define FLAG_LOWRES_ENC  1 << 0  // Device uses low res encoder as default
@@ -138,6 +139,7 @@ typedef struct {
   hal_u32_t fault_reset_state;
   hal_u32_t fault_reset_cycle;
 
+  lcec_class_dout_channels_t *dout;
 } lcec_deasda_data_t;
 
 static const lcec_pindesc_t slave_pins[] = {
@@ -213,19 +215,21 @@ static ec_pdo_entry_info_t lcec_deasda_in[] = {
 static ec_pdo_entry_info_t lcec_deasda_out_csv[] = {
     {0x6040, 0x00, 16},  // Control Word
     {0x60FF, 0x00, 32},  // Target Velocity
+    {0x60fe, 0x01, 32},  // digital output
 };
 
 static ec_pdo_entry_info_t lcec_deasda_out_csp[] = {
     {0x6040, 0x00, 16},  // Control Word
     {0x607A, 0x00, 32},  // Target Position
+    {0x60fe, 0x01, 32},  // digital output
 };
 
 static ec_pdo_info_t lcec_deasda_pdos_out_csv[] = {
-    {0x1602, 2, lcec_deasda_out_csv},
+    {0x1602, 3, lcec_deasda_out_csv},
 };
 
 static ec_pdo_info_t lcec_deasda_pdos_out_csp[] = {
-    {0x1602, 2, lcec_deasda_out_csp},
+    {0x1602, 3, lcec_deasda_out_csp},
 };
 
 static ec_pdo_info_t lcec_deasda_pdos_in[] = {
@@ -305,6 +309,19 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
   }
   memset(hal_data, 0, sizeof(lcec_deasda_data_t));
   slave->hal_data = hal_data;
+
+  // Set up digital outputs
+  hal_data->dout = lcec_dout_allocate_channels(4);
+  hal_data->dout->channels[0] = lcec_dout_register_channel_packed(slave, 0x60f3, 0x01, 16, "dout-d01");
+  hal_data->dout->channels[1] = lcec_dout_register_channel_packed(slave, 0x60f3, 0x01, 17, "dout-d02");
+  hal_data->dout->channels[2] = lcec_dout_register_channel_packed(slave, 0x60f3, 0x01, 18, "dout-d03");
+  hal_data->dout->channels[3] = lcec_dout_register_channel_packed(slave, 0x60f3, 0x01, 19, "dout-d04");
+
+  if (lcec_write_sdo32(slave, 0x60fe, 0x02, 0x000f0000) != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to configure slave %s.%s sdo for enabling digital output ports 1-4\n", master->name,
+        slave->name);
+    return -1;
+  }
 
   // set to 0x6060 to requested mode (CSV, CSP)
   if (lcec_write_sdo8(slave, 0x6060, 0x00, operationmode) != 0) {
@@ -524,6 +541,9 @@ static void lcec_deasda_write_csv(lcec_slave_t *slave, long period) {
   double speed_raw;
   int switch_on_edge;
 
+  // do digital outputs
+  lcec_dout_write_all(slave, hal_data->dout);
+
   // check for enable edge
   switch_on_edge = *(hal_data->switch_on) && !hal_data->last_switch_on;
   hal_data->last_switch_on = *(hal_data->switch_on);
@@ -573,6 +593,9 @@ static void lcec_deasda_write_csp(lcec_slave_t *slave, long period) {
   uint16_t control;
   int32_t pos_puu;
   int switch_on_edge;
+
+  // do digital outputs
+  lcec_dout_write_all(slave, hal_data->dout);
 
   // check for enable edge
   switch_on_edge = *(hal_data->switch_on) && !hal_data->last_switch_on;
