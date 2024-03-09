@@ -128,11 +128,7 @@ static int lcec_digitalcombo_init(int comp_id, lcec_slave_t *slave) {
   if (out_channels > 0) slave->proc_write = lcec_digitalcombo_write;
 
   // alloc hal memory
-  if ((hal_data = hal_malloc(sizeof(lcec_digitalcombo_data_t))) == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", slave->master->name, slave->name);
-    return -EIO;
-  }
-  memset(hal_data, 0, sizeof(lcec_digitalcombo_data_t));
+  hal_data = LCEC_HAL_ALLOCATE(lcec_digitalcombo_data_t);
   slave->hal_data = hal_data;
 
   // Allocate memory for I/O pin definitions

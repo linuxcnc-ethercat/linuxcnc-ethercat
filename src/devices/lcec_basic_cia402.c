@@ -127,7 +127,7 @@ static int lcec_basic_cia402_init(int comp_id, lcec_slave_t *slave) {
   int err;
 
   // XXXX: you can remove this if you replace the /* fake vid */ and /* fake pid */ in `types`, above.
-  if (slave->vid == -1 || slave->pid == -1) {
+  if (slave->vid == 0xffffffff || slave->pid == 0xffffffff) {
     rtapi_print_msg(RTAPI_MSG_ERR,
         LCEC_MSG_PFX "basic_cia402 device slave %s.%s not configured correctly, you must specify vid and pid in the XML file.\n",
         slave->master->name, slave->name);
@@ -135,11 +135,7 @@ static int lcec_basic_cia402_init(int comp_id, lcec_slave_t *slave) {
   }
 
   // alloc hal memory
-  if ((hal_data = hal_malloc(sizeof(lcec_basic_cia402_data_t))) == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", slave->master->name, slave->name);
-    return -EIO;
-  }
-  memset(hal_data, 0, sizeof(lcec_basic_cia402_data_t));
+  hal_data = LCEC_HAL_ALLOCATE(lcec_basic_cia402_data_t);
   slave->hal_data = hal_data;
 
   // initialize callbacks

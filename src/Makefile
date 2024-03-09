@@ -6,7 +6,6 @@ all: all-deps realtime user
 include Makefile.clean
 
 #CC=g++
-#EXTRA_CFLAGS += -fpermissive
 
 RTLDFLAGS += -Wl,-rpath,$(LIBDIR)
 RTEXTRA_LDFLAGS += -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -L$(LIBDIR) -llinuxcnchal -lethercat -lrt
@@ -16,7 +15,7 @@ EXTRA_CFLAGS += -Wall # Increase debugging level
 #EXTRA_CFLAGS += -fanalyzer # Use GCC's static analyzer tool, doubles compile time
 
 ## targets
-lcec-common-objs := lcec_devicelist.o lcec_ethercat.o lcec_pins.o lcec_lookup.o lcec_modparam.o
+lcec-common-objs := lcec_devicelist.o lcec_ethercat.o lcec_pins.o lcec_lookup.o lcec_modparam.o lcec_malloc.o
 lcec-objs := lcec_main.o $(lcec-common-objs)
 lcec-conf-srcs := $(wildcard lcec_conf*.c)
 lcec-conf-objs = $(subst .c,.o,$(lcec-conf-srcs))

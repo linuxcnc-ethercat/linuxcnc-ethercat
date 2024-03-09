@@ -52,7 +52,7 @@ static const lcec_modparam_desc_t lcec_deasda_modparams[] = {
 };
 
 typedef struct {
-  char *name;      // Mode type name
+  const char *name;      // Mode type name
   uint16_t value;  // Which value needs to be set in 0x6060:00 to enable this mode
 } drive_operationmodes_t;
 
@@ -303,11 +303,7 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
     slave->proc_write = lcec_deasda_write_csp;
   }
   // alloc hal memory
-  if ((hal_data = hal_malloc(sizeof(lcec_deasda_data_t))) == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", master->name, slave->name);
-    return -EIO;
-  }
-  memset(hal_data, 0, sizeof(lcec_deasda_data_t));
+  hal_data = LCEC_HAL_ALLOCATE(lcec_deasda_data_t);
   slave->hal_data = hal_data;
 
   // Set up digital outputs.  These names should match the A3, unclear about other models.

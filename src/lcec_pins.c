@@ -86,7 +86,7 @@ static int lcec_pin_newfv_list(void *base, const lcec_pindesc_t *list, va_list a
 
   for (p = list; p->type != HAL_TYPE_UNSPECIFIED; p++) {
     va_copy(ac, ap);
-    err = lcec_pin_newfv(p->type, p->dir, (void **)(base + p->offset), p->fmt, ac);
+    err = lcec_pin_newfv(p->type, p->dir, (void **)((char *)base + p->offset), p->fmt, ac);
     va_end(ac);
     if (err) {
       return err;

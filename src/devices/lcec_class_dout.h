@@ -24,7 +24,7 @@
 #include "../lcec.h"
 
 typedef struct {
-  char *name;                  ///< Used for debugging only
+  const char *name;                  ///< Used for debugging only
   hal_bit_t *out;              ///< -dout-X pin in LinuxCNC
   hal_bit_t invert;            ///< Is the value inverted?
   unsigned int pdo_os;         ///< Byte offset in PDO data struct
@@ -39,8 +39,8 @@ typedef struct {
 
 lcec_class_dout_channels_t *lcec_dout_allocate_channels(int count);
 lcec_class_dout_channel_t *lcec_dout_register_channel(struct lcec_slave *slave, int id, uint16_t idx, uint16_t sidx);
-lcec_class_dout_channel_t *lcec_dout_register_channel_named(struct lcec_slave *slave, uint16_t idx, uint16_t sidx, char *name);
-lcec_class_dout_channel_t *lcec_dout_register_channel_packed(struct lcec_slave *slave, uint16_t idx, uint16_t sidx, int bit, char *name);
+lcec_class_dout_channel_t *lcec_dout_register_channel_named(struct lcec_slave *slave, uint16_t idx, uint16_t sidx, const char *name);
+lcec_class_dout_channel_t *lcec_dout_register_channel_packed(struct lcec_slave *slave, uint16_t idx, uint16_t sidx, int bit, const char *name);
 void lcec_dout_write(struct lcec_slave *slave, lcec_class_dout_channel_t *data);
 void lcec_dout_write_all(struct lcec_slave *slave, lcec_class_dout_channels_t *pins);
 

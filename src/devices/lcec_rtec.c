@@ -181,7 +181,7 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
   uint16_t input_polarity = 0, input_polarity_set = 0;
   uint16_t output_polarity = 0, output_polarity_set = 0;
   uint32_t uval;
-  int v;
+  int val, v;
 
   // Read current polarity values, so we don't overwrite them all.
   lcec_read_sdo16(slave, 0x2006, 0, &output_polarity);
@@ -205,123 +205,123 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
         if (lcec_write_sdo16_modparam(slave, 0x2003, 0, p->value.u32, p->name) < 0) return -1;
         break;
       case M_OUTPUT1FUNC:
-        uval = lcec_lookupint_i(rtec_outputfunc, p->value.str, -1);
-        if (uval == -1) {
+        val = lcec_lookupint_i(rtec_outputfunc, p->value.str, -1);
+        if (val == -1) {
           rtapi_print_msg(
               RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"output1Func\"> for slave %s.%s\n", master->name, slave->name);
           return -1;
         }
-        if (lcec_write_sdo16_modparam(slave, 0x2005, 1, uval, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, 0x2005, 1, val, p->name) < 0) return -1;
         break;
       case M_OUTPUT2FUNC:
-        uval = lcec_lookupint_i(rtec_outputfunc, p->value.str, -1);
-        if (uval == -1) {
+        val = lcec_lookupint_i(rtec_outputfunc, p->value.str, -1);
+        if (val == -1) {
           rtapi_print_msg(
               RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"output2Func\"> for slave %s.%s\n", master->name, slave->name);
           return -1;
         }
-        if (lcec_write_sdo16_modparam(slave, 0x2005, 2, uval, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, 0x2005, 2, val, p->name) < 0) return -1;
         break;
       case M_OUTPUT1POLARITY:
-        uval = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
-        if (uval == -1) {
+        val = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
+        if (val == -1) {
           rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"output1Polarity\"> for slave %s.%s\n",
               master->name, slave->name);
           return -1;
         }
         output_polarity &= ~1;  // Clear the 0 bit.
-        output_polarity |= (uval & 1);
+        output_polarity |= (val & 1);
         output_polarity_set = 1;
         break;
       case M_OUTPUT2POLARITY:
-        uval = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
-        if (uval == -1) {
+        val = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
+        if (val == -1) {
           rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"output2Polarity\"> for slave %s.%s\n",
               master->name, slave->name);
           return -1;
         }
         output_polarity &= ~2;  // Clear the 1 bit.
-        output_polarity |= (uval & 1) << 1;
+        output_polarity |= (val & 1) << 1;
         output_polarity_set = 1;
         break;
       case M_INPUT3FUNC:
-        uval = lcec_lookupint_i(rtec_inputfunc, p->value.str, -1);
-        if (uval == -1) {
+        val = lcec_lookupint_i(rtec_inputfunc, p->value.str, -1);
+        if (val == -1) {
           rtapi_print_msg(
               RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"input3Func\"> for slave %s.%s\n", master->name, slave->name);
           return -1;
         }
-        if (lcec_write_sdo16_modparam(slave, 0x2007, 3, uval, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, 0x2007, 3, val, p->name) < 0) return -1;
         break;
       case M_INPUT4FUNC:
-        uval = lcec_lookupint_i(rtec_inputfunc, p->value.str, -1);
-        if (uval == -1) {
+        val = lcec_lookupint_i(rtec_inputfunc, p->value.str, -1);
+        if (val == -1) {
           rtapi_print_msg(
               RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"input4Func\"> for slave %s.%s\n", master->name, slave->name);
           return -1;
         }
-        if (lcec_write_sdo16_modparam(slave, 0x2007, 4, uval, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, 0x2007, 4, val, p->name) < 0) return -1;
         break;
       case M_INPUT5FUNC:
-        uval = lcec_lookupint_i(rtec_inputfunc, p->value.str, -1);
-        if (uval == -1) {
+        val = lcec_lookupint_i(rtec_inputfunc, p->value.str, -1);
+        if (val == -1) {
           rtapi_print_msg(
               RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"input5Func\"> for slave %s.%s\n", master->name, slave->name);
           return -1;
         }
-        if (lcec_write_sdo16_modparam(slave, 0x2007, 5, uval, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, 0x2007, 5, val, p->name) < 0) return -1;
         break;
       case M_INPUT6FUNC:
-        uval = lcec_lookupint_i(rtec_inputfunc, p->value.str, -1);
-        if (uval == -1) {
+        val = lcec_lookupint_i(rtec_inputfunc, p->value.str, -1);
+        if (val == -1) {
           rtapi_print_msg(
               RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"input6Func\"> for slave %s.%s\n", master->name, slave->name);
           return -1;
         }
-        if (lcec_write_sdo16_modparam(slave, 0x2007, 6, uval, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, 0x2007, 6, val, p->name) < 0) return -1;
         break;
       case M_INPUT3POLARITY:
-        uval = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
-        if (uval == -1) {
+        val = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
+        if (val == -1) {
           rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"input3Polarity\"> for slave %s.%s\n",
               master->name, slave->name);
           return -1;
         }
         input_polarity &= ~(1 << 2);
-        input_polarity |= (uval & 1) << 2;
+        input_polarity |= (val & 1) << 2;
         input_polarity_set = 1;
         break;
       case M_INPUT4POLARITY:
-        uval = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
-        if (uval == -1) {
+        val = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
+        if (val == -1) {
           rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"input4Polarity\"> for slave %s.%s\n",
               master->name, slave->name);
           return -1;
         }
         input_polarity &= ~(1 << 3);
-        input_polarity |= (uval & 1) << 3;
+        input_polarity |= (val & 1) << 3;
         input_polarity_set = 1;
         break;
       case M_INPUT5POLARITY:
-        uval = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
-        if (uval == -1) {
+        val = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
+        if (val == -1) {
           rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"input5Polarity\"> for slave %s.%s\n",
               master->name, slave->name);
           return -1;
         }
         input_polarity &= ~(1 << 4);
-        input_polarity |= (uval & 1) << 4;
+        input_polarity |= (val & 1) << 4;
         input_polarity_set = 1;
         break;
       case M_INPUT6POLARITY:
-        uval = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
-        if (uval == -1) {
+        val = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
+        if (val == -1) {
           rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"input6Polarity\"> for slave %s.%s\n",
               master->name, slave->name);
           return -1;
         }
         input_polarity &= ~(1 << 5);
-        input_polarity |= (uval & 1) << 5;
+        input_polarity |= (val & 1) << 5;
         input_polarity_set = 1;
         break;
       case M_FILTERTIME:
@@ -334,22 +334,22 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
         if (lcec_write_sdo16_modparam(slave, 0x200b, 1, !!p->value.bit, p->name) < 0) return -1;
         break;
       case M_STEPPERPHASES:
-        uval = lcec_lookupint_i(rtec_stepperphases, p->value.str, -1);
-        if (uval == -1) {
+        val = lcec_lookupint_i(rtec_stepperphases, p->value.str, -1);
+        if (val == -1) {
           rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"stepperPhases\"> for slave %s.%s\n", master->name,
               slave->name);
           return -1;
         }
-        if (lcec_write_sdo16_modparam(slave, 0x200c, 1, uval, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, 0x200c, 1, val, p->name) < 0) return -1;
         break;
       case M_CONTROLMODE:
-        uval = lcec_lookupint_i(rtec_controlmode, p->value.str, -1);
-        if (uval == -1) {
+        val = lcec_lookupint_i(rtec_controlmode, p->value.str, -1);
+        if (val == -1) {
           rtapi_print_msg(
               RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"controlMode\"> for slave %s.%s\n", master->name, slave->name);
           return -1;
         }
-        if (lcec_write_sdo16_modparam(slave, 0x2011, 0, uval, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, 0x2011, 0, val, p->name) < 0) return -1;
         break;
       case M_ENCODER_RESOLUTION:
         if (lcec_write_sdo16_modparam(slave, 0x2020, 0, p->value.u32, p->name) < 0) return -1;
@@ -402,11 +402,7 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
   int err;
 
   // alloc hal memory
-  if ((hal_data = hal_malloc(sizeof(lcec_rtec_data_t))) == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", slave->master->name, slave->name);
-    return -EIO;
-  }
-  memset(hal_data, 0, sizeof(lcec_rtec_data_t));
+  hal_data = LCEC_HAL_ALLOCATE(lcec_rtec_data_t);
   slave->hal_data = hal_data;
 
   // initialize callbacks

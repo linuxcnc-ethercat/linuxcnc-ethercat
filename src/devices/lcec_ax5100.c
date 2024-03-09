@@ -65,7 +65,6 @@ static void lcec_ax5100_write(lcec_slave_t *slave, long period);
 }
 
 static int lcec_ax5100_init(int comp_id, lcec_slave_t *slave) {
-  lcec_master_t *master = slave->master;
   lcec_ax5100_data_t *hal_data;
   int err;
 
@@ -74,11 +73,7 @@ static int lcec_ax5100_init(int comp_id, lcec_slave_t *slave) {
   slave->proc_write = lcec_ax5100_write;
 
   // alloc hal memory
-  if ((hal_data = hal_malloc(sizeof(lcec_ax5100_data_t))) == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", master->name, slave->name);
-    return -EIO;
-  }
-  memset(hal_data, 0, sizeof(lcec_ax5100_data_t));
+  hal_data = LCEC_HAL_ALLOCATE(lcec_ax5100_data_t);
   slave->hal_data = hal_data;
 
   // init subclasses

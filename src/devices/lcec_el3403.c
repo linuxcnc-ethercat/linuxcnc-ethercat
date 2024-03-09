@@ -205,11 +205,7 @@ static int lcec_el3403_init(int comp_id, lcec_slave_t *slave) {
   slave->proc_read = lcec_el3403_read;
 
   // alloc hal memory
-  if ((hal_data = hal_malloc(sizeof(lcec_el3403_data_t))) == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", master->name, slave->name);
-    return -EIO;
-  }
-  memset(hal_data, 0, sizeof(lcec_el3403_data_t));
+  hal_data = LCEC_HAL_ALLOCATE(lcec_el3403_data_t);
   slave->hal_data = hal_data;
 
   // initializer sync info

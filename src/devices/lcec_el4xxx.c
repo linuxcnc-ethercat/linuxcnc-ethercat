@@ -75,18 +75,13 @@ ADD_TYPES(types);
 static void lcec_el4xxx_write(lcec_slave_t *slave, long period);
 
 static int lcec_el4xxx_init(int comp_id, lcec_slave_t *slave) {
-  lcec_master_t *master = slave->master;
   lcec_class_aout_channels_t *hal_data;
-  int i;
+  unsigned int i;
 
   // initialize callbacks
   slave->proc_write = lcec_el4xxx_write;
 
   hal_data = lcec_aout_allocate_channels(OUTPORTS(slave->flags));
-  if (hal_data == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", master->name, slave->name);
-    return -EIO;
-  }
   slave->hal_data = hal_data;
 
   // initialize pins

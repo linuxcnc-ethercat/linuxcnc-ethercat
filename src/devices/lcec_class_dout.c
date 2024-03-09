@@ -45,15 +45,12 @@ static const lcec_paramdesc_t slave_params[] = {
 lcec_class_dout_channels_t *lcec_dout_allocate_channels(int count) {
   lcec_class_dout_channels_t *channels;
 
-  channels = hal_malloc(sizeof(lcec_class_dout_channels_t));
+  channels = LCEC_HAL_ALLOCATE(lcec_class_dout_channels_t);
   if (channels == NULL) {
     return NULL;
   }
   channels->count = count;
-  channels->channels = hal_malloc(sizeof(lcec_class_dout_channel_t *) * count);
-  if (channels->channels == NULL) {
-    return NULL;
-  }
+  channels->channels = LCEC_HAL_ALLOCATE_ARRAY(lcec_class_dout_channel_t *, count);
 
   return channels;
 }
@@ -83,16 +80,11 @@ lcec_class_dout_channel_t *lcec_dout_register_channel(lcec_slave_t *slave, int i
 /// @param name The base pin name to use, usually `dout-<ID>`.
 ///
 /// See lcec_el2xxx.c for an example of use.
-lcec_class_dout_channel_t *lcec_dout_register_channel_named(lcec_slave_t *slave, uint16_t idx, uint16_t sidx, char *name) {
+lcec_class_dout_channel_t *lcec_dout_register_channel_named(lcec_slave_t *slave, uint16_t idx, uint16_t sidx, const char *name) {
   lcec_class_dout_channel_t *data;
   int err;
 
-  data = hal_malloc(sizeof(lcec_class_dout_channel_t));
-  if (data == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s pin %s failed\n", slave->master->name, slave->name, name);
-    return NULL;
-  }
-  memset(data, 0, sizeof(lcec_class_dout_channel_t));
+  data = LCEC_HAL_ALLOCATE(lcec_class_dout_channel_t);
   data->name = name;
   data->pdo_bp_packed = 0xffff;
 
@@ -125,16 +117,11 @@ lcec_class_dout_channel_t *lcec_dout_register_channel_named(lcec_slave_t *slave,
 /// @param os  The offset from `LCEC_PDO_INIT()`.
 /// @param bit  The bit offset for the digital out channel.
 /// @param name The base name to use for the channel, `dout-<ID>` is common.
-lcec_class_dout_channel_t *lcec_dout_register_channel_packed(lcec_slave_t *slave, uint16_t idx, uint16_t sidx, int bit, char *name) {
+lcec_class_dout_channel_t *lcec_dout_register_channel_packed(lcec_slave_t *slave, uint16_t idx, uint16_t sidx, int bit, const char *name) {
   lcec_class_dout_channel_t *data;
   int err;
 
-  data = hal_malloc(sizeof(lcec_class_dout_channel_t));
-  if (data == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s pin %s failed\n", slave->master->name, slave->name, name);
-    return NULL;
-  }
-  memset(data, 0, sizeof(lcec_class_dout_channel_t));
+  data = LCEC_HAL_ALLOCATE(lcec_class_dout_channel_t);
 
   // Register the whole PDO, hopefully this does the sane thing if we register the same PDO repeatedly.
   lcec_pdo_init(slave, idx, sidx, &data->pdo_os, &data->pdo_bp);

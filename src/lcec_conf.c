@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
   char buffer[BUFFSIZE];
   FILE *file;
   LCEC_CONF_NULL_T *end;
-  void *shmem_ptr;
+  char *shmem_ptr;
   LCEC_CONF_HEADER_T *header;
   uint64_t u;
   LCEC_CONF_XML_STATE_T state;
@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
   }
 
   // allocate hal memory
-  conf_hal_data = hal_malloc(sizeof(LCEC_CONF_HAL_T));
+  conf_hal_data = LCEC_HAL_ALLOCATE(LCEC_CONF_HAL_T);
   if (conf_hal_data == NULL) {
     fprintf(stderr, "%s: ERROR: unable to allocate HAL shared memory\n", modname);
     goto fail1;
@@ -193,7 +193,7 @@ int main(int argc, char **argv) {
   }
 
   // set end marker
-  end = addOutputBuffer(&state.outputBuf, sizeof(LCEC_CONF_NULL_T));
+  end = ADD_OUTPUT_BUFFER(&state.outputBuf, LCEC_CONF_NULL_T);
   if (end == NULL) {
     goto fail4;
   }
@@ -205,13 +205,13 @@ int main(int argc, char **argv) {
     fprintf(stderr, "%s: ERROR: couldn't allocate user/RT shared memory\n", modname);
     goto fail4;
   }
-  if (lcec_rtapi_shmem_getptr(shmem_id, &shmem_ptr) < 0) {
+  if (lcec_rtapi_shmem_getptr(shmem_id, (void **)&shmem_ptr) < 0) {
     fprintf(stderr, "%s: ERROR: couldn't map user/RT shared memory\n", modname);
     goto fail5;
   }
 
   // setup header
-  header = shmem_ptr;
+  header = (LCEC_CONF_HEADER_T*)shmem_ptr;
   shmem_ptr += sizeof(LCEC_CONF_HEADER_T);
   header->magic = LCEC_CONF_SHMEM_MAGIC;
   header->length = state.outputBuf.len;
@@ -246,7 +246,7 @@ fail0:
 static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **attr) {
   LCEC_CONF_XML_STATE_T *state = (LCEC_CONF_XML_STATE_T *)inst;
 
-  LCEC_CONF_MASTER_T *p = addOutputBuffer(&state->outputBuf, sizeof(LCEC_CONF_MASTER_T));
+  LCEC_CONF_MASTER_T *p = ADD_OUTPUT_BUFFER(&state->outputBuf, LCEC_CONF_MASTER_T);
   if (p == NULL) {
     XML_StopParser(inst->parser, 0);
     return;
@@ -302,7 +302,7 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
 
   LCEC_CONF_XML_STATE_T *state = (LCEC_CONF_XML_STATE_T *)inst;
 
-  LCEC_CONF_SLAVE_T *p = addOutputBuffer(&state->outputBuf, sizeof(LCEC_CONF_SLAVE_T));
+  LCEC_CONF_SLAVE_T *p = ADD_OUTPUT_BUFFER(&state->outputBuf, LCEC_CONF_SLAVE_T);
   if (p == NULL) {
     XML_StopParser(inst->parser, 0);
     return;
@@ -407,7 +407,7 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
 static void parseDcConfAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **attr) {
   LCEC_CONF_XML_STATE_T *state = (LCEC_CONF_XML_STATE_T *)inst;
 
-  LCEC_CONF_DC_T *p = addOutputBuffer(&state->outputBuf, sizeof(LCEC_CONF_DC_T));
+  LCEC_CONF_DC_T *p = ADD_OUTPUT_BUFFER(&state->outputBuf, LCEC_CONF_DC_T);
   if (p == NULL) {
     XML_StopParser(inst->parser, 0);
     return;
@@ -458,7 +458,7 @@ static void parseDcConfAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
 static void parseWatchdogAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **attr) {
   LCEC_CONF_XML_STATE_T *state = (LCEC_CONF_XML_STATE_T *)inst;
 
-  LCEC_CONF_WATCHDOG_T *p = addOutputBuffer(&state->outputBuf, sizeof(LCEC_CONF_WATCHDOG_T));
+  LCEC_CONF_WATCHDOG_T *p = ADD_OUTPUT_BUFFER(&state->outputBuf, LCEC_CONF_WATCHDOG_T);
   if (p == NULL) {
     XML_StopParser(inst->parser, 0);
     return;
@@ -492,7 +492,7 @@ static void parseSdoConfigAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char
   LCEC_CONF_XML_STATE_T *state = (LCEC_CONF_XML_STATE_T *)inst;
 
   int tmp;
-  LCEC_CONF_SDOCONF_T *p = addOutputBuffer(&state->outputBuf, sizeof(LCEC_CONF_SDOCONF_T));
+  LCEC_CONF_SDOCONF_T *p = ADD_OUTPUT_BUFFER(&state->outputBuf, LCEC_CONF_SDOCONF_T);
   if (p == NULL) {
     XML_StopParser(inst->parser, 0);
     return;
@@ -561,7 +561,7 @@ static void parseIdnConfigAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char
   LCEC_CONF_XML_STATE_T *state = (LCEC_CONF_XML_STATE_T *)inst;
 
   int tmp;
-  LCEC_CONF_IDNCONF_T *p = addOutputBuffer(&state->outputBuf, sizeof(LCEC_CONF_IDNCONF_T));
+  LCEC_CONF_IDNCONF_T *p = ADD_OUTPUT_BUFFER(&state->outputBuf, LCEC_CONF_IDNCONF_T);
   if (p == NULL) {
     XML_StopParser(inst->parser, 0);
     return;
@@ -570,7 +570,7 @@ static void parseIdnConfigAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char
   p->confType = lcecConfTypeIdnConfig;
   p->drive = 0;
   p->idn = 0xffff;
-  p->state = 0;
+  p->state = (ec_al_state_t)0;
   while (*attr) {
     const char *name = *(attr++);
     const char *val = *(attr++);
@@ -766,7 +766,7 @@ static void parseSyncManagerAttrs(LCEC_CONF_XML_INST_T *inst, int next, const ch
     return;
   }
 
-  p = addOutputBuffer(&state->outputBuf, sizeof(LCEC_CONF_SYNCMANAGER_T));
+  p = ADD_OUTPUT_BUFFER(&state->outputBuf, LCEC_CONF_SYNCMANAGER_T);
   if (p == NULL) {
     XML_StopParser(inst->parser, 0);
     return;
@@ -834,7 +834,7 @@ static void parsePdoAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **att
   LCEC_CONF_XML_STATE_T *state = (LCEC_CONF_XML_STATE_T *)inst;
 
   int tmp;
-  LCEC_CONF_PDO_T *p = addOutputBuffer(&state->outputBuf, sizeof(LCEC_CONF_PDO_T));
+  LCEC_CONF_PDO_T *p = ADD_OUTPUT_BUFFER(&state->outputBuf, LCEC_CONF_PDO_T);
   if (p == NULL) {
     XML_StopParser(inst->parser, 0);
     return;
@@ -881,7 +881,7 @@ static void parsePdoEntryAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char 
 
   int tmp;
   int floatReq;
-  LCEC_CONF_PDOENTRY_T *p = addOutputBuffer(&state->outputBuf, sizeof(LCEC_CONF_PDOENTRY_T));
+  LCEC_CONF_PDOENTRY_T *p = ADD_OUTPUT_BUFFER(&state->outputBuf, LCEC_CONF_PDOENTRY_T);
   if (p == NULL) {
     XML_StopParser(inst->parser, 0);
     return;
@@ -1052,7 +1052,7 @@ static void parseComplexEntryAttrs(LCEC_CONF_XML_INST_T *inst, int next, const c
 
   int tmp;
   int floatReq;
-  LCEC_CONF_COMPLEXENTRY_T *p = addOutputBuffer(&state->outputBuf, sizeof(LCEC_CONF_COMPLEXENTRY_T));
+  LCEC_CONF_COMPLEXENTRY_T *p = ADD_OUTPUT_BUFFER(&state->outputBuf, LCEC_CONF_COMPLEXENTRY_T);
   if (p == NULL) {
     XML_StopParser(inst->parser, 0);
     return;
@@ -1184,7 +1184,7 @@ static void parseModParamAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char 
     return;
   }
 
-  LCEC_CONF_MODPARAM_T *p = addOutputBuffer(&state->outputBuf, sizeof(LCEC_CONF_MODPARAM_T));
+  LCEC_CONF_MODPARAM_T *p = ADD_OUTPUT_BUFFER(&state->outputBuf, LCEC_CONF_MODPARAM_T);
   if (p == NULL) {
     XML_StopParser(inst->parser, 0);
     return;

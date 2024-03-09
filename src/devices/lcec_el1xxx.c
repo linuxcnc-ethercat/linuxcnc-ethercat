@@ -58,7 +58,7 @@ static void lcec_el1xxx_read(lcec_slave_t *slave, long period);
 
 static int lcec_el1xxx_init(int comp_id, lcec_slave_t *slave) {
   lcec_class_din_channels_t *hal_data;
-  int i;
+  unsigned int i;
 
   // initialize callbacks
   slave->proc_read = lcec_el1xxx_read;

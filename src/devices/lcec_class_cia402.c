@@ -69,10 +69,7 @@ FOR_ALL_WRITE_SDOS_DO(OPTIONAL_PIN_WRITE);
 /// `lcec_class_cia402_channel_options_t`.
 static lcec_class_cia402_enabled_t *lcec_cia402_enabled(lcec_class_cia402_channel_options_t *opt) {
   lcec_class_cia402_enabled_t *enabled;
-  enabled = hal_malloc(sizeof(lcec_class_cia402_enabled_t));
-  if (enabled == NULL) return NULL;
-
-  memset(enabled, 0, sizeof(lcec_class_cia402_enabled_t));
+  enabled = LCEC_HAL_ALLOCATE(lcec_class_cia402_enabled_t);
 
   if (opt->enable_opmode) {
     enabled->enable_opmode = 1;
@@ -139,25 +136,15 @@ static lcec_class_cia402_enabled_t *lcec_cia402_enabled(lcec_class_cia402_channe
 lcec_class_cia402_channels_t *lcec_cia402_allocate_channels(int count) {
   lcec_class_cia402_channels_t *channels;
 
-  channels = hal_malloc(sizeof(lcec_class_cia402_channels_t));
-  if (channels == NULL) {
-    return NULL;
-  }
+  channels = LCEC_HAL_ALLOCATE(lcec_class_cia402_channels_t);
   channels->count = count;
-  channels->channels = hal_malloc(sizeof(lcec_class_cia402_channel_t *) * count);
-  if (channels->channels == NULL) {
-    return NULL;
-  }
+  channels->channels = LCEC_HAL_ALLOCATE_ARRAY(lcec_class_cia402_channel_t *, count);
   return channels;
 }
 
 /// @brief Allocates a `lcec_class_cia402_options_t` and initializes it.
 lcec_class_cia402_options_t *lcec_cia402_options(void) {
-  lcec_class_cia402_options_t *opts = hal_malloc(sizeof(lcec_class_cia402_options_t));
-  if (opts == NULL) {
-    return NULL;
-  }
-  memset(opts, 0, sizeof(lcec_class_cia402_options_t));
+  lcec_class_cia402_options_t *opts = LCEC_HAL_ALLOCATE(lcec_class_cia402_options_t);
   opts->channels = 1;
 
   for (int channel = 0; channel < 8; channel++) {
@@ -169,11 +156,7 @@ lcec_class_cia402_options_t *lcec_cia402_options(void) {
 
 /// @brief Allocates a `lcec_class_cia402_channel_options_t` and initializes it.
 lcec_class_cia402_channel_options_t *lcec_cia402_channel_options(void) {
-  lcec_class_cia402_channel_options_t *opts = hal_malloc(sizeof(lcec_class_cia402_channel_options_t));
-  if (opts == NULL) {
-    return NULL;
-  }
-  memset(opts, 0, sizeof(lcec_class_cia402_channel_options_t));
+  lcec_class_cia402_channel_options_t *opts = LCEC_HAL_ALLOCATE(lcec_class_cia402_channel_options_t);
   opts->enable_opmode = 1;  // Should almost always be enabled.
   opts->digital_in_channels = 16;
   opts->digital_out_channels = 16;
@@ -188,7 +171,7 @@ lcec_class_cia402_channel_options_t *lcec_cia402_channel_options(void) {
 /// use names like `srv-1-foo` instead.
 void lcec_cia402_rename_multiaxis_channels(lcec_class_cia402_options_t *opt) {
   for (int channel = 0; channel < opt->channels; channel++) {
-    char *prefix = hal_malloc(16);
+    char *prefix = LCEC_HAL_ALLOCATE_STRING(16);
     snprintf(prefix, 16, "srv-%d", channel + 1);
     opt->channel[channel]->name_prefix = prefix;
   }
@@ -200,11 +183,7 @@ void lcec_cia402_rename_multiaxis_channels(lcec_class_cia402_options_t *opt) {
 lcec_syncs_t *lcec_cia402_init_sync(lcec_slave_t *slave, lcec_class_cia402_options_t *options) {
   lcec_syncs_t *syncs;
 
-  syncs = hal_malloc(sizeof(lcec_syncs_t));
-  if (syncs == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for lcec_cia402_init_sync failed\n");
-    return NULL;
-  }
+  syncs = LCEC_HAL_ALLOCATE(lcec_syncs_t);
   lcec_syncs_init(slave, syncs);
   lcec_syncs_add_sync(syncs, EC_DIR_OUTPUT, EC_WD_DEFAULT);
   lcec_syncs_add_sync(syncs, EC_DIR_INPUT, EC_WD_DEFAULT);
@@ -239,7 +218,6 @@ int lcec_cia402_add_output_sync(lcec_slave_t *slave, lcec_syncs_t *syncs, lcec_c
     int entrycount = syncs->pdo_entry_count;
 
     lcec_class_cia402_enabled_t *enabled = lcec_cia402_enabled(options->channel[channel]);
-    if (enabled == NULL) return -1;
 
     lcec_syncs_add_pdo_info(syncs, 0x1600 + channel);
     lcec_syncs_add_pdo_entry(syncs, offset + 0x40, 0x00, 16);  // Control word
@@ -285,7 +263,6 @@ int lcec_cia402_add_input_sync(lcec_slave_t *slave, lcec_syncs_t *syncs, lcec_cl
     int entrycount = syncs->pdo_entry_count;
 
     lcec_class_cia402_enabled_t *enabled = lcec_cia402_enabled(options->channel[channel]);
-    if (enabled == NULL) return -1;
 
     lcec_syncs_add_pdo_info(syncs, 0x1a00 + channel);
     lcec_syncs_add_pdo_entry(syncs, offset + 0x41, 0x00, 16);  // Status word
@@ -339,7 +316,7 @@ lcec_class_cia402_channel_t *lcec_cia402_register_channel(
   lcec_class_cia402_enabled_t *enabled;
 
   // The default name depends on the port type.
-  char *name_prefix = "srv";
+  const char *name_prefix = "srv";
   if (opt && opt->name_prefix) name_prefix = opt->name_prefix;
 
   // If we were passed a NULL opt, then create a new
@@ -347,29 +324,15 @@ lcec_class_cia402_channel_t *lcec_cia402_register_channel(
   // so we don't need to repeat the above default code downstream.
   if (!opt) {
     opt = lcec_cia402_channel_options();
-    if (opt == NULL) {
-      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", slave->master->name, slave->name);
-      return NULL;
-    }
   }
 
   // Allocate memory for per-channel data.
-  data = hal_malloc(sizeof(lcec_class_cia402_channel_t));
-  if (data == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", slave->master->name, slave->name);
-    return NULL;
-  }
-  memset(data, 0, sizeof(lcec_class_cia402_channel_t));
-
+  data = LCEC_HAL_ALLOCATE(lcec_class_cia402_channel_t);
   data->options = opt;
   data->base_idx = base_idx;
 
   // Set the `enabled` struct from `opt`.
   enabled = lcec_cia402_enabled(opt);
-  if (enabled == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", slave->master->name, slave->name);
-    return NULL;
-  }
   data->enabled = enabled;
 
   // Register PDOs
@@ -403,29 +366,22 @@ lcec_class_cia402_channel_t *lcec_cia402_register_channel(
   if (enabled->enable_digital_input) {
     char *dname;
     data->din = lcec_din_allocate_channels(opt->digital_in_channels + 4);
-    if (data->din == NULL) {
-      rtapi_print_msg(
-          RTAPI_MSG_ERR, LCEC_MSG_PFX "lcec_din_allocate_channels() for slave %s.%s failed\n", slave->master->name, slave->name);
-      return NULL;
-    }
 
-    dname = hal_malloc(sizeof(char[20]));
+    dname = LCEC_HAL_ALLOCATE_STRING(20);
     snprintf(dname, 20, "%s-din-cw-limit", name_prefix);
     data->din->channels[0] = lcec_din_register_channel_packed(slave, base_idx + 0xfd, 0, 0, dname);  // negative limit switch
-    dname = hal_malloc(sizeof(char[20]));
+    dname = LCEC_HAL_ALLOCATE_STRING(20);
     snprintf(dname, 20, "%s-din-ccw-limit", name_prefix);
     data->din->channels[1] = lcec_din_register_channel_packed(slave, base_idx + 0xfd, 0, 1, dname);  // positive limit switch
-    dname = hal_malloc(sizeof(char[20]));
+    dname = LCEC_HAL_ALLOCATE_STRING(20);
     snprintf(dname, 20, "%s-din-home", name_prefix);
     data->din->channels[2] = lcec_din_register_channel_packed(slave, base_idx + 0xfd, 0, 2, dname);  // home
-    dname = hal_malloc(sizeof(char[20]));
+    dname = LCEC_HAL_ALLOCATE_STRING(20);
     snprintf(dname, 20, "%s-din-interlock", name_prefix);
     data->din->channels[3] = lcec_din_register_channel_packed(slave, base_idx + 0xfd, 0, 3, dname);  // interlock?
 
     for (int channel = 0; channel < opt->digital_in_channels; channel++) {
-      dname = hal_malloc(sizeof(char[20]));
-      if (dname == NULL) return NULL;
-
+      dname = LCEC_HAL_ALLOCATE_STRING(20);
       snprintf(dname, 20, "%s-din-%d", name_prefix, channel);
       data->din->channels[4 + channel] = lcec_din_register_channel_packed(slave, base_idx + 0xfd, 0, 16 + channel, dname);
     }
@@ -434,18 +390,11 @@ lcec_class_cia402_channel_t *lcec_cia402_register_channel(
   if (enabled->enable_digital_output) {
     char *dname;
     data->dout = lcec_dout_allocate_channels(opt->digital_out_channels + 1);
-    if (data->din == NULL) {
-      rtapi_print_msg(
-          RTAPI_MSG_ERR, LCEC_MSG_PFX "lcec_din_allocate_channels() for slave %s.%s failed\n", slave->master->name, slave->name);
-      return NULL;
-    }
-    dname = hal_malloc(sizeof(char[20]));
+    dname = LCEC_HAL_ALLOCATE_STRING(20);
     snprintf(dname, 20, "%s-dout-brake", name_prefix);
     data->dout->channels[0] = lcec_dout_register_channel_packed(slave, base_idx + 0xfe, 1, 0, dname);  // brake
     for (int channel = 0; channel < opt->digital_out_channels; channel++) {
-      dname = hal_malloc(sizeof(char[20]));
-      if (dname == NULL) return NULL;
-
+      dname = LCEC_HAL_ALLOCATE_STRING(20);
       snprintf(dname, 20, "%s-dout-%d", name_prefix, channel);
       data->dout->channels[1 + channel] = lcec_dout_register_channel_packed(slave, base_idx + 0xfe, 1, 16 + channel, dname);
     }
@@ -677,28 +626,21 @@ static const lcec_modparam_desc_t per_channel_modparams[] = {
 /// a different list.
 lcec_modparam_desc_t *lcec_cia402_channelized_modparams(lcec_modparam_desc_t const *orig) {
   lcec_modparam_desc_t *mp;
-  int l;
+  int l, len;
 
-  l = lcec_modparam_desc_len(orig);
+  len = lcec_modparam_desc_len(orig);
 
-  mp = malloc(sizeof(lcec_modparam_desc_t) * (l * 9 + 1));
-  if (mp == NULL) {
-    return NULL;
-  }
+  mp = LCEC_ALLOCATE_ARRAY(lcec_modparam_desc_t, len * 9 + 1);
 
-  mp[l * 9] = orig[l];  // Copy terminator.
+  mp[(len-1) * 9] = orig[(len-1)];  // Copy terminator.
 
-  for (l = 0; orig[l].name != NULL; l++) {
+  for (l = 0; l<len; l++) {
     mp[l * 9] = orig[l];
     for (int i = 1; i < 9; i++) {
       char *name;
       mp[l * 9 + i] = orig[l];
 
-      name = malloc(strlen(orig[l].name) + 10);
-      if (name == NULL) {
-        free(mp);
-        return NULL;
-      }
+      name = LCEC_ALLOCATE_STRING(strlen(orig[l].name) + 10);
       sprintf(name, "ch%d%s", i, orig[l].name);
       mp[l * 9 + i].name = name;
       mp[l * 9 + i].id += i - 1;
@@ -715,7 +657,6 @@ lcec_modparam_desc_t *lcec_cia402_channelized_modparams(lcec_modparam_desc_t con
 /// device-specific `<modParam>`settings.
 lcec_modparam_desc_t *lcec_cia402_modparams(lcec_modparam_desc_t const *device_mps) {
   const lcec_modparam_desc_t *channelized_mps = lcec_cia402_channelized_modparams(per_channel_modparams);
-  if (channelized_mps == NULL) return NULL;
 
   return lcec_modparam_desc_concat(device_mps, channelized_mps);
 }
@@ -872,9 +813,9 @@ int lcec_cia402_handle_modparam(lcec_slave_t *slave, const lcec_slave_modparam_t
 ///   computing a rational approximation of a FP number.  Generally,
 ///   you'll want to pick the largest int representable by the
 ///   register that you're writing it into.
-lcec_ratio lcec_cia402_decode_ratio_modparam(const char *value, unsigned int max_denominator) {
+lcec_ratio lcec_cia402_decode_ratio_modparam(const char *value, int max_denominator) {
   lcec_ratio result;
-  char *slash = strchr(value, '/');
+  const char *slash = strchr(value, '/');
 
   // If there's no "/", then try a colon.
   if (slash == NULL) slash = strchr(value, ':');

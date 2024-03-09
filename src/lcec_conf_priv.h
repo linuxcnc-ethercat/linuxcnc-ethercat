@@ -52,11 +52,13 @@ typedef struct {
   size_t len;
 } LCEC_CONF_OUTBUF_T;
 
-extern char *modname;
+extern const char *modname;
+
+#define ADD_OUTPUT_BUFFER(buf, type) ((type *)addOutputBuffer(buf, sizeof(type)))
 
 void initOutputBuffer(LCEC_CONF_OUTBUF_T *buf);
 void *addOutputBuffer(LCEC_CONF_OUTBUF_T *buf, size_t len);
-void copyFreeOutputBuffer(LCEC_CONF_OUTBUF_T *buf, void *dest);
+void copyFreeOutputBuffer(LCEC_CONF_OUTBUF_T *buf, char *dest);
 
 int parseIcmds(LCEC_CONF_SLAVE_T *slave, LCEC_CONF_OUTBUF_T *outputBuf, const char *filename);
 

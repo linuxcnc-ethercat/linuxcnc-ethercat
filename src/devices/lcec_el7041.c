@@ -502,11 +502,7 @@ static int lcec_el7041_init(int comp_id, lcec_slave_t *s) {
   s->proc_write = lcec_el7041_write;
 
   // alloc hal memory
-  if ((hd = hal_malloc(sizeof(lcec_el7041_data_t))) == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", m->name, s->name);
-    return -EIO;
-  }
-  memset(hd, 0, sizeof(lcec_el7041_data_t));
+  hd = LCEC_HAL_ALLOCATE(lcec_el7041_data_t);
   s->hal_data = hd;
 
   // initialize sync info

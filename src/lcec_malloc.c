@@ -1,5 +1,5 @@
 //
-//    Copyright (C) 2012 Sascha Ittner <sascha.ittner@modusoft.de>
+//    Copyright (C) 2024 Scott Laird <scott@sigkill.org>
 //
 //    This program is free software; you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -17,36 +17,27 @@
 //
 
 /// @file
-/// @brief Modparam-handling library code
+/// @brief Memory allocation helpers for LinuxCNC-Ethercat
 
 #include "lcec.h"
+#include <stdio.h>
 
-/// @brief Cound the number of entries in a `lcec_modparam_desc_t[]`.
-int lcec_modparam_desc_len(const lcec_modparam_desc_t *mp) {
-  int l;
 
-  for (l = 0; mp[l].name != NULL; l++)
-    ;
-
-  return l;
+void *lcec_hal_malloc(size_t size, const char *file, const char *func, int line) {
+  void *result = hal_malloc(size);
+  if (result==NULL) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "MEMORY ALLOCATION FAILURE, hal_malloc() returned NULL in function %s at %s:%d\n", func, file, line);
+    exit(1);
+  }
+  memset(result, 0, size);
+  return result;
 }
 
-lcec_modparam_desc_t *lcec_modparam_desc_concat(lcec_modparam_desc_t const *a, lcec_modparam_desc_t const *b) {
-  int a_len, b_len, i;
-  lcec_modparam_desc_t *c;
-
-  a_len = lcec_modparam_desc_len(a);
-  b_len = lcec_modparam_desc_len(b);
-
-  c = LCEC_ALLOCATE_ARRAY(lcec_modparam_desc_t, (a_len + b_len + 1));
-
-  for (i = 0; i < a_len; i++) {
-    c[i] = a[i];
+void *lcec_malloc(size_t size, const char *file, const char *func, int line) {
+  void *result = malloc(size);
+  if (result==NULL) {
+    fprintf(stderr, LCEC_MSG_PFX "MEMORY ALLOCATION FAILURE, hal_malloc() returned NULL in function %s at %s:%d\n", func, file, line);
+    exit(1);
   }
-  for (i = 0; i < b_len; i++) {
-    c[a_len + i] = b[i];
-  }
-  c[a_len + b_len] = a[a_len];  // Copy terminator
-
-  return c;
+  return result;
 }

@@ -530,7 +530,7 @@ static int lcec_param_newfv_list(void *base, const lcec_paramdesc_t *list, va_li
 
   for (p = list; p->type != HAL_TYPE_UNSPECIFIED; p++) {
     va_copy(ac, ap);
-    err = lcec_param_newfv(p->type, p->dir, (void *)(base + p->offset), p->fmt, ac);
+    err = lcec_param_newfv(p->type, p->dir, ((char*)base + p->offset), p->fmt, ac);
     va_end(ac);
     if (err) {
       return err;
@@ -574,13 +574,12 @@ LCEC_CONF_MODPARAM_VAL_T *lcec_modparam_get(lcec_slave_t *slave, int id) {
 /// @param size The maximum number of entries to allocate room for.
 /// @return  A lcec_pdo_entry_reg_t, or NULL if memory allocation failed.
 lcec_pdo_entry_reg_t *lcec_allocate_pdo_entry_reg(int size) {
-  lcec_pdo_entry_reg_t *reg = hal_malloc(sizeof(lcec_pdo_entry_reg_t));
+  lcec_pdo_entry_reg_t *reg = LCEC_HAL_ALLOCATE(lcec_pdo_entry_reg_t);
   if (reg == NULL) return NULL;
 
   reg->max = size;
   reg->current = 0;
-  reg->pdo_entry_regs = hal_malloc(sizeof(ec_pdo_entry_reg_t) * size);
-  if (reg->pdo_entry_regs == NULL) return NULL;
+  reg->pdo_entry_regs = LCEC_HAL_ALLOCATE_ARRAY(ec_pdo_entry_reg_t, size);
 
   return reg;
 }

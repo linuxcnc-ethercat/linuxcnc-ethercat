@@ -98,7 +98,7 @@ static const LCEC_CONF_XML_HANLDER_T xml_states[] = {
     {"NULL", -1, -1, NULL, NULL},
 };
 
-static long int parse_int(LCEC_CONF_ICMDS_STATE_T *state, const char *s, int len, long int min, long int max);
+static long int parse_int(LCEC_CONF_ICMDS_STATE_T *state, const char *s, unsigned int len, long int min, long int max);
 static int parse_data(LCEC_CONF_ICMDS_STATE_T *state, const char *s, int len);
 
 int parseIcmds(LCEC_CONF_SLAVE_T *slave, LCEC_CONF_OUTBUF_T *outputBuf, const char *filename) {
@@ -219,7 +219,7 @@ static void xml_data_handler(void *data, const XML_Char *s, int len) {
 static void icmdTypeCoeIcmdStart(LCEC_CONF_XML_INST_T *inst, int next, const char **attr) {
   LCEC_CONF_ICMDS_STATE_T *state = (LCEC_CONF_ICMDS_STATE_T *)inst;
 
-  state->currSdoConf = addOutputBuffer(state->outputBuf, sizeof(LCEC_CONF_SDOCONF_T));
+  state->currSdoConf = ADD_OUTPUT_BUFFER(state->outputBuf, LCEC_CONF_SDOCONF_T);
 
   if (state->currSdoConf == NULL) {
     XML_StopParser(inst->parser, 0);
@@ -265,7 +265,7 @@ static void icmdTypeCoeIcmdEnd(LCEC_CONF_XML_INST_T *inst, int next) {
 static void icmdTypeSoeIcmdStart(LCEC_CONF_XML_INST_T *inst, int next, const char **attr) {
   LCEC_CONF_ICMDS_STATE_T *state = (LCEC_CONF_ICMDS_STATE_T *)inst;
 
-  state->currIdnConf = addOutputBuffer(state->outputBuf, sizeof(LCEC_CONF_IDNCONF_T));
+  state->currIdnConf = ADD_OUTPUT_BUFFER(state->outputBuf, LCEC_CONF_IDNCONF_T);
 
   if (state->currIdnConf == NULL) {
     XML_StopParser(inst->parser, 0);
@@ -275,7 +275,7 @@ static void icmdTypeSoeIcmdStart(LCEC_CONF_XML_INST_T *inst, int next, const cha
   state->currIdnConf->confType = lcecConfTypeIdnConfig;
   state->currIdnConf->drive = 0;
   state->currIdnConf->idn = 0xffff;
-  state->currIdnConf->state = 0;
+  state->currIdnConf->state = (ec_al_state_t)0;
 }
 
 static void icmdTypeSoeIcmdEnd(LCEC_CONF_XML_INST_T *inst, int next) {
@@ -296,7 +296,7 @@ static void icmdTypeSoeIcmdEnd(LCEC_CONF_XML_INST_T *inst, int next) {
   state->currSlave->idnConfigLength += sizeof(LCEC_CONF_IDNCONF_T) + state->currIdnConf->length;
 }
 
-static long int parse_int(LCEC_CONF_ICMDS_STATE_T *state, const char *s, int len, long int min, long int max) {
+static long int parse_int(LCEC_CONF_ICMDS_STATE_T *state, const char *s, unsigned int len, long int min, long int max) {
   char buf[32];
   char *end;
   long int ret;

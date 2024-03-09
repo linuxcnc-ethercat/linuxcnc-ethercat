@@ -27,7 +27,7 @@
 #include "lcec_conf.h"
 #include "lcec_conf_priv.h"
 
-char *modname = "lcec_conf";
+const char *modname = "lcec_conf";
 
 static void xml_start_handler(void *data, const char *el, const char **attr);
 static void xml_end_handler(void *data, const char *el);
@@ -39,7 +39,7 @@ void initOutputBuffer(LCEC_CONF_OUTBUF_T *buf) {
 }
 
 void *addOutputBuffer(LCEC_CONF_OUTBUF_T *buf, size_t len) {
-  void *p = calloc(1, sizeof(LCEC_CONF_OUTBUF_ITEM_T) + len);
+  LCEC_CONF_OUTBUF_ITEM_T *p = (LCEC_CONF_OUTBUF_ITEM_T *)calloc(1, sizeof(LCEC_CONF_OUTBUF_ITEM_T) + len);
   if (p == NULL) {
     fprintf(stderr, "%s: ERROR: Couldn't allocate memory for config token\n", modname);
     return NULL;
@@ -63,11 +63,11 @@ void *addOutputBuffer(LCEC_CONF_OUTBUF_T *buf, size_t len) {
   return p;
 }
 
-void copyFreeOutputBuffer(LCEC_CONF_OUTBUF_T *buf, void *dest) {
-  void *p;
+void copyFreeOutputBuffer(LCEC_CONF_OUTBUF_T *buf, char *dest) {
+  char *p;
 
   while (buf->head != NULL) {
-    p = buf->head;
+    p = (char *)buf->head;
     if (dest != NULL) {
       memcpy(dest, p + sizeof(LCEC_CONF_OUTBUF_ITEM_T), buf->head->len);
       dest += buf->head->len;

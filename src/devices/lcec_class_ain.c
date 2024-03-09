@@ -73,15 +73,10 @@ static const lcec_pindesc_t slave_pins_status[] = {
 lcec_class_ain_channels_t *lcec_ain_allocate_channels(int count) {
   lcec_class_ain_channels_t *channels;
 
-  channels = hal_malloc(sizeof(lcec_class_ain_channels_t));
-  if (channels == NULL) {
-    return NULL;
-  }
+  channels = LCEC_HAL_ALLOCATE(lcec_class_ain_channels_t);
   channels->count = count;
-  channels->channels = hal_malloc(sizeof(lcec_class_ain_channel_t *) * count);
-  if (channels->channels == NULL) {
-    return NULL;
-  }
+  channels->channels = LCEC_HAL_ALLOCATE_ARRAY(lcec_class_ain_channel_t *, count);
+
   return channels;
 }
 
@@ -91,13 +86,7 @@ lcec_class_ain_channels_t *lcec_ain_allocate_channels(int count) {
 /// `lcec_ain_register_channel`, so we can safely just memset
 /// everything to 0 here.
 lcec_class_ain_options_t *lcec_ain_options(void) {
-  lcec_class_ain_options_t *opts = hal_malloc(sizeof(lcec_class_ain_options_t));
-  if (opts == NULL) {
-    return NULL;
-  }
-  memset(opts, 0, sizeof(lcec_class_ain_options_t));
-
-  return opts;
+  return LCEC_HAL_ALLOCATE(lcec_class_ain_options_t);
 }
 
 /// @brief registers a single analog-input channel and publishes it as a LinuxCNC HAL pin.
@@ -144,7 +133,7 @@ lcec_class_ain_channel_t *lcec_ain_register_channel(lcec_slave_t *slave, int id,
   if (opt && opt->syncerror_sidx) syncerror_sidx = opt->syncerror_sidx;
 
   // The default name depends on the port type.
-  char *name_prefix = "ain";
+  const char *name_prefix = "ain";
   if (is_temperature) name_prefix = "temp";
   if (is_pressure) name_prefix = "pressure";
   if (opt && opt->name_prefix) name_prefix = opt->name_prefix;
@@ -154,19 +143,10 @@ lcec_class_ain_channel_t *lcec_ain_register_channel(lcec_slave_t *slave, int id,
   // so we don't need to repeat the above default code downstream.
   if (!opt) {
     opt = lcec_ain_options();
-    if (opt == NULL) {
-      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s pin %d failed\n", slave->master->name, slave->name, id);
-      return NULL;
-    }
   }
 
   // Allocate memory for per-channel data.
-  data = hal_malloc(sizeof(lcec_class_ain_channel_t));
-  if (data == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s pin %d failed\n", slave->master->name, slave->name, id);
-    return NULL;
-  }
-  memset(data, 0, sizeof(lcec_class_ain_channel_t));
+  data = LCEC_HAL_ALLOCATE(lcec_class_ain_channel_t);
 
   // Save important options for later use.  None of the _idx/_sidx will be needed outside of this function.
   data->options = opt;

@@ -350,7 +350,7 @@ int lcec_parse_config(void) {
   void *shmem_ptr;
   LCEC_CONF_HEADER_T *header;
   size_t length;
-  void *conf;
+  char *conf;
   int slave_count;
   const lcec_typelist_t *type;
   lcec_master_t *master;
@@ -394,7 +394,7 @@ int lcec_parse_config(void) {
   }
 
   // check magic, get length and close shmem
-  header = shmem_ptr;
+  header = (LCEC_CONF_HEADER_T*)shmem_ptr;
   if (header->magic != LCEC_CONF_SHMEM_MAGIC) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "lcec_conf is not loaded\n");
     goto fail1;
@@ -414,7 +414,7 @@ int lcec_parse_config(void) {
   }
 
   // get pointer to config
-  conf = shmem_ptr + sizeof(LCEC_CONF_HEADER_T);
+  conf = ((char *)shmem_ptr + sizeof(LCEC_CONF_HEADER_T));
 
   // process config items
   slave_count = 0;
@@ -424,7 +424,7 @@ int lcec_parse_config(void) {
   generic_pdos = NULL;
   generic_sync_managers = NULL;
   generic_hal_data = NULL;
-  generic_hal_dir = 0;
+  generic_hal_dir = HAL_DIR_UNSPECIFIED;
   sdo_config = NULL;
   idn_config = NULL;
   pe_conf = NULL;
@@ -438,11 +438,7 @@ int lcec_parse_config(void) {
         conf += sizeof(LCEC_CONF_MASTER_T);
 
         // alloc master memory
-        master = lcec_zalloc(sizeof(lcec_master_t));
-        if (master == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Unable to allocate master %d structure memory\n", master_conf->index);
-          goto fail2;
-        }
+        master = LCEC_ALLOCATE(lcec_master_t);
 
         // initialize master
         master->index = master_conf->index;
@@ -479,18 +475,14 @@ int lcec_parse_config(void) {
         }
 
         // create new slave
-        slave = lcec_zalloc(sizeof(lcec_slave_t));
-        if (slave == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Unabl eto allocate slave %s.%s structure memory\n", master->name, slave_conf->name);
-          goto fail2;
-        }
+        slave = LCEC_ALLOCATE(lcec_slave_t);
 
         // initialize slave
         generic_pdo_entries = NULL;
         generic_pdos = NULL;
         generic_sync_managers = NULL;
         generic_hal_data = NULL;
-        generic_hal_dir = 0;
+        generic_hal_dir = HAL_DIR_UNSPECIFIED;
         sdo_config = NULL;
         idn_config = NULL;
         modparams = NULL;
@@ -527,44 +519,27 @@ int lcec_parse_config(void) {
           slave->proc_init = lcec_generic_init;
 
           // alloc hal memory
-          if ((generic_hal_data = hal_malloc(sizeof(lcec_generic_pin_t) * slave_conf->pdoMappingCount)) == NULL) {
+          if ((generic_hal_data = LCEC_HAL_ALLOCATE_ARRAY(lcec_generic_pin_t, slave_conf->pdoMappingCount)) == NULL) {
             rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", master->name, slave_conf->name);
             goto fail2;
           }
           memset(generic_hal_data, 0, sizeof(lcec_generic_pin_t) * slave_conf->pdoMappingCount);
 
           // alloc pdo entry memory
-          generic_pdo_entries = lcec_zalloc(sizeof(ec_pdo_entry_info_t) * slave_conf->pdoEntryCount);
-          if (generic_pdo_entries == NULL) {
-            rtapi_print_msg(
-                RTAPI_MSG_ERR, LCEC_MSG_PFX "Unable to allocate slave %s.%s generic pdo entry memory\n", master->name, slave_conf->name);
-            goto fail2;
-          }
+          generic_pdo_entries = LCEC_ALLOCATE_ARRAY(ec_pdo_entry_info_t, slave_conf->pdoEntryCount);
 
           // alloc pdo memory
-          generic_pdos = lcec_zalloc(sizeof(ec_pdo_info_t) * slave_conf->pdoCount);
-          if (generic_pdos == NULL) {
-            rtapi_print_msg(
-                RTAPI_MSG_ERR, LCEC_MSG_PFX "Unable to allocate slave %s.%s generic pdo memory\n", master->name, slave_conf->name);
-            lcec_free(generic_pdo_entries);
-            goto fail2;
-          }
+          generic_pdos = LCEC_ALLOCATE_ARRAY(ec_pdo_info_t, slave_conf->pdoCount);
 
           // alloc sync manager memory
-          generic_sync_managers = lcec_zalloc(sizeof(ec_sync_info_t) * (slave_conf->syncManagerCount + 1));
-          if (generic_sync_managers == NULL) {
-            rtapi_print_msg(
-                RTAPI_MSG_ERR, LCEC_MSG_PFX "Unable to allocate slave %s.%s generic sync manager memory\n", master->name, slave_conf->name);
-            lcec_free(generic_pdo_entries);
-            lcec_free(generic_pdos);
-            goto fail2;
-          }
+          generic_sync_managers = LCEC_ALLOCATE_ARRAY(ec_sync_info_t , (slave_conf->syncManagerCount + 1));
+
           generic_sync_managers->index = 0xff;
         }
 
         // alloc sdo config memory
         if (slave_conf->sdoConfigLength > 0) {
-          sdo_config = lcec_zalloc(slave_conf->sdoConfigLength + sizeof(lcec_slave_sdoconf_t));
+          sdo_config = (lcec_slave_sdoconf_t*)lcec_zalloc(slave_conf->sdoConfigLength + sizeof(lcec_slave_sdoconf_t));
           if (sdo_config == NULL) {
             rtapi_print_msg(
                 RTAPI_MSG_ERR, LCEC_MSG_PFX "Unable to allocate slave %s.%s sdo entry memory\n", master->name, slave_conf->name);
@@ -577,7 +552,7 @@ int lcec_parse_config(void) {
 
         // alloc idn config memory
         if (slave_conf->idnConfigLength > 0) {
-          idn_config = lcec_zalloc(slave_conf->idnConfigLength + sizeof(lcec_slave_idnconf_t));
+          idn_config = (lcec_slave_idnconf_t*)lcec_zalloc(slave_conf->idnConfigLength + sizeof(lcec_slave_idnconf_t));
           if (idn_config == NULL) {
             rtapi_print_msg(
                 RTAPI_MSG_ERR, LCEC_MSG_PFX "Unable to allocate slave %s.%s idn entry memory\n", master->name, slave_conf->name);
@@ -591,16 +566,7 @@ int lcec_parse_config(void) {
 
         // alloc modparam memory
         if (slave_conf->modParamCount > 0) {
-          modparams = lcec_zalloc(sizeof(lcec_slave_modparam_t) * (slave_conf->modParamCount + 1));
-          if (modparams == NULL) {
-            rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Unable to allocate slave %s.%s modparam memory\n", master->name, slave_conf->name);
-            lcec_free(generic_pdo_entries);
-            lcec_free(generic_pdos);
-            lcec_free(generic_sync_managers);
-            lcec_free(sdo_config);
-            lcec_free(idn_config);
-            goto fail2;
-          }
+          modparams = LCEC_ALLOCATE_ARRAY(lcec_slave_modparam_t,  (slave_conf->modParamCount + 1));
           modparams[slave_conf->modParamCount].id = -1;
         }
 
@@ -639,11 +605,7 @@ int lcec_parse_config(void) {
         }
 
         // create new dc config
-        dc = lcec_zalloc(sizeof(lcec_slave_dc_t));
-        if (dc == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Unable to allocate slave %s.%s dc config memory\n", master->name, slave->name);
-          goto fail2;
-        }
+        dc = LCEC_ALLOCATE(lcec_slave_dc_t);
 
         // initialize dc conf
         dc->assignActivate = dc_conf->assignActivate;
@@ -674,11 +636,7 @@ int lcec_parse_config(void) {
         }
 
         // create new wd config
-        wd = lcec_zalloc(sizeof(lcec_slave_watchdog_t));
-        if (wd == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Unable to allocate slave %s.%s watchdog config memory\n", master->name, slave->name);
-          goto fail2;
-        }
+        wd = LCEC_ALLOCATE(lcec_slave_watchdog_t);
 
         // initialize wd conf
         wd->divider = wd_conf->divider;
@@ -720,7 +678,7 @@ int lcec_parse_config(void) {
             generic_hal_dir = HAL_IN;
             break;
           default:
-            generic_hal_dir = 0;
+            generic_hal_dir = HAL_DIR_UNSPECIFIED;
         }
 
         // next syncmanager
@@ -772,7 +730,7 @@ int lcec_parse_config(void) {
         }
 
         // check for hal dir
-        if (generic_hal_dir == 0) {
+        if (generic_hal_dir == HAL_DIR_UNSPECIFIED) {
           rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "HAL direction for generic device missing\n");
           goto fail2;
         }
@@ -1029,7 +987,7 @@ lcec_master_data_t *lcec_init_master_hal(const char *pfx, int global) {
   lcec_master_data_t *hal_data;
 
   // alloc hal data
-  if ((hal_data = hal_malloc(sizeof(lcec_master_data_t))) == NULL) {
+  if ((hal_data = LCEC_HAL_ALLOCATE(lcec_master_data_t)) == NULL) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for %s failed\n", pfx);
     return NULL;
   }
@@ -1056,7 +1014,7 @@ lcec_slave_state_t *lcec_init_slave_state_hal(char *master_name, char *slave_nam
   lcec_slave_state_t *hal_data;
 
   // alloc hal data
-  if ((hal_data = hal_malloc(sizeof(lcec_slave_state_t))) == NULL) {
+  if ((hal_data = LCEC_HAL_ALLOCATE(lcec_slave_state_t)) == NULL) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for %s.%s.%s failed\n", LCEC_MODULE_NAME, master_name, slave_name);
     return NULL;
   }

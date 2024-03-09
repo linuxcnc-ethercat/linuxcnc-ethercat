@@ -50,18 +50,14 @@ static int lcec_ex260_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_ex260_pin_t *hal_data;
   lcec_ex260_pin_t *pin;
-  int i;
+  unsigned int i;
   int err;
 
   // initialize callbacks
   slave->proc_write = lcec_ex260_write;
 
   // alloc hal memory
-  if ((hal_data = hal_malloc(sizeof(lcec_ex260_pin_t) * slave->flags)) == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", master->name, slave->name);
-    return -EIO;
-  }
-  memset(hal_data, 0, sizeof(lcec_ex260_pin_t) * slave->flags);
+  hal_data = LCEC_HAL_ALLOCATE_ARRAY(lcec_ex260_pin_t, slave->flags);
   slave->hal_data = hal_data;
 
   // initialize pins
@@ -82,7 +78,7 @@ static void lcec_ex260_write(lcec_slave_t *slave, long period) {
   lcec_ex260_pin_t *hal_data = (lcec_ex260_pin_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
   lcec_ex260_pin_t *pin;
-  int i, s;
+  unsigned int i, s;
 
   // wait for slave to be operational
   if (!slave->state.operational) {

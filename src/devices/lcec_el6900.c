@@ -140,7 +140,7 @@ static int init_std_pdos(lcec_slave_t *slave, int pid, lcec_el6900_fsoe_io_t *io
     lcec_pdo_init(slave, index, 0x01 + count, &io->os, &io->bp);
 
     // export pin
-    if ((err = lcec_pin_newf(HAL_BIT, dir, (void *)&io->pin, "%s.%s.%s.%s", LCEC_MODULE_NAME, master->name, slave->name, p->value.str)) !=
+    if ((err = lcec_pin_newf(HAL_BIT, dir, (void **)&io->pin, "%s.%s.%s.%s", LCEC_MODULE_NAME, master->name, slave->name, p->value.str)) !=
         0) {
       return err;
     }
@@ -226,11 +226,7 @@ static int lcec_el6900_init(int comp_id, lcec_slave_t *slave) {
   }
 
   // alloc hal memory
-  if ((hal_data = hal_malloc(sizeof(lcec_el6900_data_t) + fsoe_idx * sizeof(lcec_el6900_fsoe_t))) == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", master->name, slave->name);
-    return -EIO;
-  }
-  memset(hal_data, 0, sizeof(lcec_el6900_data_t));
+  hal_data = LCEC_HAL_ALLOCATE_ARRAY(lcec_el6900_data_t, fsoe_idx * sizeof(lcec_el6900_fsoe_t));
   hal_data->fsoe_count = fsoe_idx;
   slave->hal_data = hal_data;
 
@@ -268,11 +264,7 @@ static int lcec_el6900_init(int comp_id, lcec_slave_t *slave) {
       fsoeConf = fsoe_slave->fsoeConf;
 
       // alloc crc hal memory
-      if ((fsoe_data->fsoe_crc = hal_malloc(fsoeConf->data_channels * sizeof(lcec_el6900_fsoe_crc_t))) == NULL) {
-        rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for fsoe_slave %s.%s crc data failed\n", master->name, fsoe_slave->name);
-        return -EIO;
-      }
-      memset(fsoe_data->fsoe_crc, 0, sizeof(lcec_el6900_fsoe_crc_t));
+      fsoe_data->fsoe_crc = LCEC_HAL_ALLOCATE_ARRAY(lcec_el6900_fsoe_crc_t, fsoeConf->data_channels);
 
       // initialize POD entries
       lcec_pdo_init(slave, 0x7000 + (fsoe_idx << 4), 0x01, &fsoe_data->fsoe_slave_cmd_os, NULL);

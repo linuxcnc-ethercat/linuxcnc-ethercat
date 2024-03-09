@@ -22,7 +22,7 @@
 #include "../lcec.h"
 
 typedef struct {
-  char *name_prefix;               ///< Prefix for device naming, defaults to "aio".
+  const char *name_prefix;               ///< Prefix for device naming, defaults to "aio".
   int max_value;                   ///< The maximum value returned for "normal" output channels.
   double default_scale;            ///< Default scale for the device.
   double default_offset;           ///< Default value offset for the device.

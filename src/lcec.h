@@ -90,6 +90,33 @@ extern "C" {
 #define LCEC_MAX_PDO_INFO_COUNT  16    ///< The maximum number of PDOs in a sync.
 #define LCEC_MAX_SYNC_COUNT      4    ///< The maximum number of syncs.
 
+// Memory allocation macros.  These differ from malloc in a couple
+// substantial ways.  First, they check for NULL and call exit(1), so
+// there's no point in comparing their return value to NULL.  If
+// memory allocation fails, then we're broken and there's no point in
+// going on.  Next, they always 0 the allocated memory, so there's no
+// point in calling memset() on the result.  Finally, they take a
+// *type*, not a size_t, and cast the result into a pointer-to-type,
+// so compiling this as C++ doesn't cause untold numbers of errors.
+
+/// Allocate memory for an `expr`.  This zeros out the allocated memory automatically, and exits if malloc fails.
+#define LCEC_HAL_ALLOCATE(expr) ((__typeof__(expr) *)lcec_hal_malloc(sizeof(expr), __FILE__, __func__, __LINE__))
+
+/// Allocate memory for a string of `len` bytes.  This zeros out the allocated memory automatically, and exits if malloc fails.
+#define LCEC_HAL_ALLOCATE_STRING(len) ((char *)lcec_hal_malloc(len, __FILE__, __func__, __LINE__))
+
+/// Allocate memory for an array of `count` `expr`s.  This zeros out the allocated memory automatically, and exits if malloc fails.
+#define LCEC_HAL_ALLOCATE_ARRAY(expr, count) ((__typeof__(expr) *)lcec_hal_malloc(sizeof(expr) * count, __FILE__, __func__, __LINE__))
+
+/// Allocate memory for an `expr`.  This zeros out the allocated memory automatically, and exits if malloc fails.
+#define LCEC_ALLOCATE(expr) ((__typeof__(expr) *)lcec_malloc(sizeof(expr), __FILE__, __func__, __LINE__))
+
+/// Allocate memory for a string of `len` bytes.  This zeros out the allocated memory automatically, and exits if malloc fails.
+#define LCEC_ALLOCATE_STRING(len) ((char *)lcec_malloc(len, __FILE__, __func__, __LINE__))
+
+/// Allocate memory for an array of `count` `expr`s.  This zeros out the allocated memory automatically, and exits if malloc fails.
+#define LCEC_ALLOCATE_ARRAY(expr, count) ((__typeof__(expr) *)lcec_malloc(sizeof(expr) * count, __FILE__, __func__, __LINE__))
+
 typedef struct lcec_master lcec_master_t;
 typedef struct lcec_slave lcec_slave_t;
 
@@ -122,7 +149,7 @@ typedef struct {
   lcec_slave_init_t proc_init;            ///< init function.  Sets up the device.
   const lcec_modparam_desc_t *modparams;  ///< XML modparams, if any
   uint64_t flags;                         ///< Flags, passed through to `proc_init` as `slave->flags`.
-  char *sourcefile;                       ///< Source filename, autopopulated.
+  const char *sourcefile;                       ///< Source filename, autopopulated.
 } lcec_typelist_t;
 
 /// @brief Linked list for holding device type definitions.
@@ -365,5 +392,8 @@ lcec_pdo_entry_reg_t *lcec_allocate_pdo_entry_reg(int size);
 int lcec_pdo_init(lcec_slave_t *slave, uint16_t idx, uint16_t sidx, unsigned int *os, unsigned int *bp);
 int lcec_pdo_entry_reg_len(lcec_pdo_entry_reg_t *reg);
 int lcec_append_pdo_entry_reg(lcec_pdo_entry_reg_t *dest, lcec_pdo_entry_reg_t *src);
+
+void *lcec_hal_malloc(size_t size, const char *file, const char *func, int line);
+void *lcec_malloc(size_t size, const char *file, const char *func, int line);
 
 #endif

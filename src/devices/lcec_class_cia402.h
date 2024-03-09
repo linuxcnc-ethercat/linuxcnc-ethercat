@@ -51,7 +51,7 @@
 /// At the moment, only pp/pv/csp/csv are even slightly implemented.
 /// More will follow as hardware support grows.
 typedef struct {
-  char *name_prefix;  ///< Prefix for device naming, defaults to "srv".
+  const char *name_prefix;  ///< Prefix for device naming, defaults to "srv".
   int digital_in_channels;
   int digital_out_channels;
 
@@ -314,7 +314,7 @@ lcec_modparam_desc_t *lcec_cia402_modparams(lcec_modparam_desc_t const *device_m
 lcec_syncs_t *lcec_cia402_init_sync(lcec_slave_t *slave, lcec_class_cia402_options_t *options);
 int lcec_cia402_add_output_sync(lcec_slave_t *slave, lcec_syncs_t *syncs, lcec_class_cia402_options_t *options);
 int lcec_cia402_add_input_sync(lcec_slave_t *slave, lcec_syncs_t *syncs, lcec_class_cia402_options_t *options);
-lcec_ratio lcec_cia402_decode_ratio_modparam(const char *value, unsigned int max_denominator);
+lcec_ratio lcec_cia402_decode_ratio_modparam(const char *value, int max_denominator);
 
 #define ADD_TYPES_WITH_CIA402_MODPARAMS(types, mps)        \
   static void AddTypes(void) __attribute__((constructor)); \

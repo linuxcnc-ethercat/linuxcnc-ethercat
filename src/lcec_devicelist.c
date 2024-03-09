@@ -31,11 +31,8 @@ void lcec_addtype(lcec_typelist_t *type, const char *sourcefile) {
   // using malloc instead of hal_malloc because this can be called
   // from either lcec.so (inside of LinuxCNC) or lcec_conf (a
   // standalone binary).
-  t = malloc(sizeof(lcec_typelinkedlist_t));
-  if (t == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Failed to allocate memory in lcec_addtype(), skipping\n");
-    return;
-  }
+  t = LCEC_ALLOCATE(lcec_typelinkedlist_t);
+
   type->sourcefile = sourcefile;
   t->type = type;
   t->next = NULL;

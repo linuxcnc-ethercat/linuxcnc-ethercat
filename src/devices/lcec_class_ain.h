@@ -22,7 +22,7 @@
 #include "../lcec.h"
 
 typedef struct {
-  char *name_prefix;               ///< Prefix for device naming, defaults to "aio".
+  const char *name_prefix;               ///< Prefix for device naming, defaults to "aio".
   int has_sync;                    ///< Device supports the sync_err PDO.
   int valueonly;                   ///< Only read the value from the sensor, do not read over/under range or error PDOs.
   int is_temperature;              ///< Device is a temperature sensor.

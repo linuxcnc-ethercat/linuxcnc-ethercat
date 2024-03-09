@@ -55,7 +55,7 @@ static void lcec_el2xxx_write(lcec_slave_t *slave, long period);
 
 static int lcec_el2xxx_init(int comp_id, lcec_slave_t *slave) {
   lcec_class_dout_channels_t *hal_data;
-  int i;
+  unsigned int i;
 
   // initialize callbacks
   slave->proc_write = lcec_el2xxx_write;

@@ -207,16 +207,7 @@ static void lcec_el7201_9014_read(lcec_slave_t *slave, long period);
 static void lcec_el7211_write(lcec_slave_t *slave, long period);
 
 static lcec_el7211_data_t *lcec_el7211_alloc_hal(lcec_master_t *master, lcec_slave_t *slave) {
-  lcec_el7211_data_t *hal_data;
-
-  // alloc hal memory
-  if ((hal_data = hal_malloc(sizeof(lcec_el7211_data_t))) == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", master->name, slave->name);
-    return NULL;
-  }
-  memset(hal_data, 0, sizeof(lcec_el7211_data_t));
-
-  return hal_data;
+  return LCEC_HAL_ALLOCATE(lcec_el7211_data_t);
 }
 
 static int lcec_el7211_export_pins(lcec_master_t *master, lcec_slave_t *slave, lcec_el7211_data_t *hal_data) {

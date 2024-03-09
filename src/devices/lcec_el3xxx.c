@@ -220,7 +220,6 @@ static int set_wires(lcec_slave_t *slave, char *wires_name, lcec_class_ain_chann
 
 /// @brief Initialize an EL3xxx device.
 static int lcec_el3xxx_init(int comp_id, lcec_slave_t *slave) {
-  lcec_master_t *master = slave->master;
   lcec_class_ain_channels_t *hal_data;
   uint64_t flags;
 
@@ -230,10 +229,6 @@ static int lcec_el3xxx_init(int comp_id, lcec_slave_t *slave) {
   rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "- slave is %p\n", slave);
 
   hal_data = lcec_ain_allocate_channels(INPORTS(slave->flags));
-  if (hal_data == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", master->name, slave->name);
-    return -EIO;
-  }
   slave->hal_data = hal_data;
 
   for (int i = 0; i < hal_data->count; i++) {
@@ -243,7 +238,6 @@ static int lcec_el3xxx_init(int comp_id, lcec_slave_t *slave) {
     options->is_pressure = flags & F_PRESSURE;
 
     hal_data->channels[i] = lcec_ain_register_channel(slave, i, 0x6000 + (i << 4), options);
-    if (hal_data->channels[i] == NULL) return -EIO;
   }
 
   slave->proc_read = lcec_el3xxx_read;

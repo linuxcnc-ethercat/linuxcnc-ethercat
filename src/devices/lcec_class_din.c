@@ -34,22 +34,13 @@ static const lcec_pindesc_t slave_pins[] = {
 /// @brief allocates a block of memory for holding the result of
 /// `count` calls to `lcec_din_register_device()`.
 ///
-/// It is the caller's responsibility to verify that the result is not
-/// NULL.
-///
 /// @param count The number of input pins to allocate memory for.
 lcec_class_din_channels_t *lcec_din_allocate_channels(int count) {
   lcec_class_din_channels_t *channels;
 
-  channels = hal_malloc(sizeof(lcec_class_din_channels_t));
-  if (channels == NULL) {
-    return NULL;
-  }
+  channels = LCEC_HAL_ALLOCATE(lcec_class_din_channels_t);
   channels->count = count;
-  channels->channels = hal_malloc(sizeof(lcec_class_din_channel_t *) * count);
-  if (channels->channels == NULL) {
-    return NULL;
-  }
+  channels->channels = LCEC_HAL_ALLOCATE_ARRAY(lcec_class_din_channel_t *,count);
 
   return channels;
 }
@@ -84,11 +75,7 @@ lcec_class_din_channel_t *lcec_din_register_channel_named(lcec_slave_t *slave, u
   lcec_class_din_channel_t *data;
   int err;
 
-  data = hal_malloc(sizeof(lcec_class_din_channel_t));
-  if (data == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s pin %s failed\n", slave->master->name, slave->name, name);
-    return NULL;
-  }
+  data = LCEC_HAL_ALLOCATE(lcec_class_din_channel_t);
   memset(data, 0, sizeof(lcec_class_din_channel_t));
   data->name = name;
   data->pdo_bp_packed = 0xffff;  // Flag value, this isn't a packed channel.
@@ -121,11 +108,7 @@ lcec_class_din_channel_t *lcec_din_register_channel_packed(lcec_slave_t *slave, 
   lcec_class_din_channel_t *data;
   int err;
 
-  data = hal_malloc(sizeof(lcec_class_din_channel_t));
-  if (data == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s pin %s failed\n", slave->master->name, slave->name, name);
-    return NULL;
-  }
+  data = LCEC_HAL_ALLOCATE(lcec_class_din_channel_t);
   memset(data, 0, sizeof(lcec_class_din_channel_t));
   data->name = name;
 
