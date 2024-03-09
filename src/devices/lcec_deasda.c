@@ -312,10 +312,10 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
 
   // Set up digital outputs
   hal_data->dout = lcec_dout_allocate_channels(4);
-  hal_data->dout->channels[0] = lcec_dout_register_channel_packed(slave, 0x60f3, 0x01, 16, "dout-d01");
-  hal_data->dout->channels[1] = lcec_dout_register_channel_packed(slave, 0x60f3, 0x01, 17, "dout-d02");
-  hal_data->dout->channels[2] = lcec_dout_register_channel_packed(slave, 0x60f3, 0x01, 18, "dout-d03");
-  hal_data->dout->channels[3] = lcec_dout_register_channel_packed(slave, 0x60f3, 0x01, 19, "dout-d04");
+  hal_data->dout->channels[0] = lcec_dout_register_channel_packed(slave, 0x60fe, 0x01, 16, "dout-d01");
+  hal_data->dout->channels[1] = lcec_dout_register_channel_packed(slave, 0x60fe, 0x01, 17, "dout-d02");
+  hal_data->dout->channels[2] = lcec_dout_register_channel_packed(slave, 0x60fe, 0x01, 18, "dout-d03");
+  hal_data->dout->channels[3] = lcec_dout_register_channel_packed(slave, 0x60fe, 0x01, 19, "dout-d04");
 
   if (lcec_write_sdo32(slave, 0x60fe, 0x02, 0x000f0000) != 0) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to configure slave %s.%s sdo for enabling digital output ports 1-4\n", master->name,
