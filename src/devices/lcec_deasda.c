@@ -27,6 +27,7 @@
 
 #define FLAG_LOWRES_ENC  1 << 0  // Device uses low res encoder as default
 #define FLAG_HIGHRES_ENC 1 << 1  // Device uses high res encoder as default x3 series
+#define FLAG_DOUT        1 << 2  // Device has digital outputs
 
 #define LCEC_DESDA_MODPARAM_OPERATIONMODE 0
 
@@ -65,8 +66,8 @@ static const drive_operationmodes_t drive_operationmodes[] = {
 // Note that DeASDA refers to A2-E series of drives and is deliberatly not refering to A2 in its name to ensure compatability with legace
 // configurations.
 static lcec_typelist_t types[] = {
-    {"DeASDA", LCEC_DELTA_VID, 0x10305070, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_LOWRES_ENC},
-    {"DeASDA3", LCEC_DELTA_VID, 0x00006010, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_HIGHRES_ENC},
+    {"DeASDA", LCEC_DELTA_VID, 0x10305070, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_LOWRES_ENC | FLAG_DOUT},
+    {"DeASDA3", LCEC_DELTA_VID, 0x00006010, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_HIGHRES_ENC | FLAG_DOUT},
     {"DeASDB3", LCEC_DELTA_VID, 0x00006080, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_HIGHRES_ENC},
     {NULL},
 };
@@ -202,56 +203,6 @@ static const lcec_pindesc_t slave_params[] = {
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
-static ec_pdo_entry_info_t lcec_deasda_in[] = {
-    {0x6041, 0x00, 16},  // Status Word
-    {0x606C, 0x00, 32},  // Current Velocity
-    {0x6064, 0x00, 32},  // Current Position
-    {0x2511, 0x00, 32},  // External encoder
-    {0x6077, 0x00, 16},  // Torque
-    {0x60FD, 0x00, 32},  // Digital Inputs
-
-};
-
-static ec_pdo_entry_info_t lcec_deasda_out_csv[] = {
-    {0x6040, 0x00, 16},  // Control Word
-    {0x60FF, 0x00, 32},  // Target Velocity
-    {0x60fe, 0x01, 32},  // digital output
-};
-
-static ec_pdo_entry_info_t lcec_deasda_out_csp[] = {
-    {0x6040, 0x00, 16},  // Control Word
-    {0x607A, 0x00, 32},  // Target Position
-    {0x60fe, 0x01, 32},  // digital output
-};
-
-static ec_pdo_info_t lcec_deasda_pdos_out_csv[] = {
-    {0x1602, 3, lcec_deasda_out_csv},
-};
-
-static ec_pdo_info_t lcec_deasda_pdos_out_csp[] = {
-    {0x1602, 3, lcec_deasda_out_csp},
-};
-
-static ec_pdo_info_t lcec_deasda_pdos_in[] = {
-    {0x1a02, 6, lcec_deasda_in},
-};
-
-static ec_sync_info_t lcec_deasda_syncs_csv[] = {
-    {0, EC_DIR_OUTPUT, 0, NULL},
-    {1, EC_DIR_INPUT, 0, NULL},
-    {2, EC_DIR_OUTPUT, 1, lcec_deasda_pdos_out_csv},
-    {3, EC_DIR_INPUT, 1, lcec_deasda_pdos_in},
-    {0xff},
-};
-
-static ec_sync_info_t lcec_deasda_syncs_csp[] = {
-    {0, EC_DIR_OUTPUT, 0, NULL},
-    {1, EC_DIR_INPUT, 0, NULL},
-    {2, EC_DIR_OUTPUT, 1, lcec_deasda_pdos_out_csp},
-    {3, EC_DIR_INPUT, 1, lcec_deasda_pdos_in},
-    {0xff},
-};
-
 static void lcec_deasda_check_scales(lcec_deasda_data_t *hal_data);
 
 static void lcec_deasda_read(lcec_slave_t *slave, long period);
@@ -268,9 +219,15 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
   int8_t ti;
   drive_operationmodes_t const *driveopmode;
   static uint16_t operationmode;
-
+  lcec_syncs_t *syncs;
   uint64_t flags;
   flags = slave->flags;
+
+  syncs = hal_malloc(sizeof(lcec_syncs_t));
+  if (syncs == NULL) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for deasda syncs failed\n");
+    return -1;
+  }
 
   // Determine Operation Mode (modParam opmode) as this defines everything else
   LCEC_CONF_MODPARAM_VAL_T *pval;
@@ -294,6 +251,41 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
     operationmode = DEASDA_OPMODE_CSV;
   }
 
+  // Set up PDO sync configuration
+  lcec_syncs_init(slave, syncs);
+  lcec_syncs_add_sync(syncs, EC_DIR_OUTPUT, EC_WD_DEFAULT);
+  lcec_syncs_add_sync(syncs, EC_DIR_INPUT, EC_WD_DEFAULT);
+
+  // Set up output PDO syncs
+  lcec_syncs_add_sync(syncs, EC_DIR_OUTPUT, EC_WD_DEFAULT);
+  lcec_syncs_add_pdo_info(syncs, 0x1602);
+  lcec_syncs_add_pdo_entry(syncs, 0x6040, 0, 16);  // Control word
+
+  // We could actually map both of these at the same time without
+  // problems, but for compabilities's sake, I don't want to change it
+  // right now.
+  if (operationmode == DEASDA_OPMODE_CSV) {
+    lcec_syncs_add_pdo_entry(syncs, 0x60ff, 0, 32);  // Target Velocity
+  } else {
+    lcec_syncs_add_pdo_entry(syncs, 0x607a, 0, 32);  // Target Position
+  }
+
+  // Only add digital outs on models that actually have the hardware.
+  if (flags & FLAG_DOUT) {
+    lcec_syncs_add_pdo_entry(syncs, 0x60fe, 1, 32);  // Digital outputs
+  }
+
+  // Set up input PDO syncs
+  lcec_syncs_add_sync(syncs, EC_DIR_INPUT, EC_WD_DEFAULT);
+  lcec_syncs_add_pdo_info(syncs, 0x1a02);
+  lcec_syncs_add_pdo_entry(syncs, 0x6041, 0, 16);  // Status word
+  lcec_syncs_add_pdo_entry(syncs, 0x606c, 0, 32);  // Current velocity
+  lcec_syncs_add_pdo_entry(syncs, 0x6064, 0, 32);  // Current position
+  lcec_syncs_add_pdo_entry(syncs, 0x2511, 0, 32);  // External encoder
+  lcec_syncs_add_pdo_entry(syncs, 0x6077, 0, 16);  // Current torque
+  lcec_syncs_add_pdo_entry(syncs, 0x60fd, 0, 32);  // Digital inputs
+  slave->sync_info = &syncs->syncs[0];
+
   // initialize callbacks
   slave->proc_read = lcec_deasda_read;
 
@@ -311,16 +303,22 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
   slave->hal_data = hal_data;
 
   // Set up digital outputs.  These names should match the A3, unclear about other models.
-  hal_data->dout = lcec_dout_allocate_channels(4);
-  hal_data->dout->channels[0] = lcec_dout_register_channel_packed(slave, 0x60fe, 0x01, 16, "dout-d01");
-  hal_data->dout->channels[1] = lcec_dout_register_channel_packed(slave, 0x60fe, 0x01, 17, "dout-d02");
-  hal_data->dout->channels[2] = lcec_dout_register_channel_packed(slave, 0x60fe, 0x01, 18, "dout-d03");
-  hal_data->dout->channels[3] = lcec_dout_register_channel_packed(slave, 0x60fe, 0x01, 19, "dout-d04");
+  //
+  // TODO(scottlaird): It appears that various A2 and A3 models have
+  // different numbers of digital out (and in?) ports.  We'll probably
+  // want to make this configurable, one way or another.
+  if (flags & FLAG_DOUT) {
+    hal_data->dout = lcec_dout_allocate_channels(4);
+    hal_data->dout->channels[0] = lcec_dout_register_channel_packed(slave, 0x60fe, 0x01, 16, "dout-d01");
+    hal_data->dout->channels[1] = lcec_dout_register_channel_packed(slave, 0x60fe, 0x01, 17, "dout-d02");
+    hal_data->dout->channels[2] = lcec_dout_register_channel_packed(slave, 0x60fe, 0x01, 18, "dout-d03");
+    hal_data->dout->channels[3] = lcec_dout_register_channel_packed(slave, 0x60fe, 0x01, 19, "dout-d04");
 
-  if (lcec_write_sdo32(slave, 0x60fe, 0x02, 0x000f0000) != 0) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to configure slave %s.%s sdo for enabling digital output ports 1-4\n", master->name,
-        slave->name);
-    return -1;
+    if (lcec_write_sdo32(slave, 0x60fe, 0x02, 0x000f0000) != 0) {
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to configure slave %s.%s sdo for enabling digital output ports 1-4\n",
+          master->name, slave->name);
+      return -1;
+    }
   }
 
   // set to 0x6060 to requested mode (CSV, CSP)
@@ -348,8 +346,6 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
   }
 
   if (operationmode == DEASDA_OPMODE_CSV) {
-    // initialize sync info
-    slave->sync_info = lcec_deasda_syncs_csv;
     // initialize POD entries
     lcec_pdo_init(slave, 0x6041, 0x00, &hal_data->status_pdo_os, NULL);
     lcec_pdo_init(slave, 0x606C, 0x00, &hal_data->currvel_pdo_os, NULL);
@@ -367,8 +363,6 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
     if ((err = lcec_pin_newf_list(hal_data, slave_pins_csv, LCEC_MODULE_NAME, master->name, slave->name)) != 0) return err;
 
   } else if (operationmode == DEASDA_OPMODE_CSP) {
-    // initialize sync info
-    slave->sync_info = lcec_deasda_syncs_csp;
     // initialize POD entries
     lcec_pdo_init(slave, 0x6041, 0x00, &hal_data->status_pdo_os, NULL);
     lcec_pdo_init(slave, 0x606C, 0x00, &hal_data->currvel_pdo_os, NULL);
@@ -542,7 +536,7 @@ static void lcec_deasda_write_csv(lcec_slave_t *slave, long period) {
   int switch_on_edge;
 
   // do digital outputs
-  lcec_dout_write_all(slave, hal_data->dout);
+  if (hal_data->dout) lcec_dout_write_all(slave, hal_data->dout);
 
   // check for enable edge
   switch_on_edge = *(hal_data->switch_on) && !hal_data->last_switch_on;
@@ -595,7 +589,7 @@ static void lcec_deasda_write_csp(lcec_slave_t *slave, long period) {
   int switch_on_edge;
 
   // do digital outputs
-  lcec_dout_write_all(slave, hal_data->dout);
+  if (hal_data->dout) lcec_dout_write_all(slave, hal_data->dout);
 
   // check for enable edge
   switch_on_edge = *(hal_data->switch_on) && !hal_data->last_switch_on;
