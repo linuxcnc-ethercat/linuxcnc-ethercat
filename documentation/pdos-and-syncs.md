@@ -81,25 +81,27 @@ int foo_init(int id, struct lcec_slave *s) {
 ```
 
 There are a *lot* of drivers like this in the LCEC tree.  This isn't
-actually needed for most devices, and just makes the driver larger and
+actually needed for many devices, and just makes the driver larger and
 more complicated.
 
-The point (as I understand it) of setting up `sync_info` is that it
-changes the device's built-in PDO map, changing which entries are
-available to be synced automatically to the master.  However, devices
-have a default PDO setup, and for basic devices it almost always
-contains all of the objects that we care about.  For any given device,
-you can check its default PDO mappings via `ethercat pdos`, but you
-may need to power-cycle the device to see what the defaults were
-before we overwrote them.  Or you can look at
+The point of setting `sync_info` is that it changes the device's
+built-in PDO map, changing which entries are available to be synced
+automatically to the master.  Most devices have a default PDO setup,
+and for basic devices it almost always contains all of the objects
+that we care about.  In these cases, there's no point in manually
+setting PDOs.  It just complicates the driver for no real gain.
+
+For any given device, you can check its default PDO mappings via
+`ethercat pdos`, but you may need to power-cycle the device to see
+what the defaults were before we overwrote them.  Or you can look at
 [http://linuxcnc-ethercat.github.io/esi-data/devices/](http://linuxcnc-ethercat.github.io/esi-data/devices/),
 which has the default maps for nearly all devices that we support.
 
-If one of the existing PDOs covers everything that you need without
-too much extra data, then you probably don't want to bother with
-creating syncs.  If you're modifying an existing driver, try
-commenting out the `sync_info=...` line, power-cycle your Ethercat
-devices, and see if it still works.
+If the default PDOs cover everything that you need without too much
+extra data, then you probably don't want to bother with creating
+syncs.  If you're modifying an existing driver, try commenting out the
+`sync_info=...` line, power-cycle your Ethercat devices, and see if it
+still works.
 
 Failure is pretty obvious -- LCEC will fail at startup with an error
 about being unable to map a PDO entry.
@@ -109,7 +111,8 @@ style, but don't just cargo-cult it blindly.
 
 ## Style 3: create syncs using `lcec_syncs_init()`, and then use `LCEC_PDO_INIT()`
 
-The third style is similar to the second, but uses a wrapper library to actually populate the sync structures:
+The third style is similar to the second, but uses a wrapper library
+to actually populate the sync structures:
 
 ```c
 int foo_init(int id, struct lcec_slave *s) {
@@ -136,14 +139,17 @@ int foo_init(int id, struct lcec_slave *s) {
 }
 ```
 
-There are two advantages to this style:
+There are three advantages to this style:
 
 - It's shorter.
 - It's easy to use logic to decide if you want to map (or not map)
   additional entries.
+- It's harder to get wrong, as you don't need to manually count the
+  number of PDOs and PDO entries.  All of the calculatable settings
+  are managed automatically.
 
 If you were trying to set up mappings for devices with variable
-numbers of channels in a single driver, *and* the default mappings
+numbers of channels in a single driver, *and* the default mapping
 didn't cover the objects that you wanted, then you'd want to use this
 style, because it makes it easy to add additional entries in a loop.
 Under the hood, it ends up creating the same structs as style #2.
@@ -158,24 +164,37 @@ objects get mapped.
 
 ## Performance
 
-The one possible issue here is performance--I suspect (but haven't
-verified) that our EtherCAT library will look for existing PDO sync
-mappings and pick the smallest one that covers the PDO objects that we
-care about, *and then sync everything listed in that PDO*.  So, if we
-have a device that lists 50 objects in a PDO config and we only want
-1, then we're going to end up copying way more data than we care
-about, slightly increasing the average cycle time and adding overhead.
+If we don't explicitly set `sync_info`, then the Etherlab EtherCAT
+master library that we use will simply sync all of the PDOs listed in
+the device's default sync mappings.  If the device's default sync
+setup lists 50 objects in its PDO config and we only want 1, then
+we're going to end up doing extra work and slowing things down
+slightly.  In this case, we *might* want to set PDOs ourselves anyway.
+However, I don't think I've ever seen a device that fits this; if
+anything, most seem to sync too few fields, not too many.
 
-Does it matter?  It depends on the use case, the actual device, and
-its default configuration.  Most of the basic Beckhoff devices have
-fairly simple mappings, and frequently provide both a "compact" PDO
-(with only the data itself) and a larger PDO with status information.
+Does it matter if we sync too much data?  IMO, not usually, within
+reason. Adding one extra byte to an existing frame traveling over 100
+Mbps Ethernet takes an extra (8 bits / 100 Mbits/second) = 80ns.
+Modern CPUs will probably only take a cycle or two extra, if even
+that, depending on alignment and what else is being copied at the same
+time.  So a few extra bytes probably don't matter at all.  Even a
+hundred extra bytes would probably not make a difference in the vast
+majority of cases in systems with a 1ms cycle time.  But, there's no
+reason to be *overtly* wasteful here.
 
-Adding one extra byte to an existing frame travelling over 100 Mbps
-Ethernet takes an extra (8 bits / 100 Mbits/second) = 80ns.  Modern
-CPUs will probably only take a cycle or two extra, if even that,
-depending on alignment and what else is being copied at the same time.
-So a few extra bytes probably don't matter at all.  Even a hundred
-extra bytes would probably not make a difference in the vast majority
-of cases in systems with a 1ms cycle time.  But, there's no reason to
-be *overtly* wasteful here.
+## Recommendations
+
+If the device's default PDO mapping contains everything that we need
+and not *too* much else, then just use it.  Don't set `sync_info`,
+don't define our own syncs, just keep things simple.  If the code
+tries to access something that isn't mapped, then it'll fail fast with
+a mostly-readable error.
+
+If the driver needs something that *isn't* part of the default PDO
+mapping, *or* we need to pare down the number of mapped entries for
+some reason, then prefer the third style.  It's less work overall and
+harder to get wrong.
+
+There's nothing *wrong* with the second style, but it's probably best
+avoided in new code.
