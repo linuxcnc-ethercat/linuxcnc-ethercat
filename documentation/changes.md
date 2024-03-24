@@ -1,21 +1,20 @@
-# Changes in LinuxCNC Ethercat
+# Breaking Changes in LinuxCNC Ethercat
 
 This isn't precisely a set of release notes or a changelog file; we
 have a lot of detail in git logs, GitHub PRs, and GitHub release notes
 that cover that.
 
 Instead, this focuses on changes that *may break existing
-configurations*.  In general, we'd like to avoid breaking things, but
-there are times where we find bugs in drivers that don't have a clean
-fix, or (more likely) suggest that no one ever actually *used* the
-feature in question.
+configurations* or existing source code.  In general, we'd like to
+avoid breaking things, but there are times where we find bugs in
+drivers that don't have a clean fix, or (more likely) suggest that no
+one ever actually *used* the feature in question.
 
 Entries tagged with `[API]` will impact developers and drivers that
 aren't checked into the LinuxCNC Ethercat tree, but shouldn't be
 visible to users.
 
-Note that this list should only include deliberate breakage, not
-typical bugs.
+This list should only include deliberate breakage, not typical bugs.
 
 ## Pending
 
