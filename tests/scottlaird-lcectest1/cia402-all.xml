@@ -1,0 +1,228 @@
+<masters>
+  <master idx="0" appTimePeriod="1000000" refClockSyncCycles="1000">
+    <slave idx="25" type="basic_cia402" vid="0x00004321" pid="0x00002100" name="ls-2cl3">
+      <!--2CL3-EC507(COE)-->
+      <modParam name="ciaChannels" value="2"/>
+      <modParam name="ciaRxPDOEntryLimit" value="8"/>
+      <modParam name="ciaTxPDOEntryLimit" value="8"/>
+      <modParam name="ch1enablePP" value="false"/>
+      <modParam name="ch1enablePV" value="true"/>
+      <modParam name="ch1enableCSP" value="true"/>
+      <modParam name="ch1enableActualVoltage" value="true"/>
+      <modParam name="ch1enableDigitalInput" value="true"/>
+      <modParam name="ch1digitalInChannels" value="16"/>
+      <modParam name="ch1enableDigitalOutput" value="true"/>
+      <modParam name="ch1digitalOutChannels" value="16"/>
+      <modParam name="ch1enableErrorCode" value="true"/>
+      <modParam name="ch1enableFollowingErrorTimeout" value="true"/>
+      <modParam name="ch1enableFollowingErrorWindow" value="true"/>
+      <modParam name="ch1enableHomeAccel" value="true"/>
+      <modParam name="ch1enableInterpolationTimePeriod" value="true"/>
+      <modParam name="ch1enableMaximumAcceleration" value="true"/>
+      <modParam name="ch1enableMaximumCurrent" value="true"/>
+      <modParam name="ch1enableMaximumDeceleration" value="true"/>
+      <modParam name="ch1enableMaximumMotorRPM" value="true"/>
+      <modParam name="ch1enableMaximumTorque" value="true"/>
+      <modParam name="ch1enableMotorRatedCurrent" value="true"/>
+      <modParam name="ch1enableMotorRatedTorque" value="true"/>
+      <modParam name="ch1enablePolarity" value="true"/>
+      <modParam name="ch1enablePositioningTime" value="true"/>
+      <modParam name="ch1enablePositioningWindow" value="true"/>
+      <modParam name="ch1enableProfileAccel" value="true"/>
+      <modParam name="ch1enableProfileDecel" value="true"/>
+      <modParam name="ch1enableProfileEndVelocity" value="true"/>
+      <modParam name="ch1enableProfileMaxVelocity" value="true"/>
+      <modParam name="ch1enableProfileVelocity" value="true"/>
+      <modParam name="ch1enableTargetTorque" value="true"/>
+      <modParam name="ch1enableTorqueProfileType" value="true"/>
+      <modParam name="ch1enableTorqueSlope" value="true"/>
+      <modParam name="ch1enableVelocityErrorTime" value="true"/>
+      <modParam name="ch1enableVelocityErrorWindow" value="true"/>
+      <modParam name="ch1enableVelocityThresholdTime" value="true"/>
+      <modParam name="ch1enableVelocityThresholdWindow" value="true"/>
+      <modParam name="ch2enablePP" value="false"/>
+      <modParam name="ch2enablePV" value="true"/>
+      <modParam name="ch2enableCSP" value="true"/>
+      <modParam name="ch2enableActualVoltage" value="true"/>
+      <modParam name="ch2enableDigitalInput" value="true"/>
+      <modParam name="ch2digitalInChannels" value="16"/>
+      <modParam name="ch2enableDigitalOutput" value="true"/>
+      <modParam name="ch2digitalOutChannels" value="16"/>
+      <modParam name="ch2enableErrorCode" value="true"/>
+      <modParam name="ch2enableFollowingErrorTimeout" value="true"/>
+      <modParam name="ch2enableFollowingErrorWindow" value="true"/>
+      <modParam name="ch2enableHomeAccel" value="true"/>
+      <modParam name="ch2enableInterpolationTimePeriod" value="true"/>
+      <modParam name="ch2enableMaximumAcceleration" value="true"/>
+      <modParam name="ch2enableMaximumCurrent" value="true"/>
+      <modParam name="ch2enableMaximumDeceleration" value="true"/>
+      <modParam name="ch2enableMaximumMotorRPM" value="true"/>
+      <modParam name="ch2enableMaximumTorque" value="true"/>
+      <modParam name="ch2enableMotorRatedCurrent" value="true"/>
+      <modParam name="ch2enableMotorRatedTorque" value="true"/>
+      <modParam name="ch2enablePolarity" value="true"/>
+      <modParam name="ch2enablePositioningTime" value="true"/>
+      <modParam name="ch2enablePositioningWindow" value="true"/>
+      <modParam name="ch2enableProfileAccel" value="true"/>
+      <modParam name="ch2enableProfileDecel" value="true"/>
+      <modParam name="ch2enableProfileEndVelocity" value="true"/>
+      <modParam name="ch2enableProfileMaxVelocity" value="true"/>
+      <modParam name="ch2enableProfileVelocity" value="true"/>
+      <modParam name="ch2enableTargetTorque" value="true"/>
+      <modParam name="ch2enableTorqueProfileType" value="true"/>
+      <modParam name="ch2enableTorqueSlope" value="true"/>
+      <modParam name="ch2enableVelocityErrorTime" value="true"/>
+      <modParam name="ch2enableVelocityErrorWindow" value="true"/>
+      <modParam name="ch2enableVelocityThresholdTime" value="true"/>
+      <modParam name="ch2enableVelocityThresholdWindow" value="true"/>
+    </slave>
+    <slave idx="26" type="basic_cia402" vid="0x00000227" pid="0x00000005" name="rovix-esd">
+      <modParam name="ciaChannels" value="2"/>
+      <modParam name="ciaRxPDOEntryLimit" value="16"/>
+      <modParam name="ciaTxPDOEntryLimit" value="16"/>
+      <modParam name="ch1enablePP" value="true"/>
+      <modParam name="ch1enablePV" value="false"/>
+      <modParam name="ch1enableCSP" value="true"/>
+      <modParam name="ch1enableErrorCode" value="true"/>
+      <modParam name="ch1enablePolarity" value="true"/>
+      <modParam name="ch1enablePositioningWindow" value="true"/>
+      <modParam name="ch1enableProfileAccel" value="true"/>
+      <modParam name="ch1enableProfileDecel" value="true"/>
+      <modParam name="ch1enableProfileMaxVelocity" value="true"/>
+      <modParam name="ch1enableProfileVelocity" value="true"/>
+      <modParam name="ch2enablePP" value="true"/>
+      <modParam name="ch2enablePV" value="false"/>
+      <modParam name="ch2enableCSP" value="true"/>
+      <modParam name="ch2enableErrorCode" value="true"/>
+      <modParam name="ch2enablePolarity" value="true"/>
+      <modParam name="ch2enableProfileAccel" value="true"/>
+      <modParam name="ch2enableProfileDecel" value="true"/>
+      <modParam name="ch2enableProfileMaxVelocity" value="true"/>
+      <modParam name="ch2enableProfileVelocity" value="true"/> <!--
+      <modParam name="ch3enablePP" value="true"/>
+      <modParam name="ch3enableCSP" value="true"/>
+      <modParam name="ch3enableDigitalInput" value="true"/>
+      <modParam name="ch3digitalInChannels" value="16"/>
+      <modParam name="ch3enableDigitalOutput" value="true"/>
+      <modParam name="ch3digitalOutChannels" value="16"/>
+      <modParam name="ch3enableErrorCode" value="true"/>
+      <modParam name="ch3enablePolarity" value="true"/>
+      <modParam name="ch3enableProbeStatus" value="true"/>
+      <modParam name="ch3enableProfileAccel" value="true"/>
+      <modParam name="ch3enableProfileDecel" value="true"/>
+      <modParam name="ch3enableProfileMaxVelocity" value="true"/>
+      <modParam name="ch3enableProfileVelocity" value="true"/>
+      <modParam name="ch4enablePP" value="true"/>
+      <modParam name="ch4enableCSP" value="true"/>
+      <modParam name="ch4enableDigitalInput" value="true"/>
+      <modParam name="ch4digitalInChannels" value="16"/>
+      <modParam name="ch4enableDigitalOutput" value="true"/>
+      <modParam name="ch4digitalOutChannels" value="16"/>
+      <modParam name="ch4enableErrorCode" value="true"/>
+      <modParam name="ch4enablePolarity" value="true"/>
+      <modParam name="ch4enablePositioningWindow" value="true"/>
+      <modParam name="ch4enableProbeStatus" value="true"/>
+      <modParam name="ch4enableProfileAccel" value="true"/>
+      <modParam name="ch4enableProfileDecel" value="true"/>
+      <modParam name="ch4enableProfileMaxVelocity" value="true"/>
+      <modParam name="ch4enableProfileVelocity" value="true"/> -->
+    </slave>
+    <slave idx="27" type="basic_cia402" vid="0x00000a88" pid="0x0a880002" name="rt-ect60">
+      <!--ECT60V202(COE)-->
+      <modParam name="ciaRxPDOEntryLimit" value="16"/>
+      <modParam name="ciaTxPDOEntryLimit" value="16"/>
+      <modParam name="enablePP" value="true"/>
+      <modParam name="enablePV" value="true"/>
+      <modParam name="enableTQ" value="true"/>
+      <modParam name="enableHM" value="true"/>
+      <modParam name="enableCSP" value="true"/>
+      <modParam name="enableCSV" value="true"/>
+      <modParam name="enableDigitalInput" value="true"/>
+      <modParam name="digitalInChannels" value="16"/>
+      <modParam name="enableDigitalOutput" value="true"/>
+      <modParam name="digitalOutChannels" value="16"/>
+      <modParam name="enableErrorCode" value="true"/>
+      <modParam name="enableHomeAccel" value="true"/>
+      <modParam name="enableInterpolationTimePeriod" value="true"/>
+      <modParam name="enableProfileAccel" value="true"/>
+      <modParam name="enableProfileDecel" value="true"/>
+      <modParam name="enableProfileVelocity" value="true"/>
+    </slave>
+    <slave idx="28" type="basic_cia402" vid="0x00000a88" pid="0x0a880005" name="rt-ecr60x2">
+      <modParam name="ciaChannels" value="1"/>
+      <modParam name="ciaRxPDOEntryLimit" value="16"/>
+      <modParam name="ciaTxPDOEntryLimit" value="16"/>
+      <modParam name="ch1enablePP" value="true"/>
+      <modParam name="ch1enablePV" value="true"/>
+      <modParam name="ch1enableCSP" value="true"/>
+      <modParam name="ch1enableCSV" value="true"/>
+      <modParam name="ch1enableDigitalInput" value="true"/>
+      <modParam name="ch1digitalInChannels" value="16"/>
+      <modParam name="ch1enableDigitalOutput" value="true"/>
+      <modParam name="ch1digitalOutChannels" value="16"/>
+      <modParam name="ch1enableErrorCode" value="true"/>
+      <modParam name="ch1enableProfileAccel" value="true"/>
+      <modParam name="ch1enableProfileDecel" value="true"/>
+      <modParam name="ch1enableProfileVelocity" value="true"/>
+<!--      <modParam name="ch2enablePP" value="true"/>
+      <modParam name="ch2enablePV" value="true"/>
+      <modParam name="ch2enableCSP" value="true"/>
+      <modParam name="ch2enableCSV" value="true"/>
+      <modParam name="ch2enableDigitalInput" value="true"/>
+      <modParam name="ch2digitalInChannels" value="16"/>
+      <modParam name="ch2enableDigitalOutput" value="true"/>
+      <modParam name="ch2digitalOutChannels" value="16"/>
+      <modParam name="ch2enableErrorCode" value="true"/>
+      <modParam name="ch2enableProfileAccel" value="true"/>
+      <modParam name="ch2enableProfileDecel" value="true"/>
+      <modParam name="ch2enableProfileVelocity" value="true"/> -->
+    </slave>
+    <slave idx="29" type="basic_cia402" vid="0x00000a88" pid="0x0a880042" name="rt-drv400">
+      <!--DRV400E(COE)-->
+      <modParam name="ciaRxPDOEntryLimit" value="16"/>
+      <modParam name="ciaTxPDOEntryLimit" value="16"/>
+      <modParam name="enablePP" value="true"/>
+      <modParam name="enablePV" value="true"/>
+      <modParam name="enableCSP" value="true"/>
+      <modParam name="enableCSV" value="true"/>
+      <modParam name="enableCST" value="true"/>
+      <modParam name="enableDigitalInput" value="true"/>
+      <modParam name="digitalInChannels" value="16"/>
+      <modParam name="enableDigitalOutput" value="true"/>
+      <modParam name="digitalOutChannels" value="16"/>
+      <modParam name="enableErrorCode" value="true"/>
+      <modParam name="enableFollowingErrorTimeout" value="true"/>
+      <modParam name="enableFollowingErrorWindow" value="true"/>
+      <modParam name="enableHomeAccel" value="true"/>
+      <modParam name="enableMaximumCurrent" value="true"/>
+      <modParam name="enableMaximumTorque" value="true"/>
+      <modParam name="enablePolarity" value="true"/>
+      <modParam name="enablePositioningTime" value="true"/>
+      <modParam name="enablePositioningWindow" value="true"/>
+      <modParam name="enableProbeStatus" value="true"/>
+      <modParam name="enableProfileAccel" value="true"/>
+      <modParam name="enableProfileDecel" value="true"/>
+      <modParam name="enableProfileMaxVelocity" value="true"/>
+      <modParam name="enableProfileVelocity" value="true"/>
+      <modParam name="enableTorqueDemand" value="true"/>
+      <modParam name="enableTorqueSlope" value="true"/>
+      <modParam name="enableVelocityErrorTime" value="true"/>
+      <modParam name="enableVelocityErrorWindow" value="true"/>
+    </slave>
+    <slave idx="30" type="basic_cia402" vid="0x00000083" pid="0x00000053" name="omron-mx2">
+      <!--3G3AX-MX2-ECT EtherCAT Communication Unit for 3G3MX2-->
+      <modParam name="ciaRxPDOEntryLimit" value="8"/>
+      <modParam name="ciaTxPDOEntryLimit" value="8"/>
+      <modParam name="enableVL" value="true"/>
+      <modParam name="enableDemandVL" value="true"/>
+      <modParam name="digitalInChannels" value="16"/>
+      <modParam name="digitalOutChannels" value="16"/>
+      <modParam name="enableErrorCode" value="true"/>
+      <modParam name="enableTargetVL" value="true"/>
+      <modParam name="enableVLAccel" value="true"/>
+      <modParam name="enableVLDecel" value="true"/>
+      <modParam name="enableVLMaximum" value="true"/>
+      <modParam name="enableVLMinimum" value="true"/>
+    </slave>
+  </master>
+</masters>

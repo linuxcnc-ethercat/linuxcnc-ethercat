@@ -44,7 +44,7 @@
 static const lcec_modparam_desc_t modparams_lcec_basic_cia402[] = {
     {"ciaChannels", M_CHANNELS, MODPARAM_TYPE_U32},
     {"ciaRxPDOEntryLimit", M_RXPDOLIMIT, MODPARAM_TYPE_U32},
-    {"ciaTxPDOEntryLimit", M_RXPDOLIMIT, MODPARAM_TYPE_U32},
+    {"ciaTxPDOEntryLimit", M_TXPDOLIMIT, MODPARAM_TYPE_U32},
     // XXXX, add device-specific modparams here.
     {NULL},
 };

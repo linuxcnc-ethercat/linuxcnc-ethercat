@@ -1,0 +1,29 @@
+loadusr -W lcec_conf cia402-all.xml
+loadrt lcec
+#loadrt cia402 count=2
+
+loadrt threads name1=servo-thread period1=1000000
+addf lcec.read-all servo-thread
+#addf cia402.0.read-all servo-thread
+
+addf lcec.write-all servo-thread
+#addf cia402.0.write-all servo-thread
+
+show
+
+#net rtec-statusword lcec.0.D22.srv-1-cia-statusword => cia402.0.statusword
+#net rtec-opmode-display lcec.0.D22.srv-1-opmode-display => cia402.0.opmode-display
+#net rtec-drv-act-pos lcec.0.D22.srv-1-actual-position => cia402.0.drv-actual-position
+#net rtec-drv-act-velo lcec.0.D22.srv-1-actual-velocity => cia402.0.drv-actual-velocity
+#
+#net rtec-controlword cia402.0.controlword => lcec.0.D22.srv-1-cia-controlword
+#net rtec-modes-of-operation cia402.0.opmode => lcec.0.D22.srv-1-opmode
+#net rtec-drv-target-pos cia402.0.drv-target-position => lcec.0.D22.srv-1-target-position
+#net rtec-drv-target-velo cia402.0.drv-target-velocity => lcec.0.D22.srv-1-target-velocity
+
+#setp cia402.0.csp-mode 1  # velocity mode, for testing.
+
+start
+
+# don't exit immediately
+waitusr lcec_conf
