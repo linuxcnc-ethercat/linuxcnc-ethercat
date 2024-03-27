@@ -110,8 +110,6 @@ static lcec_class_cia402_enabled_t *lcec_cia402_enabled(lcec_class_cia402_channe
     enabled->enable_actual_vl = 1;
     enabled->enable_vl_minimum = 1;
     enabled->enable_vl_maximum = 1;
-    enabled->enable_vl_accel = 1;
-    enabled->enable_vl_decel = 1;
   }
   if (opt->enable_cst) {
     // TODO: add cyclic synchronous torque pins once they're added.
@@ -260,7 +258,7 @@ int lcec_cia402_add_output_sync(lcec_slave_t *slave, lcec_syncs_t *syncs, lcec_c
           RTAPI_MSG_ERR, "<modParam name=\"ciaRxPDOEntryLimit\">. Check your CiA 402 slave's hardware manual to determine the\n");
       rtapi_print_msg(RTAPI_MSG_ERR, "correct limit.\n\n");
       rtapi_print_msg(RTAPI_MSG_ERR, "Enabled features that impact this limit are:\n\n");
-      FOR_ALL_READ_PDOS_DO(PRINT_OPTIONAL_PDO_NAME);
+      FOR_ALL_WRITE_PDOS_DO(PRINT_OPTIONAL_PDO_NAME);
       rtapi_print_msg(
           RTAPI_MSG_ERR, "\nIn addition, disabling unneeded CiA 402 modes may help, as some implicitly add additional PDO entries:\n\n");
       FOR_ALL_CIA402_MODES_DO(PRINT_OPTIONAL_PDO_NAME);
@@ -380,7 +378,8 @@ lcec_class_cia402_channel_t *lcec_cia402_register_channel(
   if (enabled->enable_##pin_name)   \
   lcec_pdo_init(slave, base_idx + PDO_IDX_OFFSET_##pin_name, PDO_SIDX_##pin_name, &data->pin_name##_os, NULL)
 
-  // Call `lcec_pdo_init()` for all writeable PDOs.
+  // Call `lcec_pdo_init()` for all readable and writeable PDOs.
+  FOR_ALL_READ_PDOS_DO(INIT_OPTIONAL_PDO);
   FOR_ALL_WRITE_PDOS_DO(INIT_OPTIONAL_PDO);
 
 #define INIT_SDO_REQUEST(pin_name) \
@@ -638,6 +637,8 @@ static const lcec_modparam_desc_t per_channel_modparams[] = {
     {"gearRatio", CIA402_MP_GEAR_RATIO, MODPARAM_TYPE_STRING},
     {"feedRatio", CIA402_MP_FEED_RATIO, MODPARAM_TYPE_STRING},
     {"eGearRatio", CIA402_MP_EGEAR_RATIO, MODPARAM_TYPE_STRING},
+    {"vlAccel", CIA402_MP_VL_ACCEL, MODPARAM_TYPE_STRING},
+    {"vlDecel", CIA402_MP_VL_DECEL, MODPARAM_TYPE_STRING},
 
     // Create entries for all options using the names from
     // lcec_class_cia402_opt.h:
@@ -840,6 +841,16 @@ int lcec_cia402_handle_modparam(lcec_slave_t *slave, const lcec_slave_modparam_t
       ratio = lcec_cia402_decode_ratio_modparam(p->value.str, 1 << 30);
       lcec_write_sdo32_modparam(slave, base + 0x93, 1, ratio.numerator, p->name);
       lcec_write_sdo32_modparam(slave, base + 0x93, 2, ratio.denominator, p->name);
+      return 0;
+    case CIA402_MP_VL_ACCEL:
+      ratio = lcec_cia402_decode_ratio_modparam(p->value.str, 1 << 30);
+      lcec_write_sdo32_modparam(slave, base + 0x48, 1, ratio.numerator, p->name);
+      lcec_write_sdo16_modparam(slave, base + 0x48, 2, ratio.denominator, p->name);
+      return 0;
+    case CIA402_MP_VL_DECEL:
+      ratio = lcec_cia402_decode_ratio_modparam(p->value.str, 1 << 30);
+      lcec_write_sdo32_modparam(slave, base + 0x49, 1, ratio.numerator, p->name);
+      lcec_write_sdo16_modparam(slave, base + 0x49, 2, ratio.denominator, p->name);
       return 0;
     default:
       return 1;

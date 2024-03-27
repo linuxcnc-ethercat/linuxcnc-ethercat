@@ -111,8 +111,6 @@ typedef struct {
   int enable_velocity_sensor_selector;
   int enable_velocity_threshold_time;
   int enable_velocity_threshold_window;
-  int enable_vl_accel;
-  int enable_vl_decel;
   int enable_vl_maximum;
   int enable_vl_minimum;
 } lcec_class_cia402_channel_options_t;
@@ -195,8 +193,6 @@ typedef struct {
   int enable_velocity_threshold_time;
   int enable_velocity_threshold_window;
   int enable_vl;
-  int enable_vl_accel;
-  int enable_vl_decel;
   int enable_vl_maximum;
   int enable_vl_minimum;
 } lcec_class_cia402_enabled_t;
@@ -251,10 +247,8 @@ typedef struct {
   SDO_PIN(velocity_sensor_selector, hal_s32_t);
   SDO_PIN(velocity_threshold_time, hal_u32_t);
   SDO_PIN(velocity_threshold_window, hal_u32_t);
-  SDO_PIN(vl_accel, hal_u32_t);
-  SDO_PIN(vl_decel, hal_u32_t);
-  SDO_PIN(vl_maximum, hal_s32_t);
-  SDO_PIN(vl_minimum, hal_s32_t);
+  SDO_PIN(vl_maximum, hal_u32_t);
+  SDO_PIN(vl_minimum, hal_u32_t);
 
   // In.
   PDO_PIN(statusword, hal_u32_t);
@@ -369,7 +363,9 @@ lcec_ratio lcec_cia402_decode_ratio_modparam(const char *value, unsigned int max
 #define CIA402_MP_GEAR_RATIO           0x1210
 #define CIA402_MP_FEED_RATIO           0x1220
 #define CIA402_MP_EGEAR_RATIO          0x1230
-// next is 0x1260
+#define CIA402_MP_VL_ACCEL             0x1260
+#define CIA402_MP_VL_DECEL             0x1270
+// next is 0x1280
 
 // "enable" modParams
 #define CIA402_MP_ENABLE_actual_current            0x22d0
@@ -420,8 +416,6 @@ lcec_ratio lcec_cia402_decode_ratio_modparam(const char *value, unsigned int max
 #define CIA402_MP_ENABLE_velocity_threshold_time   0x2270
 #define CIA402_MP_ENABLE_velocity_threshold_window 0x2280
 #define CIA402_MP_ENABLE_vl                        0x2060
-#define CIA402_MP_ENABLE_vl_accel                  0x2360
-#define CIA402_MP_ENABLE_vl_decel                  0x2370
 #define CIA402_MP_ENABLE_vl_maximum                0x2350
 #define CIA402_MP_ENABLE_vl_minimum                0x2340
 #define CIA402_MP_ENABLE_opmode                    0x23b0

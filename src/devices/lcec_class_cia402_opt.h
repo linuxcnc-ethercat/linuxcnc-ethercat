@@ -116,8 +116,6 @@
 #define PDO_IDX_OFFSET_velocity_sensor_selector  0x6a
 #define PDO_IDX_OFFSET_velocity_threshold_time   0x70
 #define PDO_IDX_OFFSET_velocity_threshold_window 0x6f
-#define PDO_IDX_OFFSET_vl_accel                  0x48
-#define PDO_IDX_OFFSET_vl_decel                  0x49
 #define PDO_IDX_OFFSET_vl_maximum                0x46
 #define PDO_IDX_OFFSET_vl_minimum                0x46
 
@@ -177,8 +175,6 @@
 #define PDO_SIDX_velocity_sensor_selector  0
 #define PDO_SIDX_velocity_threshold_time   0
 #define PDO_SIDX_velocity_threshold_window 0
-#define PDO_SIDX_vl_accel                  0
-#define PDO_SIDX_vl_decel                  0
 #define PDO_SIDX_vl_maximum                2
 #define PDO_SIDX_vl_minimum                1
 
@@ -238,10 +234,8 @@
 #define PDO_PIN_TYPE_velocity_sensor_selector  HAL_S32
 #define PDO_PIN_TYPE_velocity_threshold_time   HAL_U32
 #define PDO_PIN_TYPE_velocity_threshold_window HAL_U32
-#define PDO_PIN_TYPE_vl_accel                  HAL_U32
-#define PDO_PIN_TYPE_vl_decel                  HAL_U32
-#define PDO_PIN_TYPE_vl_maximum                HAL_S32
-#define PDO_PIN_TYPE_vl_minimum                HAL_S32
+#define PDO_PIN_TYPE_vl_maximum                HAL_U32
+#define PDO_PIN_TYPE_vl_minimum                HAL_U32
 
 // Pin names
 #define PDO_PIN_NAME_actual_current            "actual-current"
@@ -296,8 +290,6 @@
 #define PDO_PIN_NAME_velocity_sensor_selector  "velocity-sensor-selector"
 #define PDO_PIN_NAME_velocity_threshold_time   "velocity-threshold-time"
 #define PDO_PIN_NAME_velocity_threshold_window "velocity-threshold-window"
-#define PDO_PIN_NAME_vl_accel                  "vl-accel"
-#define PDO_PIN_NAME_vl_decel                  "vl-decel"
 #define PDO_PIN_NAME_vl_maximum                "vl-maximum"
 #define PDO_PIN_NAME_vl_minimum                "vl-minimum"
 
@@ -356,10 +348,8 @@
 #define PDO_BITS_velocity_sensor_selector  16
 #define PDO_BITS_velocity_threshold_time   16
 #define PDO_BITS_velocity_threshold_window 16
-#define PDO_BITS_vl_accel                  32
-#define PDO_BITS_vl_decel                  32
-#define PDO_BITS_vl_maximum                16
-#define PDO_BITS_vl_minimum                16
+#define PDO_BITS_vl_maximum                32
+#define PDO_BITS_vl_minimum                32
 
 // The signeded-ness of each object.  This should match
 // PDO_PIN_TYPE_foo, but we don't *necessarily* have PDO_PIN_TYPE_foo
@@ -416,10 +406,8 @@
 #define PDO_SIGN_velocity_sensor_selector  S
 #define PDO_SIGN_velocity_threshold_time   U
 #define PDO_SIGN_velocity_threshold_window U
-#define PDO_SIGN_vl_accel                  U
-#define PDO_SIGN_vl_decel                  U
-#define PDO_SIGN_vl_maximum                S
-#define PDO_SIGN_vl_minimum                S
+#define PDO_SIGN_vl_maximum                U
+#define PDO_SIGN_vl_minimum                U
 
 // define modParam names for each setting.
 #define PDO_MP_NAME_actual_current            "enableActualCurrent"
@@ -477,8 +465,6 @@
 #define PDO_MP_NAME_velocity_threshold_time   "enableVelocityThresholdTime"
 #define PDO_MP_NAME_velocity_threshold_window "enableVelocityThresholdWindow"
 #define PDO_MP_NAME_vl                        "enableVL"
-#define PDO_MP_NAME_vl_accel                  "enableVLAccel"
-#define PDO_MP_NAME_vl_decel                  "enableVLDecel"
 #define PDO_MP_NAME_vl_maximum                "enableVLMaximum"
 #define PDO_MP_NAME_vl_minimum                "enableVLMinimum"
 #define PDO_MP_NAME_target_position           ""  // not individually enableable
@@ -569,8 +555,6 @@
   thing(velocity_sensor_selector);   \
   thing(velocity_threshold_time);    \
   thing(velocity_threshold_window);  \
-  thing(vl_accel);                   \
-  thing(vl_decel);                   \
   thing(vl_maximum);                 \
   thing(vl_minimum);
 
@@ -591,7 +575,6 @@
                           thing(profile_max_velocity) thing(profile_velocity) thing(pv) thing(target_torque) thing(target_vl)              \
                               thing(torque_demand) thing(torque_profile_type) thing(torque_slope) thing(tq) thing(velocity_demand)         \
                                   thing(velocity_error_time) thing(velocity_error_window) thing(velocity_sensor_selector)                  \
-                                      thing(velocity_threshold_time) thing(velocity_threshold_window) thing(vl) thing(vl_accel)            \
-                                          thing(vl_decel) thing(vl_maximum) thing(vl_minimum) thing(positioning_window)                    \
+                                      thing(velocity_threshold_time) thing(velocity_threshold_window) thing(vl) thing(vl_maximum) thing(vl_minimum) thing(positioning_window)                    \
                                               thing(positioning_time) thing(maximum_slippage) thing(probe_status) thing(position_demand)   \
                                                   thing(control_effort)

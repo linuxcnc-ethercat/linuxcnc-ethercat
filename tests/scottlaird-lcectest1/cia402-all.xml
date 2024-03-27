@@ -213,14 +213,14 @@
       <!--3G3AX-MX2-ECT EtherCAT Communication Unit for 3G3MX2-->
       <modParam name="ciaRxPDOEntryLimit" value="8"/>
       <modParam name="ciaTxPDOEntryLimit" value="8"/>
+      <modParam name="enablePP" value="false"/>
+      <modParam name="enablePV" value="false"/>
       <modParam name="enableVL" value="true"/>
-      <modParam name="enableDemandVL" value="true"/>
+      <!-- <modParam name="enableDemandVL" value="true"/>-->
       <modParam name="digitalInChannels" value="16"/>
       <modParam name="digitalOutChannels" value="16"/>
       <modParam name="enableErrorCode" value="true"/>
-      <modParam name="enableTargetVL" value="true"/>
-      <modParam name="enableVLAccel" value="true"/>
-      <modParam name="enableVLDecel" value="true"/>
+      <!-- <modParam name="enableTargetVL" value="true"/> -->
       <modParam name="enableVLMaximum" value="true"/>
       <modParam name="enableVLMinimum" value="true"/>
     </slave>
