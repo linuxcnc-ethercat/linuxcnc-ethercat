@@ -343,6 +343,7 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
 
     // set slave type_name
     if (strcmp(name, "type") == 0) {
+      fprintf(stderr, "Found type \"%s\"\n", val);
       strncpy(p->type_name, val, LCEC_CONF_STR_MAXLEN);
       continue;
     }
@@ -761,7 +762,7 @@ static void parseSyncManagerAttrs(LCEC_CONF_XML_INST_T *inst, int next, const ch
 
   // only allowed on generic slave
   if (strcmp(state->currSlave->type_name, "generic")) {
-    fprintf(stderr, "%s: ERROR: syncManager is only allowed on generic slaves\n", modname);
+    fprintf(stderr, "%s: ERROR: syncManager is only allowed on generic slaves, not type=\"%s\"\n", modname, state->currSlave->type_name);
     XML_StopParser(inst->parser, 0);
     return;
   }
