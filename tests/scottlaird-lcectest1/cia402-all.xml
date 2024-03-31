@@ -182,28 +182,12 @@
 	  <pdoEntry idx="606C" subIdx="00" bitLen="32" halPin="srv-actual-velocity" halType="s32"/>
 	</pdo>
       </syncManager>
-    </slave> -->
-    <slave idx="27" type="basic_cia402" vid="0x00000a88" pid="0x0a880002" name="rt-ect60">
-      <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/>
-      <modParam name="ciaRxPDOEntryLimit" value="16"/>
-      <modParam name="ciaTxPDOEntryLimit" value="16"/>
-      <modParam name="enablePP" value="true"/>
-      <modParam name="enablePV" value="true"/>
-      <modParam name="enableTQ" value="true"/>
-      <modParam name="enableHM" value="true"/>
-      <modParam name="enableCSP" value="true"/>
-      <modParam name="enableCSV" value="true"/>
-      <modParam name="enableDigitalInput" value="true"/>
-      <modParam name="digitalInChannels" value="16"/>
-      <modParam name="enableDigitalOutput" value="true"/>
-      <modParam name="digitalOutChannels" value="16"/>
-      <modParam name="enableErrorCode" value="true"/>
-      <modParam name="enableHomeAccel" value="true"/>
-      <modParam name="enableInterpolationTimePeriod" value="true"/>
-      <modParam name="enableProfileAccel" value="true"/>
-      <modParam name="enableProfileDecel" value="true"/>
-      <modParam name="enableProfileVelocity" value="true"/>
+      </slave> -->
+
+    <slave idx="27" type="ECT60" name="rt-ect60">
+      <!-- <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/> -->
     </slave>
+    
     <slave idx="28" type="basic_cia402" vid="0x00000a88" pid="0x0a880005" name="rt-ecr60x2">
       <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/>
       <modParam name="ciaChannels" value="2"/>

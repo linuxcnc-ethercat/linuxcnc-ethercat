@@ -20,18 +20,6 @@
 /// @brief Driver for RTelligent Ethercat Stepper Drives
 ///
 /// See documentation at http://www.rtelligent.net/upload/wenjian/Stepper/ECT%20Series%20User%20Manual.pdf
-///
-/// This driver should (but does not currently) have modParams for these settings
-///
-/// Useful:
-/// - 0x200b:01 motor autotune enable
-/// - 0x200b:02 motor Kp
-/// - 0x200b:03 motor Ki
-/// - 0x200b:04 motor Kc
-/// - 0x200c:04 stepper resistance set
-/// - 0x200c:05 stepper inductance set
-/// - 0x200c:06 BEMF coefficient
-/// - 0x200d run reverse
 
 #include "../lcec.h"
 #include "lcec_class_cia402.h"
@@ -90,15 +78,19 @@ static const lcec_modparam_desc_t modparams_rtec[] = {
 
 static int lcec_rtec_init(int comp_id, lcec_slave_t *slave);
 
+#define AXES(flags)             ((flags >> 60) & 0xf)
+#define PDOINCREMENT(flags)     ((flags >> 52) & 0xff)
+#define FLAG_AXES(axes)         ((uint64_t)axes << 60)
+#define FLAG_PDOINCREMENT(incr) ((uint64_t)incr << 52)
+
 static lcec_typelist_t types[] = {
-    {"ECR60", LCEC_RTELLIGENT_VID, 0x0a880001, 0, NULL, lcec_rtec_init, /* modparams_rtec */},
-    {"ECR60x2", LCEC_RTELLIGENT_VID, 0x0a880005, 0, NULL, lcec_rtec_init,
-        /* modparams_rtec */},  // Only one channel supported right now
-    {"ECT60", LCEC_RTELLIGENT_VID, 0x0a880002, 0, NULL, lcec_rtec_init, /* modparams_rtec */},
-    {"ECT60x2", LCEC_RTELLIGENT_VID, 0x0a880006, 0, NULL, lcec_rtec_init,
-        /* modparams_rtec */},  // Only one channel supported right now
-    {"ECR86", LCEC_RTELLIGENT_VID, 0x0a880003, 0, NULL, lcec_rtec_init, /* modparams_rtec */},
-    {"ECT86", LCEC_RTELLIGENT_VID, 0x0a880004, 0, NULL, lcec_rtec_init, /* modparams_rtec */},
+    // note that modparams_rtec is added implicitly in ADD_TYPES_WITH_CIA402_MODPARAMS.
+    {"ECR60", LCEC_RTELLIGENT_VID, 0x0a880001, 0, NULL, lcec_rtec_init, NULL, 0},
+    {"ECR60x2", LCEC_RTELLIGENT_VID, 0x0a880005, 0, NULL, lcec_rtec_init, NULL, FLAG_AXES(2) | FLAG_PDOINCREMENT(0x10)},
+    {"ECT60", LCEC_RTELLIGENT_VID, 0x0a880002, 0, NULL, lcec_rtec_init, NULL, 0},
+    {"ECT60x2", LCEC_RTELLIGENT_VID, 0x0a880006, 0, NULL, lcec_rtec_init, NULL, FLAG_AXES(2)},  // Does this need PDOINCREMENT also?
+    {"ECR86", LCEC_RTELLIGENT_VID, 0x0a880003, 0, NULL, lcec_rtec_init, NULL, 0},
+    {"ECT86", LCEC_RTELLIGENT_VID, 0x0a880004, 0, NULL, lcec_rtec_init, NULL, 0},
     {NULL},
 };
 ADD_TYPES_WITH_CIA402_MODPARAMS(types, modparams_rtec)
@@ -400,6 +392,7 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_rtec_data_t *hal_data;
   int err;
+  int channel;
 
   // alloc hal memory
   hal_data = LCEC_HAL_ALLOCATE(lcec_rtec_data_t);
@@ -410,25 +403,39 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
   slave->proc_write = lcec_rtec_write;
 
   lcec_class_cia402_options_t *options = lcec_cia402_options();
-  // The ECT60 should support these CiA 402 features:
-  options->channel[0]->enable_pv = 1;
-  options->channel[0]->enable_pp = 1;
-  options->channel[0]->enable_csp = 1;
-  options->channel[0]->enable_csv = 1;
-  options->channel[0]->enable_hm = 1;
-  options->channel[0]->enable_actual_torque = 1;
-  options->channel[0]->enable_digital_input = 1;
-  options->channel[0]->enable_digital_output = 1;
-  options->channel[0]->enable_profile_velocity = 1;
-  options->channel[0]->enable_profile_accel = 1;
-  options->channel[0]->enable_profile_decel = 1;
-  options->channel[0]->enable_home_accel = 1;
-  options->channel[0]->enable_digital_input = 1;
-  options->channel[0]->enable_digital_output = 1;
-  options->channel[0]->digital_in_channels = 6;
-  options->channel[0]->digital_out_channels = 2;
-  // options->channel[0]->enable_interpolation_time_period = 1;  // Should be supported but doesn't actually work.
-  options->channel[0]->enable_actual_following_error = 1;
+  options->rxpdolimit = 12;  // `ethercat sdos` shows 12, it's possible that more will work.
+  options->txpdolimit = 12;
+
+  if (AXES(slave->flags) != 0) {
+    options->channels = AXES(slave->flags);
+  } else {
+    options->channels = 1;
+  }
+
+  if (PDOINCREMENT(slave->flags) != 0) {
+    options->pdo_increment = PDOINCREMENT(slave->flags);
+  } else {
+    options->pdo_increment = 1;
+  }
+
+  // The ECT60 should support these CiA 402 features.
+  for (channel = 0; channel < options->channels; channel++) {
+    options->channel[channel]->enable_csp = 1;
+    options->channel[channel]->enable_csv = 1;
+    options->channel[channel]->enable_hm = 1;
+    options->channel[channel]->enable_actual_following_error = 1;
+    options->channel[channel]->enable_actual_torque = 1;
+    options->channel[channel]->enable_digital_input = 1;
+    options->channel[channel]->enable_digital_output = 1;
+    options->channel[channel]->enable_error_code = 1;
+    options->channel[channel]->enable_home_accel = 1;
+    options->channel[channel]->enable_profile_accel = 1;
+    options->channel[channel]->enable_profile_decel = 1;
+    options->channel[channel]->enable_profile_velocity = 1;
+    options->channel[channel]->digital_in_channels = 6;
+    options->channel[channel]->digital_out_channels = 2;
+    options->channel[channel]->enable_actual_following_error = 1;
+  }
 
   if (handle_modparams(slave, options) != 0) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "modparam handling failure for slave %s.%s\n", master->name, slave->name);
