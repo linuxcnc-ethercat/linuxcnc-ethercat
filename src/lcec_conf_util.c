@@ -39,7 +39,7 @@ void initOutputBuffer(LCEC_CONF_OUTBUF_T *buf) {
 }
 
 void *addOutputBuffer(LCEC_CONF_OUTBUF_T *buf, size_t len) {
-  LCEC_CONF_OUTBUF_ITEM_T *p = (LCEC_CONF_OUTBUF_ITEM_T *)calloc(1, sizeof(LCEC_CONF_OUTBUF_ITEM_T) + len);
+  void *p = calloc(1, sizeof(LCEC_CONF_OUTBUF_ITEM_T) + len);
   if (p == NULL) {
     fprintf(stderr, "%s: ERROR: Couldn't allocate memory for config token\n", modname);
     return NULL;
