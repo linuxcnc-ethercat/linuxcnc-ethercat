@@ -163,7 +163,7 @@
 	    <complexEntry bitLen="1" halPin="CW-limit" halType="bit"/>
 	    <complexEntry bitLen="1" halPin="CCW-limit" halType="bit"/>
 	    <complexEntry bitLen="1" halPin="in-home" halType="bit"/>
-	    <complexEntry bitLen="13"/>
+	    <complexEntry bitLen="13"/> 
 	    <complexEntry bitLen="1" halPin="in-1" halType="bit"/>
 	    <complexEntry bitLen="1" halPin="in-2" halType="bit"/>
 	    <complexEntry bitLen="1" halPin="in-3" halType="bit"/>
@@ -185,32 +185,13 @@
       </slave> -->
 
     <slave idx="27" type="ECT60" name="rt-ect60">
-      <!-- <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/> -->
-    </slave>
-    
-    <slave idx="28" type="basic_cia402" vid="0x00000a88" pid="0x0a880005" name="rt-ecr60x2">
       <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/>
-      <modParam name="ciaChannels" value="2"/>
-      <modParam name="pdoIncrement" value="16"/>
-      <modParam name="ciaRxPDOEntryLimit" value="16"/>
-      <modParam name="ciaTxPDOEntryLimit" value="16"/>
-      <modParam name="ch1enablePP" value="true"/>
-      <modParam name="ch1enablePV" value="true"/>
-      <modParam name="ch1enableCSP" value="true"/>
-      <modParam name="ch1enableCSV" value="true"/>
-      <modParam name="ch1enableErrorCode" value="true"/>
-      <modParam name="ch1enableProfileAccel" value="true"/>
-      <modParam name="ch1enableProfileDecel" value="true"/>
-      <modParam name="ch1enableProfileVelocity" value="true"/>
-      <modParam name="ch2enablePP" value="true"/>
-      <modParam name="ch2enablePV" value="true"/>
-      <modParam name="ch2enableCSP" value="true"/>
-      <modParam name="ch2enableCSV" value="true"/>
-      <modParam name="ch2enableErrorCode" value="true"/>
-      <modParam name="ch2enableProfileAccel" value="true"/>
-      <modParam name="ch2enableProfileDecel" value="true"/>
-      <modParam name="ch2enableProfileVelocity" value="true"/>
     </slave>
+
+    <slave idx="28" type="ECR60x2" name="rt-ecr60x2">
+      <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/>
+    </slave>
+
     <slave idx="29" type="basic_cia402" vid="0x00000a88" pid="0x0a880042" name="rt-drv400">
       <!--DRV400E(COE)-->
       <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/>

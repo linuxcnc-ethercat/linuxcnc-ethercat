@@ -418,6 +418,9 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
     options->pdo_increment = 1;
   }
 
+  if (options->channels > 1) {
+    lcec_cia402_rename_multiaxis_channels(options);
+  }
   // The ECT60 should support these CiA 402 features.
   for (channel = 0; channel < options->channels; channel++) {
     options->channel[channel]->enable_csp = 1;
@@ -459,13 +462,15 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
 
   slave->sync_info = &syncs->syncs[0];
 
-  hal_data->cia402 = lcec_cia402_allocate_channels(1);
+  hal_data->cia402 = lcec_cia402_allocate_channels(options->channels);
   if (hal_data->cia402 == NULL) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "lcec_cia402_allocate_channels() for slave %s.%s failed\n", master->name, slave->name);
     return -EIO;
   }
 
-  hal_data->cia402->channels[0] = lcec_cia402_register_channel(slave, 0x6000, options->channel[0]);
+  for (int channel = 0; channel < options->channels; channel++) {
+    hal_data->cia402->channels[channel] = lcec_cia402_register_channel(slave, 0x6000 + 0x800 * channel, options->channel[channel]);
+  }
 
   // Register rtec-specific PDOs.
   lcec_pdo_init(slave, 0x200e, 0, &hal_data->alarm_code_os, NULL);
