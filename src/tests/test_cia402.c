@@ -18,7 +18,17 @@ static const lcec_modparam_desc_t device_mps[] = {
     {NULL},
 };
 
-TESTFUNC(test_modparm_len) {
+static const lcec_modparam_desc_t device_mps2[] = {
+    {"eee", 0x100, MODPARAM_TYPE_S32, "42"},
+    {NULL},
+};
+
+static const lcec_modparam_desc_t override_mps[] = {
+    {"aaa", 0, 0, "12"},
+    {NULL},
+};
+
+TESTFUNC(test_cia402_modparam_len) {
   TESTSETUP;
   lcec_modparam_desc_t *channelized_mps;
 
@@ -75,10 +85,37 @@ TESTFUNC(test_modparm_len) {
   TESTRESULTS;
 }
 
-TESTFUNC(test_modparam_ratio) {
+TESTFUNC(test_cia402_modparam_defaults) {
   TESTSETUP;
 
-  int max_denom = 1<<15;
+  int a = lcec_modparam_desc_len(lcec_cia402_modparams(NULL, NULL, NULL));
+
+  TESTINT(lcec_modparam_desc_len(lcec_cia402_modparams(per_channel_mps, NULL, NULL)), a + 27);
+  TESTINT(lcec_modparam_desc_len(lcec_cia402_modparams(per_channel_mps, device_mps, NULL)), a + 28);
+  TESTINT(lcec_modparam_desc_len(lcec_cia402_modparams(per_channel_mps, device_mps, override_mps)), a + 28);
+
+  lcec_modparam_desc_t *all_mps = lcec_modparam_desc_concat(per_channel_mps, device_mps2);
+
+  TESTINT(lcec_modparam_desc_len(all_mps), 4);
+  TESTSTRING(all_mps[3].config_value, "42");
+
+  TESTRESULTS;
+}
+
+TESTFUNC(test_cia402_modparam_override) {
+  TESTSETUP;
+  lcec_modparam_desc_t *merged_mps = lcec_modparam_desc_override(per_channel_mps, override_mps);
+
+  TESTINT(lcec_modparam_desc_len(merged_mps), 3);
+  TESTSTRING(merged_mps[0].config_value, "12");
+
+  TESTRESULTS;
+}
+
+TESTFUNC(test_cia402_modparam_ratio) {
+  TESTSETUP;
+
+  int max_denom = 1 << 15;
 
   lcec_ratio ratio;
   ratio = lcec_cia402_decode_ratio_modparam("1/2", max_denom);

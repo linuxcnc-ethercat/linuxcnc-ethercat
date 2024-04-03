@@ -24,36 +24,43 @@
 #include "../lcec.h"
 #include "lcec_class_cia402.h"
 
-#define M_PEAKCURRENT        0
-#define M_MOTOR_RESOLUTION   1
-#define M_STANDBYTIME        2
-#define M_STANDBYCURRENT     3
-#define M_OUTPUT1FUNC        4
-#define M_OUTPUT2FUNC        5
-#define M_OUTPUT1POLARITY    6
-#define M_OUTPUT2POLARITY    7
-#define M_INPUT3FUNC         8
-#define M_INPUT4FUNC         9
-#define M_INPUT5FUNC         10
-#define M_INPUT6FUNC         11
-#define M_INPUT3POLARITY     12
-#define M_INPUT4POLARITY     13
-#define M_INPUT5POLARITY     14
-#define M_INPUT6POLARITY     15
-#define M_FILTERTIME         16
-#define M_SHAFTLOCKTIME      17
-#define M_MOTORAUTOTUNE      18
-#define M_STEPPERPHASES      19
-#define M_CONTROLMODE        20
-#define M_ENCODER_RESOLUTION 21
-#define M_POSITION_ERROR     22
+#define M_PEAKCURRENT        0x0
+#define M_MOTOR_RESOLUTION   0x10
+#define M_STANDBYTIME        0x20
+#define M_STANDBYCURRENT     0x30
+#define M_OUTPUT1FUNC        0x40
+#define M_OUTPUT2FUNC        0x50
+#define M_OUTPUT1POLARITY    0x60
+#define M_OUTPUT2POLARITY    0x70
+#define M_INPUT3FUNC         0x80
+#define M_INPUT4FUNC         0x90
+#define M_INPUT5FUNC         0xa0
+#define M_INPUT6FUNC         0xb0
+#define M_INPUT3POLARITY     0xc0
+#define M_INPUT4POLARITY     0xd0
+#define M_INPUT5POLARITY     0xe0
+#define M_INPUT6POLARITY     0xf0
+#define M_FILTERTIME         0x100
+#define M_SHAFTLOCKTIME      0x110
+#define M_MOTORAUTOTUNE      0x120
+#define M_STEPPERPHASES      0x130
+#define M_CONTROLMODE        0x140
+#define M_ENCODER_RESOLUTION 0x150
+#define M_POSITION_ERROR     0x160
 
 /// @brief Modparams settings available via XML.
-static const lcec_modparam_desc_t modparams_rtec[] = {
+static const lcec_modparam_desc_t modparams_perchannel[] = {
     {"peakCurrent_amps", M_PEAKCURRENT, MODPARAM_TYPE_FLOAT},
     {"motorResolution_pulses", M_MOTOR_RESOLUTION, MODPARAM_TYPE_U32},
     {"standbyTime_ms", M_STANDBYTIME, MODPARAM_TYPE_U32},
     {"standbyCurrent_pct", M_STANDBYCURRENT, MODPARAM_TYPE_U32},
+    {"filterTime_us", M_FILTERTIME, MODPARAM_TYPE_U32},
+    {"shaftLockTime_us", M_SHAFTLOCKTIME, MODPARAM_TYPE_U32},
+    {"motorAutoTune", M_MOTORAUTOTUNE, MODPARAM_TYPE_BIT},
+    {"stepperPhases", M_STEPPERPHASES, MODPARAM_TYPE_STRING},
+    {"controlMode", M_CONTROLMODE, MODPARAM_TYPE_STRING},
+    {"encoderResolution", M_ENCODER_RESOLUTION, MODPARAM_TYPE_U32},
+    {"positionErrorLimit", M_POSITION_ERROR, MODPARAM_TYPE_U32},
     {"output1Func", M_OUTPUT1FUNC, MODPARAM_TYPE_STRING},
     {"output2Func", M_OUTPUT2FUNC, MODPARAM_TYPE_STRING},
     {"output1Polarity", M_OUTPUT1POLARITY, MODPARAM_TYPE_STRING},
@@ -66,13 +73,63 @@ static const lcec_modparam_desc_t modparams_rtec[] = {
     {"input4Polarity", M_INPUT4POLARITY, MODPARAM_TYPE_STRING},
     {"input5Polarity", M_INPUT5POLARITY, MODPARAM_TYPE_STRING},
     {"input6Polarity", M_INPUT6POLARITY, MODPARAM_TYPE_STRING},
-    {"filterTime_us", M_FILTERTIME, MODPARAM_TYPE_U32},
-    {"shaftLockTime_us", M_SHAFTLOCKTIME, MODPARAM_TYPE_U32},
-    {"motorAutoTune", M_MOTORAUTOTUNE, MODPARAM_TYPE_BIT},
-    {"stepperPhases", M_STEPPERPHASES, MODPARAM_TYPE_STRING},
-    {"controlMode", M_CONTROLMODE, MODPARAM_TYPE_STRING},
-    {"encoderResolution", M_ENCODER_RESOLUTION, MODPARAM_TYPE_U32},
-    {"positionErrorLimit", M_POSITION_ERROR, MODPARAM_TYPE_U32},
+    {NULL},
+};
+
+static const lcec_modparam_desc_t modparams_base[] = {
+    {NULL},
+};
+
+// "Normal" settings that should be applied to each channel.
+//
+// We don't want to list *everything* here, because that gets
+// overwhelming, but we do want to include the most common things that
+// users will want to change.
+#define PER_CHANNEL_OVERRIDES(ch)                                                                                         \
+  {#ch "enableCSP", 0, 0, "true", "Enable support for Cyclic Synchronous Position mode."},                                \
+      {#ch "enableCSV", 0, 0, "false", "Enable support for Cyclic Synchronous Velocity mode."},                           \
+      {#ch "encoderResolution", 0, 0, "4000", "Number of encoder steps per revolution."},                                 \
+      {#ch "peakCurrent_amps", 0, 0, "6.0", "Maximum stepper Amps."},                                                     \
+      {#ch "output1Func", 0, 0, "alarm", "Output 1 use: general, alarm, brake, in-place."},                               \
+      {#ch "output2Func", 0, 0, "brake", "Output 2 use: general, alarm, brake, in-place."},                               \
+      {#ch "input3Func", 0, 0, "cw-limit",                                                                                \
+          "Input 3 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2"}, \
+      {#ch "input4Func", 0, 0, "ccw-limit",                                                                               \
+          "Input 4 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2"}, \
+      {#ch "input5Func", 0, 0, "home",                                                                                    \
+          "Input 5 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2"}, \
+      {#ch "input6Func", 0, 0, "motor-offline",                                                                           \
+          "Input 6 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2"}
+
+/// Override values for single-axis open-loop steppers
+static const lcec_modparam_desc_t overrides_open[] = {
+    PER_CHANNEL_OVERRIDES(),
+    {"motorResolution_pulses", 0, 0, "10000", "Number of stepper pulses per rotation"},
+    {NULL},
+};
+
+/// Overrides for dual-axis open-loop steppers
+static const lcec_modparam_desc_t overrides_open_x2[] = {
+    PER_CHANNEL_OVERRIDES(ch1),
+    PER_CHANNEL_OVERRIDES(ch2),
+    {"ch1motorResolution_pulses", 0, 0, "10000", "Number of stepper pulses per rotation"},
+    {"ch1motorResolution_pulses", 0, 0, "10000", "Number of stepper pulses per rotation"},
+    {NULL},
+};
+
+/// Override values for single-axis closed-loop steppers
+static const lcec_modparam_desc_t overrides_closed[] = {
+    PER_CHANNEL_OVERRIDES(),
+    {"controlMode", 0, 0, "closedloop", "Operation mode: openloop, closedloop, or foc."},
+    {NULL},
+};
+
+/// Override values for dual-axis closed-loop steppers
+static const lcec_modparam_desc_t overrides_closed_x2[] = {
+    PER_CHANNEL_OVERRIDES(ch1),
+    PER_CHANNEL_OVERRIDES(ch2),
+    {"ch1controlMode", 0, 0, "closedloop", "Operation mode: openloop, closedloop, or foc."},
+    {"ch2controlMode", 0, 0, "closedloop", "Operation mode: openloop, closedloop, or foc."},
     {NULL},
 };
 
@@ -84,17 +141,36 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave);
 #define F_PDOINCREMENT(incr) ((uint64_t)incr << 52)
 #define F_NOEXTRAS           1  // Don't map RTelligent-specific PDO entries
 
-static lcec_typelist_t types[] = {
+static lcec_typelist_t types_open[] = {
     // note that modparams_rtec is added implicitly in ADD_TYPES_WITH_CIA402_MODPARAMS.
     {"ECR60", LCEC_RTELLIGENT_VID, 0x0a880001, 0, NULL, lcec_rtec_init, NULL, 0},
-    {"ECR60x2", LCEC_RTELLIGENT_VID, 0x0a880005, 0, NULL, lcec_rtec_init, NULL, F_AXES(2) | F_PDOINCREMENT(0x10) | F_NOEXTRAS},
-    {"ECT60", LCEC_RTELLIGENT_VID, 0x0a880002, 0, NULL, lcec_rtec_init, NULL, 0},
-    {"ECT60x2", LCEC_RTELLIGENT_VID, 0x0a880006, 0, NULL, lcec_rtec_init, NULL, F_AXES(2)},  // Does this need PDOINCREMENT also?
     {"ECR86", LCEC_RTELLIGENT_VID, 0x0a880003, 0, NULL, lcec_rtec_init, NULL, 0},
+    {NULL},
+};
+
+static lcec_typelist_t types_open_x2[] = {
+    // note that modparams_rtec is added implicitly in ADD_TYPES_WITH_CIA402_MODPARAMS.
+    {"ECR60x2", LCEC_RTELLIGENT_VID, 0x0a880005, 0, NULL, lcec_rtec_init, NULL, F_AXES(2) | F_PDOINCREMENT(0x10) | F_NOEXTRAS},
+    {NULL},
+};
+
+static lcec_typelist_t types_closed[] = {
+    // note that modparams_rtec is added implicitly in ADD_TYPES_WITH_CIA402_MODPARAMS.
+    {"ECT60", LCEC_RTELLIGENT_VID, 0x0a880002, 0, NULL, lcec_rtec_init, NULL, 0},
     {"ECT86", LCEC_RTELLIGENT_VID, 0x0a880004, 0, NULL, lcec_rtec_init, NULL, 0},
     {NULL},
 };
-ADD_TYPES_WITH_CIA402_MODPARAMS(types, modparams_rtec)
+
+static lcec_typelist_t types_closed_x2[] = {
+    // note that modparams_rtec is added implicitly in ADD_TYPES_WITH_CIA402_MODPARAMS.
+    {"ECT60x2", LCEC_RTELLIGENT_VID, 0x0a880006, 0, NULL, lcec_rtec_init, NULL, F_AXES(2)},  // Does this need PDOINCREMENT also?
+    {NULL},
+};
+
+ADD_TYPES_WITH_CIA402_MODPARAMS(types_open, modparams_perchannel, modparams_base, overrides_open)
+ADD_TYPES_WITH_CIA402_MODPARAMS(types_open_x2, modparams_perchannel, modparams_base, overrides_open_x2)
+ADD_TYPES_WITH_CIA402_MODPARAMS(types_closed, modparams_perchannel, modparams_base, overrides_closed)
+ADD_TYPES_WITH_CIA402_MODPARAMS(types_closed_x2, modparams_perchannel, modparams_base, overrides_closed_x2)
 
 static void lcec_rtec_read(lcec_slave_t *slave, long period);
 static void lcec_rtec_write(lcec_slave_t *slave, long period);
@@ -400,7 +476,7 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
   // Apply default Distributed Clock settings if it's not already set.
   if (slave->dc_conf == NULL) {
     lcec_slave_dc_t *dc = LCEC_HAL_ALLOCATE(lcec_slave_dc_t);
-    dc->assignActivate = 0x300; // All known RTelligent steppers use 0x300, according to their ESI.
+    dc->assignActivate = 0x300;  // All known RTelligent steppers use 0x300, according to their ESI.
     dc->sync0Cycle = slave->master->app_time_period;
 
     slave->dc_conf = dc;
@@ -425,10 +501,12 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
   if (options->channels > 1) {
     lcec_cia402_rename_multiaxis_channels(options);
   }
-  // The ECT60 should support these CiA 402 features.
+  // The ECT60 supports these CiA 402 features (plus a few others).
+  // We'll assume that all of the EC* devices do, until we learn
+  // otherwise.
   for (channel = 0; channel < options->channels; channel++) {
     options->channel[channel]->enable_csp = 1;
-    options->channel[channel]->enable_csv = 1;
+    options->channel[channel]->enable_csv = 0;
     options->channel[channel]->enable_hm = 1;
     options->channel[channel]->enable_actual_following_error = 1;
     options->channel[channel]->enable_actual_torque = 1;
@@ -436,9 +514,6 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
     options->channel[channel]->enable_digital_output = 1;
     options->channel[channel]->enable_error_code = 1;
     options->channel[channel]->enable_home_accel = 1;
-    options->channel[channel]->enable_profile_accel = 1;
-    options->channel[channel]->enable_profile_decel = 1;
-    options->channel[channel]->enable_profile_velocity = 1;
     options->channel[channel]->digital_in_channels = 6;
     options->channel[channel]->digital_out_channels = 2;
     options->channel[channel]->enable_actual_following_error = 1;

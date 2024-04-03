@@ -305,22 +305,23 @@ lcec_class_cia402_channel_options_t *lcec_cia402_channel_options(void);
 void lcec_cia402_rename_multiaxis_channels(lcec_class_cia402_options_t *opt);
 int lcec_cia402_handle_modparam(struct lcec_slave *slave, const lcec_slave_modparam_t *p, lcec_class_cia402_options_t *opt);
 lcec_modparam_desc_t *lcec_cia402_channelized_modparams(lcec_modparam_desc_t const *orig);
-lcec_modparam_desc_t *lcec_cia402_modparams(lcec_modparam_desc_t const *device_mps);
+lcec_modparam_desc_t *lcec_cia402_modparams(
+    lcec_modparam_desc_t const *device_channelized_mps, lcec_modparam_desc_t const *device_base_mps, lcec_modparam_desc_t const *overrides);
 lcec_syncs_t *lcec_cia402_init_sync(lcec_slave_t *slave, lcec_class_cia402_options_t *options);
 int lcec_cia402_add_output_sync(lcec_slave_t *slave, lcec_syncs_t *syncs, lcec_class_cia402_options_t *options);
 int lcec_cia402_add_input_sync(lcec_slave_t *slave, lcec_syncs_t *syncs, lcec_class_cia402_options_t *options);
 lcec_ratio lcec_cia402_decode_ratio_modparam(const char *value, int max_denominator);
 
-#define ADD_TYPES_WITH_CIA402_MODPARAMS(types, mps)        \
-  static void AddTypes(void) __attribute__((constructor)); \
-  static void AddTypes(void) {                             \
-    const lcec_modparam_desc_t *all_modparams;             \
-    int i;                                                 \
-    all_modparams = lcec_cia402_modparams(mps);            \
-    for (i = 0; types[i].name != NULL; i++) {              \
-      types[i].modparams = all_modparams;                  \
-    }                                                      \
-    lcec_addtypes(types, __FILE__);                        \
+#define ADD_TYPES_WITH_CIA402_MODPARAMS(types, chan_mps, base_mps, overrides) \
+  static void AddTypes##types(void) __attribute__((constructor));             \
+  static void AddTypes##types(void) {                                         \
+    const lcec_modparam_desc_t *all_modparams;                                \
+    int i;                                                                    \
+    all_modparams = lcec_cia402_modparams(chan_mps, base_mps, overrides);     \
+    for (i = 0; types[i].name != NULL; i++) {                                 \
+      types[i].modparams = all_modparams;                                     \
+    }                                                                         \
+    lcec_addtypes(types, __FILE__);                                           \
   }
 
 // modParam IDs

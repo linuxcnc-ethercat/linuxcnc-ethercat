@@ -117,7 +117,7 @@ lcec_configgen: configgen/*.go configgen/*/*.go
 configgen/devicelist: configgen/devicelist.go
 	(cd configgen ; go build devicelist.go)
 
-configgen/drivers/drivers.go: configgen/devicelist ../documentation/devices/*.yml
+configgen/drivers/drivers.go: configgen/devicelist lcec_devices
 	(cd configgen ; go generate)
 
 # Rule for compiling tests/*.bin files.  We're naming test excutables *.bin so we can use wildcards in .gitignore and `make clean` to match them.

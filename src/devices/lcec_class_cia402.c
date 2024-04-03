@@ -550,9 +550,7 @@ void lcec_cia402_write(lcec_slave_t *slave, lcec_class_cia402_channel_t *data) {
 /// @param channels An `lcec_class_cia402_channel_t *`, as returned by lcec_cia402_register_channel.
 void lcec_cia402_write_all(lcec_slave_t *slave, lcec_class_cia402_channels_t *channels) {
   for (int i = 0; i < channels->count; i++) {
-    lcec_class_cia402_channel_t *channel = channels->channels[i];
-
-    lcec_cia402_write(slave, channel);
+    lcec_cia402_write(slave, channels->channels[i]);
   }
 }
 
@@ -657,12 +655,18 @@ lcec_modparam_desc_t *lcec_cia402_channelized_modparams(lcec_modparam_desc_t con
 /// @brief Merge per-device modParams and channelized generic CiA 402
 /// modParams into a single list.
 ///
-/// @param device_mps a `lcec_modparam_desc_t[]` containing all of the
+/// @param device_channelized_mps a `lcec_modparam_desc_t[]` containing all of the per-channel
 /// device-specific `<modParam>`settings.
-lcec_modparam_desc_t *lcec_cia402_modparams(lcec_modparam_desc_t const *device_mps) {
-  const lcec_modparam_desc_t *channelized_mps = lcec_cia402_channelized_modparams(per_channel_modparams);
+/// @param device_base_mps a `lcec_modparam_desc_t[]` containing device-specific `<modParam>` settings that should *not* be duplicated per
+/// channel.
+/// @param overrides a `lcec_modparam_desc_t[]` that will override the settings of `default_value` on other MPs.
+lcec_modparam_desc_t *lcec_cia402_modparams(lcec_modparam_desc_t const *device_channelized_mps, lcec_modparam_desc_t const *device_base_mps,
+    lcec_modparam_desc_t const *overrides) {
+  const lcec_modparam_desc_t *pre_channelized_mps = lcec_modparam_desc_concat(per_channel_modparams, device_channelized_mps);
+  const lcec_modparam_desc_t *channelized_mps = lcec_cia402_channelized_modparams(pre_channelized_mps);
+  const lcec_modparam_desc_t *all_mps = lcec_modparam_desc_concat(channelized_mps, device_base_mps);
 
-  return lcec_modparam_desc_concat(device_mps, channelized_mps);
+  return lcec_modparam_desc_override(all_mps, overrides);
 }
 
 /// @brief Handle a single modparam entry

@@ -21,12 +21,22 @@ static const lcec_modparam_desc_t mp_0[] = {
     {NULL},
 };
 
-TESTFUNC(test_modparm_len) {
+TESTFUNC(test_modparam_len) {
   TESTSETUP;
 
   TESTINT(lcec_modparam_desc_len(mp_3), 3);
   TESTINT(lcec_modparam_desc_len(mp_1), 1);
   TESTINT(lcec_modparam_desc_len(mp_0), 0);
+  TESTINT(lcec_modparam_desc_len(NULL), 0);
+
+  TESTRESULTS;
+}
+
+TESTFUNC(test_modparam_concat) {
+  TESTSETUP;
+  TESTINT(lcec_modparam_desc_len(lcec_modparam_desc_concat(mp_1, mp_3)), 4);
+  TESTINT(lcec_modparam_desc_len(lcec_modparam_desc_concat(mp_1, mp_0)), 1);
+  TESTINT(lcec_modparam_desc_len(lcec_modparam_desc_concat(mp_1, NULL)), 1);
 
   TESTRESULTS;
 }

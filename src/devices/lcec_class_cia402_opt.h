@@ -496,85 +496,85 @@
 
 // This is the list of read PDOs.  These all need to be initialized,
 // mapped, and read.
-#define FOR_ALL_READ_PDOS_DO(thing) \
-  thing(actual_current);            \
-  thing(actual_following_error);    \
-  thing(actual_position);           \
-  thing(actual_torque);             \
-  thing(actual_velocity);           \
-  thing(actual_velocity_sensor);    \
-  thing(actual_vl);                 \
-  thing(actual_voltage);            \
-  thing(control_effort);            \
-  thing(error_code);                \
-  thing(opmode_display);            \
-  thing(position_demand);           \
-  thing(probe_status);              \
-  thing(torque_demand);             \
-  thing(velocity_demand);           \
-  thing(vl_demand);
+#define FOR_ALL_READ_PDOS_DO(action) \
+  action(actual_current);            \
+  action(actual_following_error);    \
+  action(actual_position);           \
+  action(actual_torque);             \
+  action(actual_velocity);           \
+  action(actual_velocity_sensor);    \
+  action(actual_vl);                 \
+  action(actual_voltage);            \
+  action(control_effort);            \
+  action(error_code);                \
+  action(opmode_display);            \
+  action(position_demand);           \
+  action(probe_status);              \
+  action(torque_demand);             \
+  action(velocity_demand);           \
+  action(vl_demand);
 
 // This is the list of write SDOs.  These need to be initialized, mapped, and written.
-#define FOR_ALL_WRITE_PDOS_DO(thing) \
-  thing(opmode);                     \
-  thing(profile_velocity);           \
-  thing(target_position);            \
-  thing(target_torque);              \
-  thing(target_velocity);            \
-  thing(target_vl);
+#define FOR_ALL_WRITE_PDOS_DO(action) \
+  action(opmode);                     \
+  action(profile_velocity);           \
+  action(target_position);            \
+  action(target_torque);              \
+  action(target_velocity);            \
+  action(target_vl);
 
 // This is the list of write *SDOs*.  These need to be initialized differently and written, but not mapped.
-#define FOR_ALL_WRITE_SDOS_DO(thing) \
-  thing(following_error_timeout);    \
-  thing(following_error_window);     \
-  thing(home_accel);                 \
-  thing(home_method);                \
-  thing(home_velocity_fast);         \
-  thing(home_velocity_slow);         \
-  thing(interpolation_time_period);  \
-  thing(maximum_acceleration);       \
-  thing(maximum_current);            \
-  thing(maximum_deceleration);       \
-  thing(maximum_motor_rpm);          \
-  thing(maximum_slippage);           \
-  thing(maximum_torque);             \
-  thing(motion_profile);             \
-  thing(motor_rated_current);        \
-  thing(motor_rated_torque);         \
-  thing(polarity);                   \
-  thing(positioning_time);           \
-  thing(positioning_window);         \
-  thing(profile_accel);              \
-  thing(profile_decel);              \
-  thing(profile_end_velocity);       \
-  thing(profile_max_velocity);       \
-  thing(torque_profile_type);        \
-  thing(torque_slope);               \
-  thing(velocity_error_time);        \
-  thing(velocity_error_window);      \
-  thing(velocity_sensor_selector);   \
-  thing(velocity_threshold_time);    \
-  thing(velocity_threshold_window);  \
-  thing(vl_maximum);                 \
-  thing(vl_minimum);
+#define FOR_ALL_WRITE_SDOS_DO(action) \
+  action(following_error_timeout);    \
+  action(following_error_window);     \
+  action(home_accel);                 \
+  action(home_method);                \
+  action(home_velocity_fast);         \
+  action(home_velocity_slow);         \
+  action(interpolation_time_period);  \
+  action(maximum_acceleration);       \
+  action(maximum_current);            \
+  action(maximum_deceleration);       \
+  action(maximum_motor_rpm);          \
+  action(maximum_slippage);           \
+  action(maximum_torque);             \
+  action(motion_profile);             \
+  action(motor_rated_current);        \
+  action(motor_rated_torque);         \
+  action(polarity);                   \
+  action(positioning_time);           \
+  action(positioning_window);         \
+  action(profile_accel);              \
+  action(profile_decel);              \
+  action(profile_end_velocity);       \
+  action(profile_max_velocity);       \
+  action(torque_profile_type);        \
+  action(torque_slope);               \
+  action(velocity_error_time);        \
+  action(velocity_error_window);      \
+  action(velocity_sensor_selector);   \
+  action(velocity_threshold_time);    \
+  action(velocity_threshold_window);  \
+  action(vl_maximum);                 \
+  action(vl_minimum);
 
 // This is the list of CiA 402 modes:
-#define FOR_ALL_CIA402_MODES_DO(thing) thing(pp) thing(pv) thing(csp) thing(csv) thing(cst) thing(hm) thing(ip) thing(tq) thing(vl)
+#define FOR_ALL_CIA402_MODES_DO(action) action(pp) action(pv) action(csp) action(csv) action(cst) action(hm) action(ip) action(tq) action(vl)
 
 // This is all items that have entries in `enabled`.  It is neither a
 // proper superset not proper subset of the above entries.
 //
 // Also, `clang-format` *really* doesn't know what to do with this.
-#define FOR_ALL_OPTS_DO(thing)                                                                                                      \
-  thing(actual_current) thing(actual_following_error) thing(actual_torque) thing(actual_velocity_sensor) thing(actual_vl)           \
-      thing(actual_voltage) thing(csp) thing(cst) thing(csv) thing(digital_input) thing(digital_output) thing(error_code)           \
-          thing(following_error_timeout) thing(following_error_window) thing(hm) thing(home_accel) thing(interpolation_time_period) \
-              thing(ip) thing(maximum_acceleration) thing(maximum_current) thing(maximum_deceleration) thing(maximum_motor_rpm)     \
-                  thing(maximum_torque) thing(motion_profile) thing(motor_rated_current) thing(motor_rated_torque) thing(opmode)    \
-                      thing(polarity) thing(pp) thing(profile_accel) thing(profile_decel) thing(profile_end_velocity)               \
-                          thing(profile_max_velocity) thing(profile_velocity) thing(pv) thing(target_torque) thing(target_vl)       \
-                              thing(torque_demand) thing(torque_profile_type) thing(torque_slope) thing(tq) thing(velocity_demand)  \
-                                  thing(velocity_error_time) thing(velocity_error_window) thing(velocity_sensor_selector)           \
-                                      thing(velocity_threshold_time) thing(velocity_threshold_window) thing(vl) thing(vl_demand)    \
-                                          thing(vl_maximum) thing(vl_minimum) thing(positioning_window) thing(positioning_time)     \
-                                              thing(maximum_slippage) thing(probe_status) thing(position_demand) thing(control_effort)
+#define FOR_ALL_OPTS_DO(action)                                                                                                      \
+  action(actual_current) action(actual_following_error) action(actual_torque) action(actual_velocity_sensor) action(actual_vl)           \
+      action(actual_voltage) action(csp) action(cst) action(csv) action(digital_input) action(digital_output) action(error_code)           \
+          action(following_error_timeout) action(following_error_window) action(hm) action(home_accel) action(interpolation_time_period) \
+              action(ip) action(maximum_acceleration) action(maximum_current) action(maximum_deceleration) action(maximum_motor_rpm)     \
+                  action(maximum_torque) action(motion_profile) action(motor_rated_current) action(motor_rated_torque) action(opmode)    \
+                      action(polarity) action(pp) action(profile_accel) action(profile_decel) action(profile_end_velocity)               \
+                          action(profile_max_velocity) action(profile_velocity) action(pv) action(target_torque) action(target_vl)       \
+                              action(torque_demand) action(torque_profile_type) action(torque_slope) action(tq) action(velocity_demand)  \
+                                  action(velocity_error_time) action(velocity_error_window) action(velocity_sensor_selector)           \
+                                      action(velocity_threshold_time) action(velocity_threshold_window) action(vl) action(vl_demand)    \
+                                          action(vl_maximum) action(vl_minimum) action(positioning_window) action(positioning_time)     \
+                                              action(maximum_slippage) action(probe_status) action(position_demand) action(control_effort)

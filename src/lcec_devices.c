@@ -38,6 +38,11 @@ extern lcec_typelinkedlist_t *typeslist;
 
 int main(int argc, char **argv) {
   for (lcec_typelinkedlist_t *t = typeslist; t != NULL; t = t->next) {
-    printf("%s\t0x%08x\t0x%08x\t%s\n", t->type->name, t->type->vid, t->type->pid, t->type->sourcefile);
+    printf("%s\t0x%08x\t0x%08x\t%s\t", t->type->name, t->type->vid, t->type->pid, t->type->sourcefile);
+    for (const lcec_modparam_desc_t *m = t->type->modparams; m && m->name != NULL; m++) {
+      if (m->config_comment) printf("<!-- %s --> ", m->config_comment);
+      if (m->config_value) printf("<modParam name=\"%s\" value=\"%s\"/> ", m->name, m->config_value);
+    }
+    printf("\n");
   }
 }
