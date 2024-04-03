@@ -70,7 +70,7 @@ type ConfigSlave struct {
 	Name         string   `xml:"name,attr"`
 	ConfigPDOs   string   `xml:"configPdos,attr,omitempty"`
 	SyncManagers []*ConfigSyncManager
-	ModParams    []ConfigModParam
+	ModParams    []interface{}
 }
 
 type ConfigModParam struct {
@@ -118,6 +118,30 @@ type ConfigComplexEntry struct {
 type EnableSDO struct {
 	offset, subindex int
 	name             string
+}
+
+type Comment string
+
+func (cm Comment) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	if cm != "" {
+		// This is a terrible hack; the Go XML encoder writes
+		// comments immediately after the previous tag, which
+		// looks terrible for human-edited config files.  We
+		// emit a newline followed by 6 spaces, which ends up
+		// making things line up.
+		err := e.EncodeToken(xml.CharData("\n      "))
+		if err != nil {
+			return err
+		}
+		return e.EncodeToken(xml.Comment(cm))
+	}
+	return nil
+}
+
+type BlankLine string
+
+func (bl BlankLine) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	return e.EncodeToken(xml.CharData("\n      "))
 }
 
 var (
@@ -191,6 +215,10 @@ var (
 
 	// Regex for pin names.  Anything that this matches will be replaced by a `-` in pin names.
 	pinRE = regexp.MustCompile("[^a-z0-9]+")
+
+	// Regexes for `lcec_devices`output
+	ld_modparamRE = regexp.MustCompile("<modParam name=\"([^\"]+)\" value=\"([^\"]+)\".*")
+	ld_commentRE  = regexp.MustCompile("<!--(.*)-->")
 
 	// Sequence number for device naming
 	deviceSequence int
@@ -342,12 +370,13 @@ func (s *EthercatSlave) CiATxPDOEntries() int {
 // features to enable for this slave.
 //
 // This should really only be needed for `basic_cia402`.
-func (s *EthercatSlave) CiAEnableModParams() []ConfigModParam {
-	mp := []ConfigModParam{}
+func (s *EthercatSlave) CiAEnableModParams() []interface{} {
+	mp := []interface{}{}
 
 	channels := s.CiAChannels()
 
 	if channels > 1 {
+		//mp = append(mp, Comment("This device supports multiple axes"))
 		mp = append(mp, ConfigModParam{Name: "ciaChannels", Value: fmt.Sprintf("%d", channels)})
 	}
 	mp = append(mp, ConfigModParam{Name: "ciaRxPDOEntryLimit", Value: strconv.Itoa(s.CiARxPDOEntries())})
@@ -409,17 +438,27 @@ func (s *EthercatSlave) CiAEnableModParams() []ConfigModParam {
 	return mp
 }
 
+func BuildInferMap() map[string]map[string]string {
+	r := make(map[string]map[string]string) // vendorID : deviceID : device type
+	if *typedbFlag {
+		for _, v := range configgen.Drivers {
+			if r[v.VendorID] == nil {
+				r[v.VendorID] = make(map[string]string)
+			}
+			r[v.VendorID][v.ProductID] = v.Type
+		}
+	}
+
+	return r
+}
+
 // InferType determines the best 'type=""` value to use in the generated
 // XML file.  It looks at which VID:PID pairs current drivers support,
 // and if no matches are found it returns either `basic_cia402` or
 // `generic`.
-func (s *EthercatSlave) InferType() string {
-	if *typedbFlag {
-		for _, v := range configgen.Drivers {
-			if s.VendorID == v.VendorID && s.ProductID == v.ProductID {
-				return v.Type
-			}
-		}
+func (s *EthercatSlave) InferType(infermap map[string]map[string]string) string {
+	if infermap[s.VendorID] != nil && infermap[s.VendorID][s.ProductID] != "" {
+		return infermap[s.VendorID][s.ProductID]
 	}
 
 	if s.isCiA402() {
@@ -427,6 +466,36 @@ func (s *EthercatSlave) InferType() string {
 	} else {
 		return "generic"
 	}
+}
+
+func (s *EthercatSlave) ConfigModParams() []interface{} {
+	for _, v := range configgen.Drivers {
+		if v.VendorID == s.VendorID && v.ProductID == s.ProductID {
+			if len(v.ModParams) > 0 {
+				mp := []interface{}{}
+
+				for _, entry := range v.ModParams {
+					if ld_modparamRE.MatchString(entry) {
+						results := ld_modparamRE.FindStringSubmatch(entry)
+						m := &ConfigModParam{
+							Name:  results[1],
+							Value: results[2],
+						}
+						mp = append(mp, m)
+						mp = append(mp, BlankLine(""))
+					} else if ld_commentRE.MatchString(entry) {
+						results := ld_commentRE.FindStringSubmatch(entry)
+						mp = append(mp, Comment(results[1]))
+					}
+				}
+
+				return mp
+			} else {
+				return []interface{}{}
+			}
+		}
+	}
+	return []interface{}{}
 }
 
 // InferName comes up with a plausible `name=""` value for use in the generated XML file.
@@ -603,6 +672,7 @@ func main() {
 	}
 
 	masters := map[string]*ConfigMaster{}
+	infermap := BuildInferMap()
 	for _, slave := range slaves {
 		if masters[slave.Master] == nil {
 			masters[slave.Master] = &ConfigMaster{
@@ -617,9 +687,9 @@ func main() {
 		}
 		slaveconfig := ConfigSlave{
 			Idx:       slave.Slave,
-			Type:      slave.InferType(),
+			Type:      slave.InferType(infermap),
 			Name:      slave.InferName(),
-			ModParams: []ConfigModParam{},
+			ModParams: slave.ConfigModParams(),
 		}
 
 		if slaveconfig.Type == "basic_cia402" || (*extraciamodFlag && slave.isCiA402()) {

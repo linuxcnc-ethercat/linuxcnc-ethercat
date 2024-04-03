@@ -1,1239 +1,2019 @@
 // Code generated  DO NOT EDIT.
 package configgen
 type EthercatDriver struct {
-	VendorID string
+    VendorID string
     ProductID string
     Type string
+    ModParams []string
 }
-var Drivers=map[string]EthercatDriver{
-  "AX5101": EthercatDriver{
+var Drivers=[]EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x13ed6012",
     Type: "AX5101",
+    ModParams: []string{
+    },
   },
-  "AX5103": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x13ef6012",
     Type: "AX5103",
+    ModParams: []string{
+    },
   },
-  "AX5106": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x13f26012",
     Type: "AX5106",
+    ModParams: []string{
+    },
   },
-  "AX5112": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x13f86012",
     Type: "AX5112",
+    ModParams: []string{
+    },
   },
-  "AX5118": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x13fe6012",
     Type: "AX5118",
+    ModParams: []string{
+    },
   },
-  "AX5203": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x14536012",
     Type: "AX5203",
+    ModParams: []string{
+    },
   },
-  "AX5206": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x14566012",
     Type: "AX5206",
+    ModParams: []string{
+    },
   },
-  "AX5805": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x16ad6012",
     Type: "AX5805",
+    ModParams: []string{
+    },
   },
-  "DEMS300": EthercatDriver{
-    VendorID: "0x000001dd",
-    ProductID: "0x10400200",
-    Type: "DEMS300",
-  },
-  "DEASDA": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x000001dd",
     ProductID: "0x10305070",
-    Type: "DEASDA",
+    Type: "DeASDA",
+    ModParams: []string{
+    },
   },
-  "DEASDA3": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x000001dd",
     ProductID: "0x00006010",
-    Type: "DEASDA3",
+    Type: "DeASDA3",
+    ModParams: []string{
+    },
   },
-  "DeASDB3": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x000001dd",
     ProductID: "0x00006080",
     Type: "DeASDB3",
+    ModParams: []string{
+    },
   },
-  "ECR60": EthercatDriver{
+  EthercatDriver{
+    VendorID: "0x000001dd",
+    ProductID: "0x10400200",
+    Type: "DeMS300",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
     VendorID: "0x00000a88",
     ProductID: "0x0a880001",
     Type: "ECR60",
+    ModParams: []string{
+      "<!-- Enable support for Cyclic Synchronous Position mode. --> ",
+      "<modParam name=\"enableCSP\" value=\"true\"/> ",
+      "<!-- Enable support for Cyclic Synchronous Velocity mode. --> ",
+      "<modParam name=\"enableCSV\" value=\"false\"/> ",
+      "<!-- Maximum stepper Amps. --> ",
+      "<modParam name=\"peakCurrent_amps\" value=\"6.0\"/> ",
+      "<!-- Number of stepper pulses per rotation --> ",
+      "<modParam name=\"motorResolution_pulses\" value=\"10000\"/> ",
+      "<!-- Number of encoder steps per revolution. --> ",
+      "<modParam name=\"encoderResolution\" value=\"4000\"/> ",
+      "<!-- Output 1 use: general, alarm, brake, in-place. --> ",
+      "<modParam name=\"output1Func\" value=\"alarm\"/> ",
+      "<!-- Output 2 use: general, alarm, brake, in-place. --> ",
+      "<modParam name=\"output2Func\" value=\"brake\"/> ",
+      "<!-- Input 3 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"input3Func\" value=\"cw-limit\"/> ",
+      "<!-- Input 4 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"input4Func\" value=\"ccw-limit\"/> ",
+      "<!-- Input 5 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"input5Func\" value=\"home\"/> ",
+      "<!-- Input 6 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"input6Func\" value=\"motor-offline\"/> ",
+      "",
+    },
   },
-  "ECR60x2": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000a88",
     ProductID: "0x0a880005",
     Type: "ECR60x2",
+    ModParams: []string{
+      "<!-- Enable support for Cyclic Synchronous Position mode. --> ",
+      "<modParam name=\"ch1enableCSP\" value=\"true\"/> ",
+      "<!-- Enable support for Cyclic Synchronous Position mode. --> ",
+      "<modParam name=\"ch2enableCSP\" value=\"true\"/> ",
+      "<!-- Enable support for Cyclic Synchronous Velocity mode. --> ",
+      "<modParam name=\"ch1enableCSV\" value=\"false\"/> ",
+      "<!-- Enable support for Cyclic Synchronous Velocity mode. --> ",
+      "<modParam name=\"ch2enableCSV\" value=\"false\"/> ",
+      "<!-- Maximum stepper Amps. --> ",
+      "<modParam name=\"ch1peakCurrent_amps\" value=\"6.0\"/> ",
+      "<!-- Maximum stepper Amps. --> ",
+      "<modParam name=\"ch2peakCurrent_amps\" value=\"6.0\"/> ",
+      "<!-- Number of stepper pulses per rotation --> ",
+      "<modParam name=\"ch1motorResolution_pulses\" value=\"10000\"/> ",
+      "<!-- Number of encoder steps per revolution. --> ",
+      "<modParam name=\"ch1encoderResolution\" value=\"4000\"/> ",
+      "<!-- Number of encoder steps per revolution. --> ",
+      "<modParam name=\"ch2encoderResolution\" value=\"4000\"/> ",
+      "<!-- Output 1 use: general, alarm, brake, in-place. --> ",
+      "<modParam name=\"ch1output1Func\" value=\"alarm\"/> ",
+      "<!-- Output 1 use: general, alarm, brake, in-place. --> ",
+      "<modParam name=\"ch2output1Func\" value=\"alarm\"/> ",
+      "<!-- Output 2 use: general, alarm, brake, in-place. --> ",
+      "<modParam name=\"ch1output2Func\" value=\"brake\"/> ",
+      "<!-- Output 2 use: general, alarm, brake, in-place. --> ",
+      "<modParam name=\"ch2output2Func\" value=\"brake\"/> ",
+      "<!-- Input 3 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"ch1input3Func\" value=\"cw-limit\"/> ",
+      "<!-- Input 3 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"ch2input3Func\" value=\"cw-limit\"/> ",
+      "<!-- Input 4 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"ch1input4Func\" value=\"ccw-limit\"/> ",
+      "<!-- Input 4 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"ch2input4Func\" value=\"ccw-limit\"/> ",
+      "<!-- Input 5 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"ch1input5Func\" value=\"home\"/> ",
+      "<!-- Input 5 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"ch2input5Func\" value=\"home\"/> ",
+      "<!-- Input 6 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"ch1input6Func\" value=\"motor-offline\"/> ",
+      "<!-- Input 6 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"ch2input6Func\" value=\"motor-offline\"/> ",
+      "",
+    },
   },
-  "ECR86": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000a88",
     ProductID: "0x0a880003",
     Type: "ECR86",
+    ModParams: []string{
+      "<!-- Enable support for Cyclic Synchronous Position mode. --> ",
+      "<modParam name=\"enableCSP\" value=\"true\"/> ",
+      "<!-- Enable support for Cyclic Synchronous Velocity mode. --> ",
+      "<modParam name=\"enableCSV\" value=\"false\"/> ",
+      "<!-- Maximum stepper Amps. --> ",
+      "<modParam name=\"peakCurrent_amps\" value=\"6.0\"/> ",
+      "<!-- Number of stepper pulses per rotation --> ",
+      "<modParam name=\"motorResolution_pulses\" value=\"10000\"/> ",
+      "<!-- Number of encoder steps per revolution. --> ",
+      "<modParam name=\"encoderResolution\" value=\"4000\"/> ",
+      "<!-- Output 1 use: general, alarm, brake, in-place. --> ",
+      "<modParam name=\"output1Func\" value=\"alarm\"/> ",
+      "<!-- Output 2 use: general, alarm, brake, in-place. --> ",
+      "<modParam name=\"output2Func\" value=\"brake\"/> ",
+      "<!-- Input 3 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"input3Func\" value=\"cw-limit\"/> ",
+      "<!-- Input 4 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"input4Func\" value=\"ccw-limit\"/> ",
+      "<!-- Input 5 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"input5Func\" value=\"home\"/> ",
+      "<!-- Input 6 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"input6Func\" value=\"motor-offline\"/> ",
+      "",
+    },
   },
-  "ECT60": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000a88",
     ProductID: "0x0a880002",
     Type: "ECT60",
+    ModParams: []string{
+      "<!-- Enable support for Cyclic Synchronous Position mode. --> ",
+      "<modParam name=\"enableCSP\" value=\"true\"/> ",
+      "<!-- Enable support for Cyclic Synchronous Velocity mode. --> ",
+      "<modParam name=\"enableCSV\" value=\"false\"/> ",
+      "<!-- Maximum stepper Amps. --> ",
+      "<modParam name=\"peakCurrent_amps\" value=\"6.0\"/> ",
+      "<!-- Operation mode: openloop, closedloop, or foc. --> ",
+      "<modParam name=\"controlMode\" value=\"closedloop\"/> ",
+      "<!-- Number of encoder steps per revolution. --> ",
+      "<modParam name=\"encoderResolution\" value=\"4000\"/> ",
+      "<!-- Output 1 use: general, alarm, brake, in-place. --> ",
+      "<modParam name=\"output1Func\" value=\"alarm\"/> ",
+      "<!-- Output 2 use: general, alarm, brake, in-place. --> ",
+      "<modParam name=\"output2Func\" value=\"brake\"/> ",
+      "<!-- Input 3 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"input3Func\" value=\"cw-limit\"/> ",
+      "<!-- Input 4 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"input4Func\" value=\"ccw-limit\"/> ",
+      "<!-- Input 5 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"input5Func\" value=\"home\"/> ",
+      "<!-- Input 6 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"input6Func\" value=\"motor-offline\"/> ",
+      "",
+    },
   },
-  "ECT60x2": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000a88",
     ProductID: "0x0a880006",
     Type: "ECT60x2",
+    ModParams: []string{
+      "<!-- Enable support for Cyclic Synchronous Position mode. --> ",
+      "<modParam name=\"ch1enableCSP\" value=\"true\"/> ",
+      "<!-- Enable support for Cyclic Synchronous Position mode. --> ",
+      "<modParam name=\"ch2enableCSP\" value=\"true\"/> ",
+      "<!-- Enable support for Cyclic Synchronous Velocity mode. --> ",
+      "<modParam name=\"ch1enableCSV\" value=\"false\"/> ",
+      "<!-- Enable support for Cyclic Synchronous Velocity mode. --> ",
+      "<modParam name=\"ch2enableCSV\" value=\"false\"/> ",
+      "<!-- Maximum stepper Amps. --> ",
+      "<modParam name=\"ch1peakCurrent_amps\" value=\"6.0\"/> ",
+      "<!-- Maximum stepper Amps. --> ",
+      "<modParam name=\"ch2peakCurrent_amps\" value=\"6.0\"/> ",
+      "<!-- Operation mode: openloop, closedloop, or foc. --> ",
+      "<modParam name=\"ch1controlMode\" value=\"closedloop\"/> ",
+      "<!-- Operation mode: openloop, closedloop, or foc. --> ",
+      "<modParam name=\"ch2controlMode\" value=\"closedloop\"/> ",
+      "<!-- Number of encoder steps per revolution. --> ",
+      "<modParam name=\"ch1encoderResolution\" value=\"4000\"/> ",
+      "<!-- Number of encoder steps per revolution. --> ",
+      "<modParam name=\"ch2encoderResolution\" value=\"4000\"/> ",
+      "<!-- Output 1 use: general, alarm, brake, in-place. --> ",
+      "<modParam name=\"ch1output1Func\" value=\"alarm\"/> ",
+      "<!-- Output 1 use: general, alarm, brake, in-place. --> ",
+      "<modParam name=\"ch2output1Func\" value=\"alarm\"/> ",
+      "<!-- Output 2 use: general, alarm, brake, in-place. --> ",
+      "<modParam name=\"ch1output2Func\" value=\"brake\"/> ",
+      "<!-- Output 2 use: general, alarm, brake, in-place. --> ",
+      "<modParam name=\"ch2output2Func\" value=\"brake\"/> ",
+      "<!-- Input 3 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"ch1input3Func\" value=\"cw-limit\"/> ",
+      "<!-- Input 3 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"ch2input3Func\" value=\"cw-limit\"/> ",
+      "<!-- Input 4 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"ch1input4Func\" value=\"ccw-limit\"/> ",
+      "<!-- Input 4 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"ch2input4Func\" value=\"ccw-limit\"/> ",
+      "<!-- Input 5 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"ch1input5Func\" value=\"home\"/> ",
+      "<!-- Input 5 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"ch2input5Func\" value=\"home\"/> ",
+      "<!-- Input 6 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"ch1input6Func\" value=\"motor-offline\"/> ",
+      "<!-- Input 6 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"ch2input6Func\" value=\"motor-offline\"/> ",
+      "",
+    },
   },
-  "ECT86": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000a88",
     ProductID: "0x0a880004",
     Type: "ECT86",
+    ModParams: []string{
+      "<!-- Enable support for Cyclic Synchronous Position mode. --> ",
+      "<modParam name=\"enableCSP\" value=\"true\"/> ",
+      "<!-- Enable support for Cyclic Synchronous Velocity mode. --> ",
+      "<modParam name=\"enableCSV\" value=\"false\"/> ",
+      "<!-- Maximum stepper Amps. --> ",
+      "<modParam name=\"peakCurrent_amps\" value=\"6.0\"/> ",
+      "<!-- Operation mode: openloop, closedloop, or foc. --> ",
+      "<modParam name=\"controlMode\" value=\"closedloop\"/> ",
+      "<!-- Number of encoder steps per revolution. --> ",
+      "<modParam name=\"encoderResolution\" value=\"4000\"/> ",
+      "<!-- Output 1 use: general, alarm, brake, in-place. --> ",
+      "<modParam name=\"output1Func\" value=\"alarm\"/> ",
+      "<!-- Output 2 use: general, alarm, brake, in-place. --> ",
+      "<modParam name=\"output2Func\" value=\"brake\"/> ",
+      "<!-- Input 3 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"input3Func\" value=\"cw-limit\"/> ",
+      "<!-- Input 4 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"input4Func\" value=\"ccw-limit\"/> ",
+      "<!-- Input 5 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"input5Func\" value=\"home\"/> ",
+      "<!-- Input 6 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2 --> ",
+      "<modParam name=\"input6Func\" value=\"motor-offline\"/> ",
+      "",
+    },
   },
-  "EJ1859": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07432852",
     Type: "EJ1859",
+    ModParams: []string{
+    },
   },
-  "EJ3004": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bbc2852",
     Type: "EJ3004",
+    ModParams: []string{
+    },
   },
-  "EJ3202": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c822852",
     Type: "EJ3202",
+    ModParams: []string{
+    },
   },
-  "EJ3214": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c8e2852",
     Type: "EJ3214",
+    ModParams: []string{
+    },
   },
-  "EJ4002": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fa22852",
     Type: "EJ4002",
+    ModParams: []string{
+    },
   },
-  "EJ4004": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fa42852",
     Type: "EJ4004",
+    ModParams: []string{
+    },
   },
-  "EJ4008": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fa82852",
     Type: "EJ4008",
+    ModParams: []string{
+    },
   },
-  "EJ4018": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fb22852",
     Type: "EJ4018",
+    ModParams: []string{
+    },
   },
-  "EJ4024": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fb82852",
     Type: "EJ4024",
+    ModParams: []string{
+    },
   },
-  "EJ4132": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x10242852",
     Type: "EJ4132",
+    ModParams: []string{
+    },
   },
-  "EJ4134": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x10262852",
     Type: "EJ4134",
+    ModParams: []string{
+    },
   },
-  "EJ5002": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x138a2852",
     Type: "EJ5002",
+    ModParams: []string{
+    },
   },
-  "EK1100": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x044c2c52",
     Type: "EK1100",
+    ModParams: []string{
+    },
   },
-  "EK1101": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x044d2c52",
     Type: "EK1101",
+    ModParams: []string{
+    },
   },
-  "EK1110": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x04562c52",
     Type: "EK1110",
+    ModParams: []string{
+    },
   },
-  "EK1122": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x04622c52",
     Type: "EK1122",
+    ModParams: []string{
+    },
   },
-  "EK1814": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07162c52",
     Type: "EK1814",
+    ModParams: []string{
+    },
   },
-  "EK1818": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x071a2c52",
     Type: "EK1818",
+    ModParams: []string{
+    },
   },
-  "EK1828-0010": EthercatDriver{
-    VendorID: "0x00000002",
-    ProductID: "0x07242c52",
-    Type: "EK1828-0010",
-  },
-  "EK1828": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07242c52",
     Type: "EK1828",
+    ModParams: []string{
+    },
   },
-  "EL1002": EthercatDriver{
+  EthercatDriver{
+    VendorID: "0x00000002",
+    ProductID: "0x07242c52",
+    Type: "EK1828-0010",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x03ea3052",
     Type: "EL1002",
+    ModParams: []string{
+    },
   },
-  "EL1004": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x03ec3052",
     Type: "EL1004",
+    ModParams: []string{
+    },
   },
-  "EL1008": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x03f03052",
     Type: "EL1008",
+    ModParams: []string{
+    },
   },
-  "EL1012": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x03f43052",
     Type: "EL1012",
+    ModParams: []string{
+    },
   },
-  "EL1014": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x03f63052",
     Type: "EL1014",
+    ModParams: []string{
+    },
   },
-  "EL1018": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x03fa3052",
     Type: "EL1018",
+    ModParams: []string{
+    },
   },
-  "EL1024": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x04003052",
     Type: "EL1024",
+    ModParams: []string{
+    },
   },
-  "EL1034": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x040a3052",
     Type: "EL1034",
+    ModParams: []string{
+    },
   },
-  "EL1084": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x043c3052",
     Type: "EL1084",
+    ModParams: []string{
+    },
   },
-  "EL1088": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x04403052",
     Type: "EL1088",
+    ModParams: []string{
+    },
   },
-  "EL1094": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x04463052",
     Type: "EL1094",
+    ModParams: []string{
+    },
   },
-  "EL1098": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x044a3052",
     Type: "EL1098",
+    ModParams: []string{
+    },
   },
-  "EL1104": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x04503052",
     Type: "EL1104",
+    ModParams: []string{
+    },
   },
-  "EL1114": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x045a3052",
     Type: "EL1114",
+    ModParams: []string{
+    },
   },
-  "EL1124": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x04643052",
     Type: "EL1124",
+    ModParams: []string{
+    },
   },
-  "EL1134": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x046e3052",
     Type: "EL1134",
+    ModParams: []string{
+    },
   },
-  "EL1144": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x04783052",
     Type: "EL1144",
+    ModParams: []string{
+    },
   },
-  "EL1252": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x04e43052",
     Type: "EL1252",
+    ModParams: []string{
+    },
   },
-  "EL1804": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x070c3052",
     Type: "EL1804",
+    ModParams: []string{
+    },
   },
-  "EL1808": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07103052",
     Type: "EL1808",
+    ModParams: []string{
+    },
   },
-  "EL1809": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07113052",
     Type: "EL1809",
+    ModParams: []string{
+    },
   },
-  "EL1819": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x071b3052",
     Type: "EL1819",
+    ModParams: []string{
+    },
   },
-  "EL1852": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x073c3052",
     Type: "EL1852",
+    ModParams: []string{
+    },
   },
-  "EL1859": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07433052",
     Type: "EL1859",
+    ModParams: []string{
+    },
   },
-  "EL1904": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07703052",
     Type: "EL1904",
+    ModParams: []string{
+    },
   },
-  "EL1918_LOGIC": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x077e3052",
     Type: "EL1918_LOGIC",
+    ModParams: []string{
+    },
   },
-  "EL2002": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07d23052",
     Type: "EL2002",
+    ModParams: []string{
+    },
   },
-  "EL2004": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07d43052",
     Type: "EL2004",
+    ModParams: []string{
+    },
   },
-  "EL2008": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07d83052",
     Type: "EL2008",
+    ModParams: []string{
+    },
   },
-  "EL2022": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07e63052",
     Type: "EL2022",
+    ModParams: []string{
+    },
   },
-  "EL2024": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07e83052",
     Type: "EL2024",
+    ModParams: []string{
+    },
   },
-  "EL2032": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07f03052",
     Type: "EL2032",
+    ModParams: []string{
+    },
   },
-  "EL2034": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07f23052",
     Type: "EL2034",
+    ModParams: []string{
+    },
   },
-  "EL2042": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07fa3052",
     Type: "EL2042",
+    ModParams: []string{
+    },
   },
-  "EL2084": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x08243052",
     Type: "EL2084",
+    ModParams: []string{
+    },
   },
-  "EL2088": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x08283052",
     Type: "EL2088",
+    ModParams: []string{
+    },
   },
-  "EL2124": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x084c3052",
     Type: "EL2124",
+    ModParams: []string{
+    },
   },
-  "EL2202": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x089a3052",
     Type: "EL2202",
+    ModParams: []string{
+    },
   },
-  "EL2521": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x09d93052",
     Type: "EL2521",
+    ModParams: []string{
+    },
   },
-  "EL2612": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0a343052",
     Type: "EL2612",
+    ModParams: []string{
+    },
   },
-  "EL2622": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0a3e3052",
     Type: "EL2622",
+    ModParams: []string{
+    },
   },
-  "EL2624": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0a403052",
     Type: "EL2624",
+    ModParams: []string{
+    },
   },
-  "EL2634": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0a4a3052",
     Type: "EL2634",
+    ModParams: []string{
+    },
   },
-  "EL2652": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0a5c3052",
     Type: "EL2652",
+    ModParams: []string{
+    },
   },
-  "EL2798": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0aee3052",
     Type: "EL2798",
+    ModParams: []string{
+    },
   },
-  "EL2808": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0af83052",
     Type: "EL2808",
+    ModParams: []string{
+    },
   },
-  "EL2809": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0af93052",
     Type: "EL2809",
+    ModParams: []string{
+    },
   },
-  "EL2904": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0b583052",
     Type: "EL2904",
+    ModParams: []string{
+    },
   },
-  "EL3001": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bb93052",
     Type: "EL3001",
+    ModParams: []string{
+    },
   },
-  "EL3002": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bba3052",
     Type: "EL3002",
+    ModParams: []string{
+    },
   },
-  "EL3004": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bbc3052",
     Type: "EL3004",
+    ModParams: []string{
+    },
   },
-  "EL3008": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bc03052",
     Type: "EL3008",
+    ModParams: []string{
+    },
   },
-  "EL3011": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bc33052",
     Type: "EL3011",
+    ModParams: []string{
+    },
   },
-  "EL3012": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bc43052",
     Type: "EL3012",
+    ModParams: []string{
+    },
   },
-  "EL3014": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bc63052",
     Type: "EL3014",
+    ModParams: []string{
+    },
   },
-  "EL3021": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bcd3052",
     Type: "EL3021",
+    ModParams: []string{
+    },
   },
-  "EL3022": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bce3052",
     Type: "EL3022",
+    ModParams: []string{
+    },
   },
-  "EL3024": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bd03052",
     Type: "EL3024",
+    ModParams: []string{
+    },
   },
-  "EL3041": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0be13052",
     Type: "EL3041",
+    ModParams: []string{
+    },
   },
-  "EL3042": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0be23052",
     Type: "EL3042",
+    ModParams: []string{
+    },
   },
-  "EL3044": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0be43052",
     Type: "EL3044",
+    ModParams: []string{
+    },
   },
-  "EL3048": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0be83052",
     Type: "EL3048",
+    ModParams: []string{
+    },
   },
-  "EL3051": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0beb3052",
     Type: "EL3051",
+    ModParams: []string{
+    },
   },
-  "EL3052": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bec3052",
     Type: "EL3052",
+    ModParams: []string{
+    },
   },
-  "EL3054": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bee3052",
     Type: "EL3054",
+    ModParams: []string{
+    },
   },
-  "EL3058": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bf23052",
     Type: "EL3058",
+    ModParams: []string{
+    },
   },
-  "EL3061": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bf53052",
     Type: "EL3061",
+    ModParams: []string{
+    },
   },
-  "EL3062": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bf63052",
     Type: "EL3062",
+    ModParams: []string{
+    },
   },
-  "EL3064": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bf83052",
     Type: "EL3064",
+    ModParams: []string{
+    },
   },
-  "EL3068": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0bfc3052",
     Type: "EL3068",
+    ModParams: []string{
+    },
   },
-  "EL3101": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c1d3052",
     Type: "EL3101",
+    ModParams: []string{
+    },
   },
-  "EL3102": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c1e3052",
     Type: "EL3102",
+    ModParams: []string{
+    },
   },
-  "EL3104": EthercatDriver{
+  EthercatDriver{
+    VendorID: "0x00000002",
+    ProductID: "0x0c1e3052",
+    Type: "EL3102",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c203052",
     Type: "EL3104",
+    ModParams: []string{
+    },
   },
-  "EL3111": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c273052",
     Type: "EL3111",
+    ModParams: []string{
+    },
   },
-  "EL3112": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c283052",
     Type: "EL3112",
+    ModParams: []string{
+    },
   },
-  "EL3114": EthercatDriver{
+  EthercatDriver{
+    VendorID: "0x00000002",
+    ProductID: "0x0c283052",
+    Type: "EL3112",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c2a3052",
     Type: "EL3114",
+    ModParams: []string{
+    },
   },
-  "EL3121": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c313052",
     Type: "EL3121",
+    ModParams: []string{
+    },
   },
-  "EL3122": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c323052",
     Type: "EL3122",
+    ModParams: []string{
+    },
   },
-  "EL3124": EthercatDriver{
+  EthercatDriver{
+    VendorID: "0x00000002",
+    ProductID: "0x0c323052",
+    Type: "EL3122",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c343052",
     Type: "EL3124",
+    ModParams: []string{
+    },
   },
-  "EL3141": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c453052",
     Type: "EL3141",
+    ModParams: []string{
+    },
   },
-  "EL3142": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c463052",
     Type: "EL3142",
+    ModParams: []string{
+    },
   },
-  "EL3144": EthercatDriver{
+  EthercatDriver{
+    VendorID: "0x00000002",
+    ProductID: "0x0c463052",
+    Type: "EL3142",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c483052",
     Type: "EL3144",
+    ModParams: []string{
+    },
   },
-  "EL3151": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c4f3052",
     Type: "EL3151",
+    ModParams: []string{
+    },
   },
-  "EL3152": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c503052",
     Type: "EL3152",
+    ModParams: []string{
+    },
   },
-  "EL3154": EthercatDriver{
+  EthercatDriver{
+    VendorID: "0x00000002",
+    ProductID: "0x0c503052",
+    Type: "EL3152",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c523052",
     Type: "EL3154",
+    ModParams: []string{
+    },
   },
-  "EL3161": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c593052",
     Type: "EL3161",
+    ModParams: []string{
+    },
   },
-  "EL3162": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c5a3052",
     Type: "EL3162",
+    ModParams: []string{
+    },
   },
-  "EL3164": EthercatDriver{
+  EthercatDriver{
+    VendorID: "0x00000002",
+    ProductID: "0x0c5a3052",
+    Type: "EL3162",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c5c3052",
     Type: "EL3164",
+    ModParams: []string{
+    },
   },
-  "EL3182": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c6e3052",
     Type: "EL3182",
+    ModParams: []string{
+    },
   },
-  "EL3201": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c813052",
     Type: "EL3201",
+    ModParams: []string{
+    },
   },
-  "EL3202": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c823052",
     Type: "EL3202",
+    ModParams: []string{
+    },
   },
-  "EL3204": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c843052",
     Type: "EL3204",
+    ModParams: []string{
+    },
   },
-  "EL3208": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c883052",
     Type: "EL3208",
+    ModParams: []string{
+    },
   },
-  "EL3214": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c8e3052",
     Type: "EL3214",
+    ModParams: []string{
+    },
   },
-  "EL3218": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c923052",
     Type: "EL3218",
+    ModParams: []string{
+    },
   },
-  "EL3255": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0cb73052",
     Type: "EL3255",
+    ModParams: []string{
+    },
   },
-  "EL3403": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0d4b3052",
     Type: "EL3403",
+    ModParams: []string{
+    },
   },
-  "EL4001": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fa13052",
     Type: "EL4001",
+    ModParams: []string{
+    },
   },
-  "EL4002": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fa23052",
     Type: "EL4002",
+    ModParams: []string{
+    },
   },
-  "EL4004": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fa43052",
     Type: "EL4004",
+    ModParams: []string{
+    },
   },
-  "EL4008": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fa83052",
     Type: "EL4008",
+    ModParams: []string{
+    },
   },
-  "EL4011": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fab3052",
     Type: "EL4011",
+    ModParams: []string{
+    },
   },
-  "EL4012": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fac3052",
     Type: "EL4012",
+    ModParams: []string{
+    },
   },
-  "EL4014": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fae3052",
     Type: "EL4014",
+    ModParams: []string{
+    },
   },
-  "EL4018": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fb23052",
     Type: "EL4018",
+    ModParams: []string{
+    },
   },
-  "EL4021": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fb53052",
     Type: "EL4021",
+    ModParams: []string{
+    },
   },
-  "EL4022": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fb63052",
     Type: "EL4022",
+    ModParams: []string{
+    },
   },
-  "EL4024": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fb83052",
     Type: "EL4024",
+    ModParams: []string{
+    },
   },
-  "EL4028": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fbc3052",
     Type: "EL4028",
+    ModParams: []string{
+    },
   },
-  "EL4031": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fbf3052",
     Type: "EL4031",
+    ModParams: []string{
+    },
   },
-  "EL4032": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fc03052",
     Type: "EL4032",
+    ModParams: []string{
+    },
   },
-  "EL4034": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fc23052",
     Type: "EL4034",
+    ModParams: []string{
+    },
   },
-  "EL4038": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0fc63052",
     Type: "EL4038",
+    ModParams: []string{
+    },
   },
-  "EL4102": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x10063052",
     Type: "EL4102",
+    ModParams: []string{
+    },
   },
-  "EL4104": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x10083052",
     Type: "EL4104",
+    ModParams: []string{
+    },
   },
-  "EL4112": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x10103052",
     Type: "EL4112",
+    ModParams: []string{
+    },
   },
-  "EL4114": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x10123052",
     Type: "EL4114",
+    ModParams: []string{
+    },
   },
-  "EL4122": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x101a3052",
     Type: "EL4122",
+    ModParams: []string{
+    },
   },
-  "EL4124": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x101c3052",
     Type: "EL4124",
+    ModParams: []string{
+    },
   },
-  "EL4132": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x10243052",
     Type: "EL4132",
+    ModParams: []string{
+    },
   },
-  "EL4134": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x10263052",
     Type: "EL4134",
+    ModParams: []string{
+    },
   },
-  "EL5002": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x138a3052",
     Type: "EL5002",
+    ModParams: []string{
+    },
   },
-  "EL5032": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x13a83052",
     Type: "EL5032",
+    ModParams: []string{
+    },
   },
-  "EL5101": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x13ed3052",
     Type: "EL5101",
+    ModParams: []string{
+    },
   },
-  "EL5102": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x13ee3052",
     Type: "EL5102",
+    ModParams: []string{
+    },
   },
-  "EL5151": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x141f3052",
     Type: "EL5151",
+    ModParams: []string{
+    },
   },
-  "EL5152": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x14203052",
     Type: "EL5152",
+    ModParams: []string{
+    },
   },
-  "EL6090": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x17ca3052",
     Type: "EL6090",
+    ModParams: []string{
+    },
   },
-  "EL6900": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x1af43052",
     Type: "EL6900",
+    ModParams: []string{
+    },
   },
-  "EL7031": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x1b773052",
     Type: "EL7031",
+    ModParams: []string{
+    },
   },
-  "EL7041-0052": EthercatDriver{
-    VendorID: "0x00000002",
-    ProductID: "0x1b813052",
-    Type: "EL7041-0052",
-  },
-  "EL7041-1000": EthercatDriver{
-    VendorID: "0x00000002",
-    ProductID: "0x1b813052",
-    Type: "EL7041-1000",
-  },
-  "EL7041": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x1b813052",
     Type: "EL7041",
+    ModParams: []string{
+    },
   },
-  "EL7201_9014": EthercatDriver{
+  EthercatDriver{
+    VendorID: "0x00000002",
+    ProductID: "0x1b813052",
+    Type: "EL7041-0052",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000002",
+    ProductID: "0x1b813052",
+    Type: "EL7041-1000",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000002",
+    ProductID: "0x1b813052",
+    Type: "EL7041_1000",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x1c213052",
     Type: "EL7201_9014",
+    ModParams: []string{
+    },
   },
-  "EL7211": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x1c2b3052",
     Type: "EL7211",
+    ModParams: []string{
+    },
   },
-  "EL7221": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x1c353052",
     Type: "EL7221",
+    ModParams: []string{
+    },
   },
-  "EL7342": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x1cae3052",
     Type: "EL7342",
+    ModParams: []string{
+    },
   },
-  "EL7411": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x1cf33052",
     Type: "EL7411",
+    ModParams: []string{
+    },
   },
-  "EL9505": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x25213052",
     Type: "EL9505",
+    ModParams: []string{
+    },
   },
-  "EL9508": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x25243052",
     Type: "EL9508",
+    ModParams: []string{
+    },
   },
-  "EL9510": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x25263052",
     Type: "EL9510",
+    ModParams: []string{
+    },
   },
-  "EL9512": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x25283052",
     Type: "EL9512",
+    ModParams: []string{
+    },
   },
-  "EL9515": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x252b3052",
     Type: "EL9515",
+    ModParams: []string{
+    },
   },
-  "EL9576": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x25683052",
     Type: "EL9576",
+    ModParams: []string{
+    },
   },
-  "EM3701": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0e753452",
     Type: "EM3701",
+    ModParams: []string{
+    },
   },
-  "EM3702": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0e763452",
     Type: "EM3702",
+    ModParams: []string{
+    },
   },
-  "EM3712": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0e803452",
     Type: "EM3712",
+    ModParams: []string{
+    },
   },
-  "EM7004": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x1b5c3452",
     Type: "EM7004",
+    ModParams: []string{
+    },
   },
-  "EP1008": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x03f04052",
     Type: "EP1008",
+    ModParams: []string{
+    },
   },
-  "EP1018": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x03fa4052",
     Type: "EP1018",
+    ModParams: []string{
+    },
   },
-  "EP1122": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x04624052",
     Type: "EP1122",
+    ModParams: []string{
+    },
   },
-  "EP1819": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x071b4052",
     Type: "EP1819",
+    ModParams: []string{
+    },
   },
-  "EP2008": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07d84052",
     Type: "EP2008",
+    ModParams: []string{
+    },
   },
-  "EP2028": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x07ec4052",
     Type: "EP2028",
+    ModParams: []string{
+    },
   },
-  "EP2308": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x09044052",
     Type: "EP2308",
+    ModParams: []string{
+    },
   },
-  "EP2316": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x090c4052",
     Type: "EP2316",
+    ModParams: []string{
+    },
   },
-  "EP2318": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x090e4052",
     Type: "EP2318",
+    ModParams: []string{
+    },
   },
-  "EP2328": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x09184052",
     Type: "EP2328",
+    ModParams: []string{
+    },
   },
-  "EP2338": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x09224052",
     Type: "EP2338",
+    ModParams: []string{
+    },
   },
-  "EP2339": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x09234052",
     Type: "EP2339",
+    ModParams: []string{
+    },
   },
-  "EP2349": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x092d4052",
     Type: "EP2349",
+    ModParams: []string{
+    },
   },
-  "EP2809": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0af94052",
     Type: "EP2809",
+    ModParams: []string{
+    },
   },
-  "EP3174": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c664052",
     Type: "EP3174",
+    ModParams: []string{
+    },
   },
-  "EP3184": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c704052",
     Type: "EP3184",
+    ModParams: []string{
+    },
   },
-  "EP3204": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x0c844052",
     Type: "EP3204",
+    ModParams: []string{
+    },
   },
-  "EP4174": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x104e4052",
     Type: "EP4174",
+    ModParams: []string{
+    },
   },
-  "EP7041": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x1b813052",
     Type: "EP7041",
+    ModParams: []string{
+    },
   },
-  "EPP2308": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x64765649",
     Type: "EPP2308",
+    ModParams: []string{
+    },
   },
-  "EPP2316": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x090c4052",
     Type: "EPP2316",
+    ModParams: []string{
+    },
   },
-  "EPP2318": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x647656e9",
     Type: "EPP2318",
+    ModParams: []string{
+    },
   },
-  "EPP2328": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x64765789",
     Type: "EPP2328",
+    ModParams: []string{
+    },
   },
-  "EPP2334": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x647657e9",
     Type: "EPP2334",
+    ModParams: []string{
+    },
   },
-  "EPP2338": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x64765829",
     Type: "EPP2338",
+    ModParams: []string{
+    },
   },
-  "EPP2339": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x64765839",
     Type: "EPP2339",
+    ModParams: []string{
+    },
   },
-  "EPP2349": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x647658d9",
     Type: "EPP2349",
+    ModParams: []string{
+    },
   },
-  "EPX3158": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x9809ab69",
     Type: "EPX3158",
+    ModParams: []string{
+    },
   },
-  "EQ2339": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000002",
     ProductID: "0x092d4052",
     Type: "EQ2339",
+    ModParams: []string{
+    },
   },
-  "EX260-SEC1": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000114",
     ProductID: "0x01000001",
     Type: "EX260-SEC1",
+    ModParams: []string{
+    },
   },
-  "EX260-SEC2": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000114",
     ProductID: "0x01000002",
     Type: "EX260-SEC2",
+    ModParams: []string{
+    },
   },
-  "EX260-SEC3": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000114",
     ProductID: "0x01000003",
     Type: "EX260-SEC3",
+    ModParams: []string{
+    },
   },
-  "EX260-SEC4": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000114",
     ProductID: "0x01000004",
     Type: "EX260-SEC4",
+    ModParams: []string{
+    },
   },
-  "EasyIO": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x0000079a",
     ProductID: "0x0debacca",
     Type: "EasyIO",
+    ModParams: []string{
+    },
   },
-  "EPOCAT": EthercatDriver{
-    VendorID: "0x0000079A",
-    ProductID: "0x00decade",
-    Type: "EPOCAT",
+  EthercatDriver{
+    VendorID: "0x0000079a",
+    ProductID: "0x04decade",
+    Type: "EpoCAT",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN01H": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x00000005",
     Type: "OmrG5_KN01H",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN01L": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x00000002",
     Type: "OmrG5_KN01L",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN02H": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x00000006",
     Type: "OmrG5_KN02H",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN02L": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x00000003",
     Type: "OmrG5_KN02L",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN04H": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x00000007",
     Type: "OmrG5_KN04H",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN04L": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x00000004",
     Type: "OmrG5_KN04L",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN06F": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x0000000b",
     Type: "OmrG5_KN06F",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN08H": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x00000008",
     Type: "OmrG5_KN08H",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN10F": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x0000000c",
     Type: "OmrG5_KN10F",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN10H": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x00000009",
     Type: "OmrG5_KN10H",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN150F": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x0000005f",
     Type: "OmrG5_KN150F",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN150H": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x0000005a",
     Type: "OmrG5_KN150H",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN15F": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x0000000d",
     Type: "OmrG5_KN15F",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN15H": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x0000000a",
     Type: "OmrG5_KN15H",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN20F": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x0000005b",
     Type: "OmrG5_KN20F",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN20H": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x00000056",
     Type: "OmrG5_KN20H",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN30F": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x0000005c",
     Type: "OmrG5_KN30F",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN30H": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x00000057",
     Type: "OmrG5_KN30H",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN50F": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x0000005d",
     Type: "OmrG5_KN50F",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN50H": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x00000058",
     Type: "OmrG5_KN50H",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN75F": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x0000005e",
     Type: "OmrG5_KN75F",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KN75H": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x00000059",
     Type: "OmrG5_KN75H",
+    ModParams: []string{
+    },
   },
-  "OmrG5_KNA5L": EthercatDriver{
+  EthercatDriver{
     VendorID: "0x00000083",
     ProductID: "0x00000001",
     Type: "OmrG5_KNA5L",
+    ModParams: []string{
+    },
   },
-  "STMDS5K": EthercatDriver{
+  EthercatDriver{
+    VendorID: "0x00000907",
+    ProductID: "0x10000001",
+    Type: "Ph3LM2RM",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000227",
+    ProductID: "0x00000005",
+    Type: "RovixESD-A6",
+    ModParams: []string{
+      "<!-- Microsteps setting (default 0) --> ",
+      "<modParam name=\"ch1microsteps\" value=\"0\"/> ",
+      "<!-- Microsteps setting (default 0) --> ",
+      "<modParam name=\"ch2microsteps\" value=\"0\"/> ",
+      "<!-- Microsteps setting (default 0) --> ",
+      "<modParam name=\"ch3microsteps\" value=\"0\"/> ",
+      "<!-- Microsteps setting (default 0) --> ",
+      "<modParam name=\"ch4microsteps\" value=\"0\"/> ",
+      "<!-- Microsteps setting (default 0) --> ",
+      "<modParam name=\"ch5microsteps\" value=\"0\"/> ",
+      "<!-- Microsteps setting (default 0) --> ",
+      "<modParam name=\"ch6microsteps\" value=\"0\"/> ",
+      "<!-- Steps per rotation --> ",
+      "<modParam name=\"ch1motorResolution_pulses\" value=\"100000\"/> ",
+      "<!-- Steps per rotation --> ",
+      "<modParam name=\"ch2motorResolution_pulses\" value=\"100000\"/> ",
+      "<!-- Steps per rotation --> ",
+      "<modParam name=\"ch3motorResolution_pulses\" value=\"100000\"/> ",
+      "<!-- Steps per rotation --> ",
+      "<modParam name=\"ch4motorResolution_pulses\" value=\"100000\"/> ",
+      "<!-- Steps per rotation --> ",
+      "<modParam name=\"ch5motorResolution_pulses\" value=\"100000\"/> ",
+      "<!-- Steps per rotation --> ",
+      "<modParam name=\"ch6motorResolution_pulses\" value=\"100000\"/> ",
+      "<!-- Maximum stepper Amps. --> ",
+      "<modParam name=\"ch1current_amps\" value=\"2.0\"/> ",
+      "<!-- Maximum stepper Amps. --> ",
+      "<modParam name=\"ch2current_amps\" value=\"2.0\"/> ",
+      "<!-- Maximum stepper Amps. --> ",
+      "<modParam name=\"ch3current_amps\" value=\"2.0\"/> ",
+      "<!-- Maximum stepper Amps. --> ",
+      "<modParam name=\"ch4current_amps\" value=\"2.0\"/> ",
+      "<!-- Maximum stepper Amps. --> ",
+      "<modParam name=\"ch5current_amps\" value=\"2.0\"/> ",
+      "<!-- Maximum stepper Amps. --> ",
+      "<modParam name=\"ch6current_amps\" value=\"2.0\"/> ",
+      "",
+    },
+  },
+  EthercatDriver{
     VendorID: "0x000000b9",
     ProductID: "0x00001388",
-    Type: "STMDS5K",
+    Type: "StMDS5k",
+    ModParams: []string{
+    },
   },
-  "basic_cia402": EthercatDriver{
+  EthercatDriver{
     VendorID: "0xffffffff",
     ProductID: "0xffffffff",
     Type: "basic_cia402",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000000",
+    ProductID: "0x00000000",
+    Type: "generic",
+    ModParams: []string{
+    },
   },
 }

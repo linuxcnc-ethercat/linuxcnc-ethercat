@@ -25,6 +25,8 @@
 int lcec_modparam_desc_len(const lcec_modparam_desc_t *mp) {
   int l;
 
+  if (mp == NULL) return 0;
+
   for (l = 0; mp[l].name != NULL; l++)
     ;
 
@@ -47,6 +49,44 @@ lcec_modparam_desc_t *lcec_modparam_desc_concat(lcec_modparam_desc_t const *a, l
     c[a_len + i] = b[i];
   }
   c[a_len + b_len] = a[a_len];  // Copy terminator
+
+  return c;
+}
+
+/// @brief Override the config value for entries in a with values from b.
+lcec_modparam_desc_t *lcec_modparam_desc_override(lcec_modparam_desc_t const *a, lcec_modparam_desc_t const *b) {
+  int a_len, b_len, i, j;
+  lcec_modparam_desc_t const *aa, *bb;
+  lcec_modparam_desc_t *c, *cc;
+
+  a_len = lcec_modparam_desc_len(a);
+  b_len = lcec_modparam_desc_len(b);
+
+  // Duplicate a into c
+  c = LCEC_ALLOCATE_ARRAY(lcec_modparam_desc_t, a_len + 1);
+
+  for (j = 0; j < a_len; j++) {
+    aa = a + j;
+    cc = c + j;
+    cc->name = aa->name;
+    cc->id = aa->id;
+    cc->type = aa->type;
+    if (aa->config_value) cc->config_value = aa->config_value;
+    if (aa->config_comment) cc->config_comment = aa->config_comment;
+  }
+
+  for (i = 0; i < b_len; i++) {
+    bb = b + i;
+    if (bb->config_value || bb->config_comment) {
+      for (j = 0; j < a_len; j++) {
+        cc = c + j;
+        if (strcmp(cc->name, bb->name) == 0) {
+          if (bb->config_value) cc->config_value = bb->config_value;
+          if (bb->config_comment) cc->config_comment = bb->config_comment;
+        }
+      }
+    }
+  }
 
   return c;
 }

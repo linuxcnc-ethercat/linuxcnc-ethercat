@@ -55,9 +55,9 @@ extern "C" {
 // init macro; this will make GCC run calls to AddTypes() before
 // main() is called.  This is used to register new slave types
 // dynamically without needing a giant list in lcec_main.c.
-#define ADD_TYPES(types)                                   \
-  static void AddTypes(void) __attribute__((constructor)); \
-  static void AddTypes(void) { lcec_addtypes(types, __FILE__); }
+#define ADD_TYPES(types)                                          \
+  static void AddTypes##types(void) __attribute__((constructor)); \
+  static void AddTypes##types(void) { lcec_addtypes(types, __FILE__); }
 
 // vendor ids, please keep sorted.
 #define LCEC_BECKHOFF_VID   0x00000002
@@ -133,9 +133,11 @@ typedef enum {
 } lcec_modparam_type_t;
 
 typedef struct {
-  const char *name;           ///< the name that appears in the XML.
-  int id;                     ///< Numeric ID, should be unique per device driver.
-  lcec_modparam_type_t type;  ///< The type (bit, int, float, string) of this modParam.
+  const char *name;            ///< the name that appears in the XML.
+  int id;                      ///< Numeric ID, should be unique per device driver.
+  lcec_modparam_type_t type;   ///< The type (bit, int, float, string) of this modParam.
+  const char *config_value;    ///< The default value (as a string), for use in lcec_configgen.
+  const char *config_comment;  ///< A comment to added to the output in lcec_configgen.
 } lcec_modparam_desc_t;
 
 /// @brief Definition of a device that LinuxCNC-Ethercat supports.
@@ -384,8 +386,9 @@ double lcec_lookupdouble(const lcec_lookuptable_double_t *table, const char *key
 double lcec_lookupdouble_i(const lcec_lookuptable_double_t *table, const char *key, double default_value) __attribute__((nonnull));
 
 LCEC_CONF_MODPARAM_VAL_T *lcec_modparam_get(lcec_slave_t *slave, int id) __attribute__((nonnull));
-int lcec_modparam_desc_len(const lcec_modparam_desc_t *mp) __attribute__((nonnull));
-lcec_modparam_desc_t *lcec_modparam_desc_concat(lcec_modparam_desc_t const *a, lcec_modparam_desc_t const *b) __attribute__((nonnull));
+int lcec_modparam_desc_len(const lcec_modparam_desc_t *mp);
+lcec_modparam_desc_t *lcec_modparam_desc_concat(lcec_modparam_desc_t const *a, lcec_modparam_desc_t const *b);
+lcec_modparam_desc_t *lcec_modparam_desc_override(lcec_modparam_desc_t const *a, lcec_modparam_desc_t const *b);
 
 lcec_pdo_entry_reg_t *lcec_allocate_pdo_entry_reg(int size);
 int lcec_pdo_init(lcec_slave_t *slave, uint16_t idx, uint16_t sidx, unsigned int *os, unsigned int *bp);

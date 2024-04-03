@@ -42,12 +42,22 @@
 #define M_PDOINCREMENT 3
 
 /// @brief Device-specific modparam settings available via XML.
-static const lcec_modparam_desc_t modparams_lcec_basic_cia402[] = {
+static const lcec_modparam_desc_t modparams_perchannel[] = {
+    // XXXX, add per-channel device-specific modparams here.
+    {NULL},
+};
+
+static const lcec_modparam_desc_t modparams_base[] = {
     {"ciaChannels", M_CHANNELS, MODPARAM_TYPE_U32},
     {"ciaRxPDOEntryLimit", M_RXPDOLIMIT, MODPARAM_TYPE_U32},
     {"ciaTxPDOEntryLimit", M_TXPDOLIMIT, MODPARAM_TYPE_U32},
     {"pdoIncrement", M_PDOINCREMENT, MODPARAM_TYPE_U32},
-    // XXXX, add device-specific modparams here.
+    // XXXX, add device-specific modparams here that aren't duplicated for multi-axis devices
+    {NULL},
+};
+
+static const lcec_modparam_desc_t overrides[] = {
+    // XXXX, add overrides here
     {NULL},
 };
 
@@ -71,7 +81,7 @@ static lcec_typelist_t types[] = {
         /* modparams implicitly added below */},
     {NULL},
 };
-ADD_TYPES_WITH_CIA402_MODPARAMS(types, modparams_lcec_basic_cia402)
+ADD_TYPES_WITH_CIA402_MODPARAMS(types, modparams_perchannel, modparams_base, overrides)
 
 static void lcec_basic_cia402_read(lcec_slave_t *slave, long period);
 static void lcec_basic_cia402_write(lcec_slave_t *slave, long period);

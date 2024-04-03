@@ -543,9 +543,9 @@ int lcec_parse_config(void) {
           if (sdo_config == NULL) {
             rtapi_print_msg(
                 RTAPI_MSG_ERR, LCEC_MSG_PFX "Unable to allocate slave %s.%s sdo entry memory\n", master->name, slave_conf->name);
-            lcec_free(generic_pdo_entries);
-            lcec_free(generic_pdos);
-            lcec_free(generic_sync_managers);
+            //lcec_free(generic_pdo_entries);
+            //lcec_free(generic_pdos);
+            //lcec_free(generic_sync_managers);
             goto fail2;
           }
         }
@@ -556,10 +556,10 @@ int lcec_parse_config(void) {
           if (idn_config == NULL) {
             rtapi_print_msg(
                 RTAPI_MSG_ERR, LCEC_MSG_PFX "Unable to allocate slave %s.%s idn entry memory\n", master->name, slave_conf->name);
-            lcec_free(generic_pdo_entries);
-            lcec_free(generic_pdos);
-            lcec_free(generic_sync_managers);
-            lcec_free(sdo_config);
+            //lcec_free(generic_pdo_entries);
+	    //lcec_free(generic_pdos);
+            //lcec_free(generic_sync_managers);
+            //lcec_free(sdo_config);
             goto fail2;
           }
         }
@@ -923,7 +923,7 @@ void lcec_clear_config(void) {
         slave->proc_cleanup(slave);
       }
 
-      // free slave
+      /*      // free slave
       if (slave->modparams != NULL) {
         lcec_free(slave->modparams);
       }
@@ -949,6 +949,7 @@ void lcec_clear_config(void) {
         lcec_free(slave->wd_conf);
       }
       lcec_free(slave);
+      */
       slave = prev_slave;
     }
 
