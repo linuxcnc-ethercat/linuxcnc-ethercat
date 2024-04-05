@@ -23,6 +23,8 @@
 #include "lcec_class_din.h"
 #include "lcec_class_dout.h"
 
+#define CIA402_MAX_CHANNELS 8
+
 /// @brief This is the option list for CiA 402 devices.
 ///
 /// This provides the naming prefix for devices, and also controls
@@ -122,7 +124,7 @@ typedef struct {
   int channels;                ///< Number of channels;
   int rxpdolimit, txpdolimit;  ///< Maximum number of PDO entries allowed per PDO.
   int pdo_increment;
-  lcec_class_cia402_channel_options_t *channel[8];  ///< Room for 8 channel options.
+  lcec_class_cia402_channel_options_t *channel[CIA402_MAX_CHANNELS];  ///< Room for 8 channel options.
 } lcec_class_cia402_options_t;
 
 /// This is the internal version of `lcec_class_cia402_channel_options_t`.  It

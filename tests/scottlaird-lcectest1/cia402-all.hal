@@ -21,15 +21,14 @@ addf 0-pid.do-pid-calcs servo-thread
 addf 1-pid.do-pid-calcs servo-thread
 addf 2-pid.do-pid-calcs servo-thread
 
-addf cia402.0.write-all servo-thread
-addf cia402.1.write-all servo-thread
-addf cia402.2.write-all servo-thread
-addf cia402.3.write-all servo-thread
 addf cia402.4.write-all servo-thread
+addf cia402.3.write-all servo-thread
+addf cia402.2.write-all servo-thread
+addf cia402.1.write-all servo-thread
+addf cia402.0.write-all servo-thread
 addf lcec.write-all servo-thread
 
-
-show
+#show
 
 net ls1-statusword lcec.0.ls-2cl3.srv-1-cia-statusword => cia402.0.statusword
 net ls1-opmode-display lcec.0.ls-2cl3.srv-1-opmode-display => cia402.0.opmode-display
@@ -38,57 +37,37 @@ net ls1-drv-act-velo lcec.0.ls-2cl3.srv-1-actual-velocity => cia402.0.drv-actual
 net ls1-controlword cia402.0.controlword => lcec.0.ls-2cl3.srv-1-cia-controlword
 net ls1-modes-of-operation cia402.0.opmode => lcec.0.ls-2cl3.srv-1-opmode
 net ls1-drv-target-pos cia402.0.drv-target-position => lcec.0.ls-2cl3.srv-1-target-position
-net ls1-drv-target-velo cia402.0.drv-target-velocity => lcec.0.ls-2cl3.srv-1-target-velocity
 net 0-home-index <= joint.0.index-enable => cia402.0.home
 net 0-enable <= joint.0.amp-enable-out => cia402.0.enable
 net 0-amp-fault => joint.0.amp-fault-in <= cia402.0.drv-fault
 net 0-pos-cmd <= joint.0.motor-pos-cmd => cia402.0.pos-cmd
 net 0-pos-fb => joint.0.motor-pos-fb <= cia402.0.pos-fb
 
-net ls2-statusword lcec.0.ls-2cl3.srv-2-cia-statusword => cia402.1.statusword
-net ls2-opmode-display lcec.0.ls-2cl3.srv-2-opmode-display => cia402.1.opmode-display
-net ls2-drv-act-pos lcec.0.ls-2cl3.srv-2-actual-position => cia402.1.drv-actual-position
-net ls2-drv-act-velo lcec.0.ls-2cl3.srv-2-actual-velocity => cia402.1.drv-actual-velocity
-net ls2-controlword cia402.1.controlword => lcec.0.ls-2cl3.srv-2-cia-controlword
-net ls2-modes-of-operation cia402.1.opmode => lcec.0.ls-2cl3.srv-2-opmode
-net ls2-drv-target-pos cia402.1.drv-target-position => lcec.0.ls-2cl3.srv-2-target-position
-net ls2-drv-target-velo cia402.1.drv-target-velocity => lcec.0.ls-2cl3.srv-2-target-velocity
+net rtect1-statusword lcec.0.rt-ect60x2.srv-1-cia-statusword => cia402.1.statusword
+net rtect1-opmode-display lcec.0.rt-ect60x2.srv-1-opmode-display => cia402.1.opmode-display
+net rtect1-drv-act-pos lcec.0.rt-ect60x2.srv-1-actual-position => cia402.1.drv-actual-position
+net rtect1-drv-act-velo lcec.0.rt-ect60x2.srv-1-actual-velocity => cia402.1.drv-actual-velocity
+net rtect1-controlword cia402.1.controlword => lcec.0.rt-ect60x2.srv-1-cia-controlword
+net rtect1-modes-of-operation cia402.1.opmode => lcec.0.rt-ect60x2.srv-1-opmode
+net rtect1-drv-target-pos cia402.1.drv-target-position => lcec.0.rt-ect60x2.srv-1-target-position
+net 1-home-index <= joint.1.index-enable => cia402.1.home
+net 1-enable <= joint.1.amp-enable-out => cia402.1.enable
+net 1-amp-fault => joint.1.amp-fault-in <= cia402.1.drv-fault
+net 1-pos-cmd <= joint.1.motor-pos-cmd => cia402.1.pos-cmd
+net 1-pos-fb => joint.1.motor-pos-fb <= cia402.1.pos-fb
 
-net rtdrv-statusword lcec.0.rt-ect60.srv-cia-statusword => cia402.3.statusword
-net rtdrv-opmode-display lcec.0.rt-ect60.srv-opmode-display => cia402.3.opmode-display
-net rtdrv-drv-act-pos lcec.0.rt-ect60.srv-actual-position => cia402.3.drv-actual-position
-net rtdrv-drv-act-velo lcec.0.rt-ect60.srv-actual-velocity => cia402.3.drv-actual-velocity
-net rtdrv-controlword cia402.3.controlword => lcec.0.rt-ect60.srv-cia-controlword
-net rtdrv-modes-of-operation cia402.3.opmode => lcec.0.rt-ect60.srv-opmode
-net rtdrv-drv-target-pos cia402.3.drv-target-position => lcec.0.rt-ect60.srv-target-position
-net 2-home-index <= joint.2.index-enable => cia402.3.home
-net 2-enable <= joint.2.amp-enable-out => cia402.3.enable
-net 2-amp-fault => joint.2.amp-fault-in <= cia402.3.drv-fault
-net 2-pos-cmd <= joint.2.motor-pos-cmd => cia402.3.pos-cmd
-net 2-pos-fb => joint.2.motor-pos-fb <= cia402.3.pos-fb
-
-#net rtect-statusword lcec.0.rt-ect60.srv-cia-statusword => cia402.2.statusword
-#net rtect-opmode-display lcec.0.rt-ect60.srv-opmode-display => cia402.2.opmode-display
-#net rtect-drv-act-pos lcec.0.rt-ect60.srv-actual-position => cia402.2.drv-actual-position
-#net rtect-drv-act-velo lcec.0.rt-ect60.srv-actual-velocity => cia402.2.drv-actual-velocity
-#net rtect-controlword cia402.2.controlword => lcec.0.rt-ect60.srv-cia-controlword
-#net rtect-modes-of-operation cia402.2.opmode => lcec.0.rt-ect60.srv-opmode
-#net rtect-drv-target-pos cia402.2.drv-target-position => lcec.0.rt-ect60.srv-target-position
-#net rtect-drv-target-velo cia402.2.drv-target-velocity => lcec.0.rt-ect60.srv-target-velocity
-
-net rtecr1-statusword lcec.0.rt-ecr60x2.srv-1-cia-statusword => cia402.4.statusword
-net rtecr1-opmode-display lcec.0.rt-ecr60x2.srv-1-opmode-display => cia402.4.opmode-display
-net rtecr1-drv-act-pos lcec.0.rt-ecr60x2.srv-1-actual-position => cia402.4.drv-actual-position
-net rtecr1-drv-act-velo lcec.0.rt-ecr60x2.srv-1-actual-velocity => cia402.4.drv-actual-velocity
-net rtecr1-controlword cia402.4.controlword => lcec.0.rt-ecr60x2.srv-1-cia-controlword
-net rtecr1-modes-of-operation cia402.4.opmode => lcec.0.rt-ecr60x2.srv-1-opmode
-net rtecr1-drv-target-pos cia402.4.drv-target-position => lcec.0.rt-ecr60x2.srv-1-target-position
-net 1-home-index <= joint.1.index-enable => cia402.4.home
-net 1-enable <= joint.1.amp-enable-out => cia402.4.enable
-net 1-amp-fault => joint.1.amp-fault-in <= cia402.4.drv-fault
-net 1-pos-cmd <= joint.1.motor-pos-cmd => cia402.4.pos-cmd
-net 1-pos-fb => joint.1.motor-pos-fb <= cia402.4.pos-fb
-
+net rtect-statusword lcec.0.rt-ect60.srv-cia-statusword => cia402.2.statusword
+net rtect-opmode-display lcec.0.rt-ect60.srv-opmode-display => cia402.2.opmode-display
+net rtect-drv-act-pos lcec.0.rt-ect60.srv-actual-position => cia402.2.drv-actual-position
+net rtect-drv-act-velo lcec.0.rt-ect60.srv-actual-velocity => cia402.2.drv-actual-velocity
+net rtect-controlword cia402.2.controlword => lcec.0.rt-ect60.srv-cia-controlword
+net rtect-modes-of-operation cia402.2.opmode => lcec.0.rt-ect60.srv-opmode
+net rtect-drv-target-pos cia402.2.drv-target-position => lcec.0.rt-ect60.srv-target-position
+net 2-home-index <= joint.2.index-enable => cia402.2.home
+net 2-enable <= joint.2.amp-enable-out => cia402.2.enable
+net 2-amp-fault => joint.2.amp-fault-in <= cia402.2.drv-fault
+net 2-pos-cmd <= joint.2.motor-pos-cmd => cia402.2.pos-cmd
+net 2-pos-fb => joint.2.motor-pos-fb <= cia402.2.pos-fb
 
 setp cia402.0.csp-mode 1
 setp cia402.1.csp-mode 1
@@ -98,3 +77,21 @@ setp cia402.4.csp-mode 1
 
 net emc-enable => iocontrol.0.emc-enable-in
 sets emc-enable 1
+
+#net rtect-statusword lcec.0.rt-ect60.srv-cia-statusword => cia402.2.statusword
+#net rtect-opmode-display lcec.0.rt-ect60.srv-opmode-display => cia402.2.opmode-display
+#net rtect-drv-act-pos lcec.0.rt-ect60.srv-actual-position => cia402.2.drv-actual-position
+#net rtect-drv-act-velo lcec.0.rt-ect60.srv-actual-velocity => cia402.2.drv-actual-velocity
+#net rtect-controlword cia402.2.controlword => lcec.0.rt-ect60.srv-cia-controlword
+#net rtect-modes-of-operation cia402.2.opmode => lcec.0.rt-ect60.srv-opmode
+#net rtect-drv-target-pos cia402.2.drv-target-position => lcec.0.rt-ect60.srv-target-position
+
+
+#net ls2-statusword lcec.0.ls-2cl3.srv-2-cia-statusword => cia402.1.statusword
+#net ls2-opmode-display lcec.0.ls-2cl3.srv-2-opmode-display => cia402.1.opmode-display
+#net ls2-drv-act-pos lcec.0.ls-2cl3.srv-2-actual-position => cia402.1.drv-actual-position
+#net ls2-drv-act-velo lcec.0.ls-2cl3.srv-2-actual-velocity => cia402.1.drv-actual-velocity
+#net ls2-controlword cia402.1.controlword => lcec.0.ls-2cl3.srv-2-cia-controlword
+#net ls2-modes-of-operation cia402.1.opmode => lcec.0.ls-2cl3.srv-2-opmode
+#net ls2-drv-target-pos cia402.1.drv-target-position => lcec.0.ls-2cl3.srv-2-target-position
+

@@ -543,9 +543,6 @@ int lcec_parse_config(void) {
           if (sdo_config == NULL) {
             rtapi_print_msg(
                 RTAPI_MSG_ERR, LCEC_MSG_PFX "Unable to allocate slave %s.%s sdo entry memory\n", master->name, slave_conf->name);
-            //lcec_free(generic_pdo_entries);
-            //lcec_free(generic_pdos);
-            //lcec_free(generic_sync_managers);
             goto fail2;
           }
         }
@@ -556,10 +553,6 @@ int lcec_parse_config(void) {
           if (idn_config == NULL) {
             rtapi_print_msg(
                 RTAPI_MSG_ERR, LCEC_MSG_PFX "Unable to allocate slave %s.%s idn entry memory\n", master->name, slave_conf->name);
-            //lcec_free(generic_pdo_entries);
-	    //lcec_free(generic_pdos);
-            //lcec_free(generic_sync_managers);
-            //lcec_free(sdo_config);
             goto fail2;
           }
         }
@@ -923,33 +916,6 @@ void lcec_clear_config(void) {
         slave->proc_cleanup(slave);
       }
 
-      /*      // free slave
-      if (slave->modparams != NULL) {
-        lcec_free(slave->modparams);
-      }
-      if (slave->sdo_config != NULL) {
-        lcec_free(slave->sdo_config);
-      }
-      if (slave->idn_config != NULL) {
-        lcec_free(slave->idn_config);
-      }
-      if (slave->generic_pdo_entries != NULL) {
-        lcec_free(slave->generic_pdo_entries);
-      }
-      if (slave->generic_pdos != NULL) {
-        lcec_free(slave->generic_pdos);
-      }
-      if (slave->generic_sync_managers != NULL) {
-        lcec_free(slave->generic_sync_managers);
-      }
-      if (slave->dc_conf != NULL) {
-        lcec_free(slave->dc_conf);
-      }
-      if (slave->wd_conf != NULL) {
-        lcec_free(slave->wd_conf);
-      }
-      lcec_free(slave);
-      */
       slave = prev_slave;
     }
 
@@ -958,13 +924,6 @@ void lcec_clear_config(void) {
       ecrt_release_master(master->master);
     }
 
-    // free PDO entry memory
-    if (master->pdo_entry_regs != NULL) {
-      lcec_free(master->pdo_entry_regs);
-    }
-
-    // free master
-    lcec_free(master);
     master = prev_master;
   }
 }
