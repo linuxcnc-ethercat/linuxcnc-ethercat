@@ -52,26 +52,38 @@ static void lcec_el7041_write(lcec_slave_t *s, long period);
 // More remain, "function for input 1", "function for input 2", output1->brake?, Kp/Ki/Ka/Kd settigns, max velocity, max accel, etc.
 
 static lcec_modparam_desc_t lcec_el7041_modparams[] = {
-    {"maxCurrent", MODPARAM_MAX_CURRENT, MODPARAM_TYPE_FLOAT},
-    {"reducedCurrent", MODPARAM_REDUCED_CURRENT, MODPARAM_TYPE_FLOAT},
-    {"nominalVoltage", MODPARAM_NOMINAL_VOLTAGE, MODPARAM_TYPE_FLOAT},
+    {"maxCurrent", MODPARAM_MAX_CURRENT, MODPARAM_TYPE_FLOAT, "5.0", "Maximum Amps for stepper"},
+    {"reducedCurrent", MODPARAM_REDUCED_CURRENT, MODPARAM_TYPE_FLOAT, /*"2.5*/},
+    {"nominalVoltage", MODPARAM_NOMINAL_VOLTAGE, MODPARAM_TYPE_FLOAT, /*"50.0"*/},
     {"coilResistance", MODPARAM_COIL_RESISTANCE, MODPARAM_TYPE_FLOAT},
     {"motorEMF", MODPARAM_MOTOR_EMF, MODPARAM_TYPE_FLOAT},
-    {"motorFullsteps", MODPARAM_MOTOR_FULLSTEPS, MODPARAM_TYPE_U32},
-    {"encoderIncrements", MODPARAM_ENCODER_INCREMENTS, MODPARAM_TYPE_U32},
+    {"motorFullsteps", MODPARAM_MOTOR_FULLSTEPS, MODPARAM_TYPE_U32, "200", "Stepper steps per revolution (usually 200)"},
+    {"encoderIncrements", MODPARAM_ENCODER_INCREMENTS, MODPARAM_TYPE_U32, "4000", "Encoder steps per revolution (usually 4000)"},
     {"startVelocity", MODPARAM_START_VELOCITY, MODPARAM_TYPE_U32},
     {"driveOnDelay", MODPARAM_DRIVE_ON_DELAY, MODPARAM_TYPE_U32},
     {"driveOffDelay", MODPARAM_DRIVE_OFF_DELAY, MODPARAM_TYPE_U32},
-    {"maxSpeed", MODPARAM_MAX_SPEED, MODPARAM_TYPE_U32},
-    {"encoder", MODPARAM_FEEDBACK, MODPARAM_TYPE_BIT},
-    {"microsteps", MODPARAM_MICROSTEPS, MODPARAM_TYPE_U32},
+    {"maxSpeed", MODPARAM_MAX_SPEED, MODPARAM_TYPE_U32, "2000", "Maximum speed in steps/second.  1000|2000|4000|8000|16000|32000."},
+    {"encoder", MODPARAM_FEEDBACK, MODPARAM_TYPE_BIT, "true", "Enable encoder.  The EL7041 will fake an encoder if false."},
+    {NULL},
+};
+
+static lcec_modparam_desc_t lcec_el7041_1000_modparams[] = {
+    {"maxCurrent", MODPARAM_MAX_CURRENT, MODPARAM_TYPE_FLOAT, "5.0", "Maximum Amps for stepper"},
+    {"nominalVoltage", MODPARAM_NOMINAL_VOLTAGE, MODPARAM_TYPE_FLOAT, /*"50.0"*/},
+    {"motorFullsteps", MODPARAM_MOTOR_FULLSTEPS, MODPARAM_TYPE_U32, "200", "Stepper steps per revolution (usually 200)"},
+    {"encoderIncrements", MODPARAM_ENCODER_INCREMENTS, MODPARAM_TYPE_U32, "4000", "Encoder steps per revolution (usually 4000)"},
+    {"startVelocity", MODPARAM_START_VELOCITY, MODPARAM_TYPE_U32},
+    {"driveOnDelay", MODPARAM_DRIVE_ON_DELAY, MODPARAM_TYPE_U32},
+    {"driveOffDelay", MODPARAM_DRIVE_OFF_DELAY, MODPARAM_TYPE_U32},
+    {"encoder", MODPARAM_FEEDBACK, MODPARAM_TYPE_BIT, "true", "Enable encoder.  The EL7041 will fake an encoder if false"},
+    {"microsteps", MODPARAM_MICROSTEPS, MODPARAM_TYPE_U32, "64", "Microsteps per full step.  1|2|4|8|16|32|64."},
     {NULL},
 };
 
 static lcec_typelist_t types[] = {
     {"EL7041", LCEC_BECKHOFF_VID, 0x1B813052, 0, NULL, lcec_el7041_init, lcec_el7041_modparams},
-    {"EL7041_1000", LCEC_BECKHOFF_VID, 0x1B813052, 0, NULL, lcec_el7041_init, lcec_el7041_modparams},
-    {"EL7041-1000", LCEC_BECKHOFF_VID, 0x1B813052, 0, NULL, lcec_el7041_init, lcec_el7041_modparams},
+    {"EL7041_1000", LCEC_BECKHOFF_VID, 0x1B813052, 0, NULL, lcec_el7041_init, lcec_el7041_1000_modparams},
+    {"EL7041-1000", LCEC_BECKHOFF_VID, 0x1B813052, 0, NULL, lcec_el7041_init, lcec_el7041_1000_modparams},
     {"EP7041", LCEC_BECKHOFF_VID, 0x1B813052, 0, NULL, lcec_el7041_init, lcec_el7041_modparams},
     {NULL},
 };
