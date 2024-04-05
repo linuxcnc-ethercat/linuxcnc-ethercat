@@ -98,8 +98,10 @@ static const lcec_modparam_desc_t modparams_base[] = {
           "Input 4 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2"}, \
       {#ch "input5Func", 0, 0, "home",                                                                                    \
           "Input 5 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2"}, \
-      {#ch "input6Func", 0, 0, "motor-offline",                                                                           \
-          "Input 6 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2"}
+  {                                                                                                                       \
+#ch "input6Func", 0, 0, "motor-offline",                                                                              \
+        "Input 6 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2"     \
+  }
 
 /// Override values for single-axis open-loop steppers
 static const lcec_modparam_desc_t overrides_open[] = {

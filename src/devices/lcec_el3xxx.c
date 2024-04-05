@@ -41,31 +41,45 @@
 static int lcec_el3xxx_init(int comp_id, lcec_slave_t *slave);
 
 /// @brief Modparams settings available via XML.
-static const lcec_modparam_desc_t modparams_temperature[] = {
-    {"ch0Sensor", LCEC_EL3XXX_MODPARAM_SENSOR + 0, MODPARAM_TYPE_STRING},
-    {"ch1Sensor", LCEC_EL3XXX_MODPARAM_SENSOR + 1, MODPARAM_TYPE_STRING},
-    {"ch2Sensor", LCEC_EL3XXX_MODPARAM_SENSOR + 2, MODPARAM_TYPE_STRING},
-    {"ch3Sensor", LCEC_EL3XXX_MODPARAM_SENSOR + 3, MODPARAM_TYPE_STRING},
-    {"ch4Sensor", LCEC_EL3XXX_MODPARAM_SENSOR + 4, MODPARAM_TYPE_STRING},
-    {"ch5Sensor", LCEC_EL3XXX_MODPARAM_SENSOR + 5, MODPARAM_TYPE_STRING},
-    {"ch6Sensor", LCEC_EL3XXX_MODPARAM_SENSOR + 6, MODPARAM_TYPE_STRING},
-    {"ch7Sensor", LCEC_EL3XXX_MODPARAM_SENSOR + 7, MODPARAM_TYPE_STRING},
-    {"ch0Resolution", LCEC_EL3XXX_MODPARAM_RESOLUTION + 0, MODPARAM_TYPE_STRING},
-    {"ch1Resolution", LCEC_EL3XXX_MODPARAM_RESOLUTION + 1, MODPARAM_TYPE_STRING},
-    {"ch2Resolution", LCEC_EL3XXX_MODPARAM_RESOLUTION + 2, MODPARAM_TYPE_STRING},
-    {"ch3Resolution", LCEC_EL3XXX_MODPARAM_RESOLUTION + 3, MODPARAM_TYPE_STRING},
-    {"ch4Resolution", LCEC_EL3XXX_MODPARAM_RESOLUTION + 4, MODPARAM_TYPE_STRING},
-    {"ch5Resolution", LCEC_EL3XXX_MODPARAM_RESOLUTION + 5, MODPARAM_TYPE_STRING},
-    {"ch6Resolution", LCEC_EL3XXX_MODPARAM_RESOLUTION + 6, MODPARAM_TYPE_STRING},
-    {"ch7Resolution", LCEC_EL3XXX_MODPARAM_RESOLUTION + 7, MODPARAM_TYPE_STRING},
-    {"ch0Wires", LCEC_EL3XXX_MODPARAM_WIRES + 0, MODPARAM_TYPE_STRING},
-    {"ch1Wires", LCEC_EL3XXX_MODPARAM_WIRES + 1, MODPARAM_TYPE_STRING},
-    {"ch2Wires", LCEC_EL3XXX_MODPARAM_WIRES + 2, MODPARAM_TYPE_STRING},
-    {"ch3Wires", LCEC_EL3XXX_MODPARAM_WIRES + 3, MODPARAM_TYPE_STRING},
-    {"ch4Wires", LCEC_EL3XXX_MODPARAM_WIRES + 4, MODPARAM_TYPE_STRING},
-    {"ch5Wires", LCEC_EL3XXX_MODPARAM_WIRES + 5, MODPARAM_TYPE_STRING},
-    {"ch6Wires", LCEC_EL3XXX_MODPARAM_WIRES + 6, MODPARAM_TYPE_STRING},
-    {"ch7Wires", LCEC_EL3XXX_MODPARAM_WIRES + 7, MODPARAM_TYPE_STRING},
+#define MP_TEMP_CH(ch)                                                                                \
+  {"ch" #ch "Sensor", LCEC_EL3XXX_MODPARAM_SENSOR + ch, MODPARAM_TYPE_STRING, "Pt100",                \
+      "Sensor type, Pt100|Ni100|Pt1000|Pt500|Pt200|Ni1000|Ni1000-TK5000|Ohm/16|Ohm/64"},              \
+      {"ch" #ch "Resolution", LCEC_EL3XXX_MODPARAM_RESOLUTION + ch, MODPARAM_TYPE_STRING, "Standard", \
+          "Sensor resolution, Standard or High.  High reduces the range in some cases."},             \
+  {                                                                                                   \
+    "ch" #ch "Wires", LCEC_EL3XXX_MODPARAM_WIRES + ch, MODPARAM_TYPE_STRING, "2",                     \
+        "Number of wires used for sensor connection.  2, 3, or 4"                                     \
+  }
+
+static const lcec_modparam_desc_t modparams_temperature1[] = {
+    MP_TEMP_CH(0),
+    {NULL},
+};
+
+static const lcec_modparam_desc_t modparams_temperature2[] = {
+    MP_TEMP_CH(0),
+    MP_TEMP_CH(1),
+    {NULL},
+};
+
+static const lcec_modparam_desc_t modparams_temperature4[] = {
+    MP_TEMP_CH(0),
+    MP_TEMP_CH(1),
+    MP_TEMP_CH(2),
+    MP_TEMP_CH(3),
+    MP_TEMP_CH(4),
+    {NULL},
+};
+
+static const lcec_modparam_desc_t modparams_temperature8[] = {
+    MP_TEMP_CH(0),
+    MP_TEMP_CH(1),
+    MP_TEMP_CH(2),
+    MP_TEMP_CH(3),
+    MP_TEMP_CH(4),
+    MP_TEMP_CH(5),
+    MP_TEMP_CH(6),
+    MP_TEMP_CH(7),
     {NULL},
 };
 
@@ -195,15 +209,15 @@ static lcec_typelist_t types[] = {
     BECKHOFF_AIN_DEVICE("EPX3158", 0x9809ab69, F_CHANNELS(8) | F_SYNC),
 
     // Temperature devices.  They need to include `modparams_temperature` to allow for sensor-type settings.
-    BECKHOFF_AIN_DEVICE_PARAMS("EJ3202", 0x0c822852, F_CHANNELS(2) | F_TEMPERATURE, modparams_temperature),
-    BECKHOFF_AIN_DEVICE_PARAMS("EJ3214", 0x0c8e2852, F_CHANNELS(4) | F_TEMPERATURE, modparams_temperature),
-    BECKHOFF_AIN_DEVICE_PARAMS("EL3201", 0x0c813052, F_CHANNELS(1) | F_TEMPERATURE, modparams_temperature),
-    BECKHOFF_AIN_DEVICE_PARAMS("EL3202", 0x0c823052, F_CHANNELS(2) | F_TEMPERATURE, modparams_temperature),
-    BECKHOFF_AIN_DEVICE_PARAMS("EL3204", 0x0c843052, F_CHANNELS(4) | F_TEMPERATURE, modparams_temperature),
-    BECKHOFF_AIN_DEVICE_PARAMS("EL3208", 0x0c883052, F_CHANNELS(8) | F_TEMPERATURE, modparams_temperature),
-    BECKHOFF_AIN_DEVICE_PARAMS("EL3214", 0x0c8e3052, F_CHANNELS(4) | F_TEMPERATURE, modparams_temperature),
-    BECKHOFF_AIN_DEVICE_PARAMS("EL3218", 0x0c923052, F_CHANNELS(8) | F_TEMPERATURE, modparams_temperature),
-    BECKHOFF_AIN_DEVICE_PARAMS("EP3204", 0x0c844052, F_CHANNELS(4) | F_TEMPERATURE, modparams_temperature),
+    BECKHOFF_AIN_DEVICE_PARAMS("EJ3202", 0x0c822852, F_CHANNELS(2) | F_TEMPERATURE, modparams_temperature2),
+    BECKHOFF_AIN_DEVICE_PARAMS("EJ3214", 0x0c8e2852, F_CHANNELS(4) | F_TEMPERATURE, modparams_temperature4),
+    BECKHOFF_AIN_DEVICE_PARAMS("EL3201", 0x0c813052, F_CHANNELS(1) | F_TEMPERATURE, modparams_temperature1),
+    BECKHOFF_AIN_DEVICE_PARAMS("EL3202", 0x0c823052, F_CHANNELS(2) | F_TEMPERATURE, modparams_temperature2),
+    BECKHOFF_AIN_DEVICE_PARAMS("EL3204", 0x0c843052, F_CHANNELS(4) | F_TEMPERATURE, modparams_temperature4),
+    BECKHOFF_AIN_DEVICE_PARAMS("EL3208", 0x0c883052, F_CHANNELS(8) | F_TEMPERATURE, modparams_temperature8),
+    BECKHOFF_AIN_DEVICE_PARAMS("EL3214", 0x0c8e3052, F_CHANNELS(4) | F_TEMPERATURE, modparams_temperature4),
+    BECKHOFF_AIN_DEVICE_PARAMS("EL3218", 0x0c923052, F_CHANNELS(8) | F_TEMPERATURE, modparams_temperature8),
+    BECKHOFF_AIN_DEVICE_PARAMS("EP3204", 0x0c844052, F_CHANNELS(4) | F_TEMPERATURE, modparams_temperature4),
 
     // Pressure sensors.
     BECKHOFF_AIN_DEVICE("EM3701", 0x0e753452, F_CHANNELS(1) | F_PRESSURE),
