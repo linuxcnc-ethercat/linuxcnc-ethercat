@@ -100,8 +100,9 @@
       <modParam name="ch2enableVelocityThresholdWindow" value="true"/>
     </slave>
 
-    <slave idx="28" type="ECT60" name="rt-ect60"/>
-    <slave idx="29" type="ECR60x2" name="rt-ecr60x2">
+    <slave idx="26" type="RovixESD-A6" name="rovix-esd"/>
+    <slave idx="27" type="ECT60" name="rt-ect60"/>
+    <slave idx="28" type="ECR60x2" name="rt-ecr60x2">
       <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/>
     </slave>
 
