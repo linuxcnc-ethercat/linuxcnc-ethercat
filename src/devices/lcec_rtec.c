@@ -152,6 +152,8 @@ static lcec_typelist_t types_open[] = {
 
 static lcec_typelist_t types_open_x2[] = {
     // note that modparams_rtec is added implicitly in ADD_TYPES_WITH_CIA402_MODPARAMS.
+
+    // The ECR60X2 only has 2 RX/TX PDOs, at 1600/1610 and 1a00/1a10.
     {"ECR60x2", LCEC_RTELLIGENT_VID, 0x0a880005, 0, NULL, lcec_rtec_init, NULL, F_AXES(2) | F_PDOINCREMENT(0x10) | F_NOEXTRAS},
     {NULL},
 };
@@ -160,12 +162,15 @@ static lcec_typelist_t types_closed[] = {
     // note that modparams_rtec is added implicitly in ADD_TYPES_WITH_CIA402_MODPARAMS.
     {"ECT60", LCEC_RTELLIGENT_VID, 0x0a880002, 0, NULL, lcec_rtec_init, NULL, 0},
     {"ECT86", LCEC_RTELLIGENT_VID, 0x0a880004, 0, NULL, lcec_rtec_init, NULL, 0},
+    {"ECT60x1", LCEC_RTELLIGENT_VID, 0x0a880006, 0, NULL, lcec_rtec_init, NULL, F_PDOINCREMENT(0x10)},
     {NULL},
 };
 
 static lcec_typelist_t types_closed_x2[] = {
     // note that modparams_rtec is added implicitly in ADD_TYPES_WITH_CIA402_MODPARAMS.
-    {"ECT60x2", LCEC_RTELLIGENT_VID, 0x0a880006, 0, NULL, lcec_rtec_init, NULL, F_AXES(2)},  // Does this need PDOINCREMENT also?
+
+    // The ECT60X2 only has 2 RX/TX PDOs, at 1600/1610 and 1a00/1a10.
+  {"ECT60x2", LCEC_RTELLIGENT_VID, 0x0a880006, 0, NULL, lcec_rtec_init, NULL, F_AXES(2) | F_PDOINCREMENT(0x10) | F_NOEXTRAS},
     {NULL},
 };
 
@@ -243,31 +248,41 @@ static const lcec_pindesc_t slave_pins[] = {
 static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *opt) {
   lcec_master_t *master = slave->master;
   lcec_slave_modparam_t *p;
-  uint16_t input_polarity = 0, input_polarity_set = 0;
-  uint16_t output_polarity = 0, output_polarity_set = 0;
+  uint16_t input_polarity[CIA402_MAX_CHANNELS], input_polarity_set[CIA402_MAX_CHANNELS];
+  uint16_t output_polarity[CIA402_MAX_CHANNELS], output_polarity_set[CIA402_MAX_CHANNELS];
   uint32_t uval;
   int val, v;
 
   // Read current polarity values, so we don't overwrite them all.
-  lcec_read_sdo16(slave, 0x2006, 0, &output_polarity);
-  lcec_read_sdo16(slave, 0x2008, 0, &input_polarity);
+  for (int channel = 0; channel < opt->channels; channel++) {
+    lcec_read_sdo16(slave, 0x2006 + 0x800*channel, 0, &output_polarity[0]);
+    lcec_read_sdo16(slave, 0x2008 + 0x800*channel, 0, &input_polarity[0]);
+  }
 
   // We'll need to byte-swap here, for big-endian systems.
 
   for (p = slave->modparams; p != NULL && p->id >= 0; p++) {
-    switch (p->id) {
+    int channel = p->id&7;
+    int id = p->id&~7;
+    int base = 0x2000 + 0x800*channel;
+
+    if (channel != 0 && channel != 1) {
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid channel in lcec_rtec: %d slave %s.%s\n", channel, master->name, slave->name);
+    }
+    
+    switch (id) {
       case M_PEAKCURRENT:
         uval = p->value.flt * 1000.0 + 0.5;
-        if (lcec_write_sdo16_modparam(slave, 0x2000, 0, uval, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 0, 0, uval, p->name) < 0) return -1;
         break;
       case M_MOTOR_RESOLUTION:
-        if (lcec_write_sdo16_modparam(slave, 0x2001, 0, p->value.u32, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 1, 0, p->value.u32, p->name) < 0) return -1;
         break;
       case M_STANDBYTIME:
-        if (lcec_write_sdo16_modparam(slave, 0x2002, 0, p->value.u32, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 2, 0, p->value.u32, p->name) < 0) return -1;
         break;
       case M_STANDBYCURRENT:
-        if (lcec_write_sdo16_modparam(slave, 0x2003, 0, p->value.u32, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 3, 0, p->value.u32, p->name) < 0) return -1;
         break;
       case M_OUTPUT1FUNC:
         val = lcec_lookupint_i(rtec_outputfunc, p->value.str, -1);
@@ -276,7 +291,7 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
               RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"output1Func\"> for slave %s.%s\n", master->name, slave->name);
           return -1;
         }
-        if (lcec_write_sdo16_modparam(slave, 0x2005, 1, val, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 5, 1, val, p->name) < 0) return -1;
         break;
       case M_OUTPUT2FUNC:
         val = lcec_lookupint_i(rtec_outputfunc, p->value.str, -1);
@@ -285,7 +300,7 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
               RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"output2Func\"> for slave %s.%s\n", master->name, slave->name);
           return -1;
         }
-        if (lcec_write_sdo16_modparam(slave, 0x2005, 2, val, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 5, 2, val, p->name) < 0) return -1;
         break;
       case M_OUTPUT1POLARITY:
         val = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
@@ -294,9 +309,9 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
               master->name, slave->name);
           return -1;
         }
-        output_polarity &= ~1;  // Clear the 0 bit.
-        output_polarity |= (val & 1);
-        output_polarity_set = 1;
+        output_polarity[channel] &= ~1;  // Clear the 0 bit.
+        output_polarity[channel] |= (val & 1);
+        output_polarity_set[channel] = 1;
         break;
       case M_OUTPUT2POLARITY:
         val = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
@@ -305,9 +320,9 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
               master->name, slave->name);
           return -1;
         }
-        output_polarity &= ~2;  // Clear the 1 bit.
-        output_polarity |= (val & 1) << 1;
-        output_polarity_set = 1;
+        output_polarity[channel] &= ~2;  // Clear the 1 bit.
+        output_polarity[channel] |= (val & 1) << 1;
+        output_polarity_set[channel] = 1;
         break;
       case M_INPUT3FUNC:
         val = lcec_lookupint_i(rtec_inputfunc, p->value.str, -1);
@@ -316,7 +331,7 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
               RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"input3Func\"> for slave %s.%s\n", master->name, slave->name);
           return -1;
         }
-        if (lcec_write_sdo16_modparam(slave, 0x2007, 3, val, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 7, 3, val, p->name) < 0) return -1;
         break;
       case M_INPUT4FUNC:
         val = lcec_lookupint_i(rtec_inputfunc, p->value.str, -1);
@@ -325,7 +340,7 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
               RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"input4Func\"> for slave %s.%s\n", master->name, slave->name);
           return -1;
         }
-        if (lcec_write_sdo16_modparam(slave, 0x2007, 4, val, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 7, 4, val, p->name) < 0) return -1;
         break;
       case M_INPUT5FUNC:
         val = lcec_lookupint_i(rtec_inputfunc, p->value.str, -1);
@@ -334,7 +349,7 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
               RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"input5Func\"> for slave %s.%s\n", master->name, slave->name);
           return -1;
         }
-        if (lcec_write_sdo16_modparam(slave, 0x2007, 5, val, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 7, 5, val, p->name) < 0) return -1;
         break;
       case M_INPUT6FUNC:
         val = lcec_lookupint_i(rtec_inputfunc, p->value.str, -1);
@@ -343,7 +358,7 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
               RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"input6Func\"> for slave %s.%s\n", master->name, slave->name);
           return -1;
         }
-        if (lcec_write_sdo16_modparam(slave, 0x2007, 6, val, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 7, 6, val, p->name) < 0) return -1;
         break;
       case M_INPUT3POLARITY:
         val = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
@@ -352,9 +367,9 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
               master->name, slave->name);
           return -1;
         }
-        input_polarity &= ~(1 << 2);
-        input_polarity |= (val & 1) << 2;
-        input_polarity_set = 1;
+        input_polarity[channel] &= ~(1 << 2);
+        input_polarity[channel] |= (val & 1) << 2;
+        input_polarity_set[channel] = 1;
         break;
       case M_INPUT4POLARITY:
         val = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
@@ -363,9 +378,9 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
               master->name, slave->name);
           return -1;
         }
-        input_polarity &= ~(1 << 3);
-        input_polarity |= (val & 1) << 3;
-        input_polarity_set = 1;
+        input_polarity[channel] &= ~(1 << 3);
+        input_polarity[channel] |= (val & 1) << 3;
+        input_polarity_set[channel] = 1;
         break;
       case M_INPUT5POLARITY:
         val = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
@@ -374,9 +389,9 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
               master->name, slave->name);
           return -1;
         }
-        input_polarity &= ~(1 << 4);
-        input_polarity |= (val & 1) << 4;
-        input_polarity_set = 1;
+        input_polarity[channel] &= ~(1 << 4);
+        input_polarity[channel] |= (val & 1) << 4;
+        input_polarity_set[channel] = 1;
         break;
       case M_INPUT6POLARITY:
         val = lcec_lookupint_i(rtec_polarity, p->value.str, -1);
@@ -385,18 +400,18 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
               master->name, slave->name);
           return -1;
         }
-        input_polarity &= ~(1 << 5);
-        input_polarity |= (val & 1) << 5;
-        input_polarity_set = 1;
+        input_polarity[channel] &= ~(1 << 5);
+        input_polarity[channel] |= (val & 1) << 5;
+        input_polarity_set[channel] = 1;
         break;
       case M_FILTERTIME:
-        if (lcec_write_sdo16_modparam(slave, 0x2009, 0, p->value.u32, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 9, 0, p->value.u32, p->name) < 0) return -1;
         break;
       case M_SHAFTLOCKTIME:
-        if (lcec_write_sdo16_modparam(slave, 0x200a, 0, p->value.u32, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 0xa, 0, p->value.u32, p->name) < 0) return -1;
         break;
       case M_MOTORAUTOTUNE:
-        if (lcec_write_sdo16_modparam(slave, 0x200b, 1, !!p->value.bit, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 0xb, 1, !!p->value.bit, p->name) < 0) return -1;
         break;
       case M_STEPPERPHASES:
         val = lcec_lookupint_i(rtec_stepperphases, p->value.str, -1);
@@ -405,7 +420,7 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
               slave->name);
           return -1;
         }
-        if (lcec_write_sdo16_modparam(slave, 0x200c, 1, val, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 0xc, 1, val, p->name) < 0) return -1;
         break;
       case M_CONTROLMODE:
         val = lcec_lookupint_i(rtec_controlmode, p->value.str, -1);
@@ -414,13 +429,13 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
               RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid value for <modparam name=\"controlMode\"> for slave %s.%s\n", master->name, slave->name);
           return -1;
         }
-        if (lcec_write_sdo16_modparam(slave, 0x2011, 0, val, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 0x11, 0, val, p->name) < 0) return -1;
         break;
       case M_ENCODER_RESOLUTION:
-        if (lcec_write_sdo16_modparam(slave, 0x2020, 0, p->value.u32, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 0x20, 0, p->value.u32, p->name) < 0) return -1;
         break;
       case M_POSITION_ERROR:
-        if (lcec_write_sdo16_modparam(slave, 0x2022, 0, p->value.u32, p->name) < 0) return -1;
+        if (lcec_write_sdo16_modparam(slave, base + 0x22, 0, p->value.u32, p->name) < 0) return -1;
         break;
       default:
         v = lcec_cia402_handle_modparam(slave, p, opt);
@@ -439,25 +454,23 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
     }
   }
 
-  if (output_polarity_set) {
-    rtapi_print_msg(
-        RTAPI_MSG_ERR, LCEC_MSG_PFX "Setting output polarity to 0x%x for slave %s.%s\n", output_polarity, master->name, slave->name);
-    if (lcec_write_sdo16(slave, 0x2006, 0, output_polarity) != 0) {
-      rtapi_print_msg(
-          RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to set slave %s.%s sdo outputPolarity to %u\n", master->name, slave->name, output_polarity);
-      return -1;
+  for (int channel=0;channel<opt->channels;channel++) {
+    if (output_polarity_set[channel]) {
+      if (lcec_write_sdo16(slave, 0x2006 + 0x800*channel, 0, output_polarity[channel]) != 0) {
+	rtapi_print_msg(
+			RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to set slave %s.%s sdo outputPolarity to %u\n", master->name, slave->name, output_polarity[channel]);
+	return -1;
+      }
+    }
+    if (input_polarity_set[channel]) {
+      if (lcec_write_sdo16(slave, 0x2008 + 0x800*channel, 0, input_polarity[channel]) != 0) {
+	rtapi_print_msg(
+			RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to set slave %s.%s sdo inputPolarity to %u\n", master->name, slave->name, input_polarity[channel]);
+	return -1;
+      }
     }
   }
-  if (input_polarity_set) {
-    rtapi_print_msg(
-        RTAPI_MSG_ERR, LCEC_MSG_PFX "Setting input polarity to 0x%x for slave %s.%s\n", input_polarity, master->name, slave->name);
-    if (lcec_write_sdo16(slave, 0x2008, 0, input_polarity) != 0) {
-      rtapi_print_msg(
-          RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to set slave %s.%s sdo inputPolarity to %u\n", master->name, slave->name, input_polarity);
-      return -1;
-    }
-  }
-
+  
   return 0;
 }
 
@@ -490,6 +503,7 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
 
   if (AXES(slave->flags) != 0) {
     options->channels = AXES(slave->flags);
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s has %d channels\n", master->name, slave->name, options->channels);
   } else {
     options->channels = 1;
   }
@@ -535,9 +549,9 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
 
   lcec_cia402_add_input_sync(slave, syncs, options);
 
-  // Don't add extra PDOs on the ECR60x2, as it only has 2 PDOs
-  // available and needs both for core functionality.
-  if (!slave->flags & F_NOEXTRAS) {
+  // Don't add extra PDOs on the ECR60x2 or ECT60x2, as they only have
+  // 2 PDOs available and needs both for core functionality.
+  if (!(slave->flags & F_NOEXTRAS)) {
     // On 2-axis devices, we need to make sure that we don't overwrite
     // the second axis's PDO here.
     int address = 0x1a00 + (options->channels * options->pdo_increment);
@@ -554,16 +568,12 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
   slave->sync_info = &syncs->syncs[0];
 
   hal_data->cia402 = lcec_cia402_allocate_channels(options->channels);
-  if (hal_data->cia402 == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "lcec_cia402_allocate_channels() for slave %s.%s failed\n", master->name, slave->name);
-    return -EIO;
-  }
 
   for (int channel = 0; channel < options->channels; channel++) {
     hal_data->cia402->channels[channel] = lcec_cia402_register_channel(slave, 0x6000 + 0x800 * channel, options->channel[channel]);
   }
 
-  if (!slave->flags & F_NOEXTRAS) {
+  if (!(slave->flags & F_NOEXTRAS)) {
     // Register rtec-specific PDOs.
     lcec_pdo_init(slave, 0x200e, 0, &hal_data->alarm_code_os, NULL);
     lcec_pdo_init(slave, 0x200f, 0, &hal_data->status_code_os, NULL);
@@ -588,7 +598,7 @@ static void lcec_rtec_read(lcec_slave_t *slave, long period) {
     return;
   }
 
-  if (!slave->flags & F_NOEXTRAS) {
+  if (!(slave->flags & F_NOEXTRAS)) {
     *(hal_data->alarm_code) = EC_READ_U16(&pd[hal_data->alarm_code_os]);
     *(hal_data->status_code) = EC_READ_U16(&pd[hal_data->status_code_os]);
     *(hal_data->voltage) = EC_READ_U16(&pd[hal_data->voltage_os]) / 100.0;

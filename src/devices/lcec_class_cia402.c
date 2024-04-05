@@ -184,6 +184,8 @@ lcec_syncs_t *lcec_cia402_init_sync(lcec_slave_t *slave, lcec_class_cia402_optio
 
   syncs = LCEC_HAL_ALLOCATE(lcec_syncs_t);
   lcec_syncs_init(slave, syncs);
+
+  // SM0 and SM1 aren't generally used.
   lcec_syncs_add_sync(syncs, EC_DIR_OUTPUT, EC_WD_DEFAULT);
   lcec_syncs_add_sync(syncs, EC_DIR_INPUT, EC_WD_DEFAULT);
 
