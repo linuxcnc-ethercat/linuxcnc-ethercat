@@ -1,11 +1,12 @@
 <masters>
   <master idx="0" appTimePeriod="1000000" refClockSyncCycles="1000">
    <slave idx="25" type="ECT60x2" name="rt-ect60x2">
-      <modParam name="peakCurrent_amps" value="1.0"/>
-      <modParam name="controlMode" value="openloop"/>
+      <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/>
+<!--      <modParam name="peakCurrent_amps" value="1.0"/> -->
+<!--      <modParam name="controlMode" value="openloop"/>  -->
     </slave>
 
-<!--    <slave idx="25" type="basic_cia402" vid="0x00000a88" pid="0x0a880006" name="rt-ect60x2">
+<!--   <slave idx="25" type="basic_cia402" vid="0x00000a88" pid="0x0a880006" name="rt-ect60x2">
       <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/>
 
       <modParam name="pdoIncrement" value="16"/>
@@ -20,11 +21,12 @@
       <modParam name="ch2enablePV" value="false"/>
       <modParam name="ch2enableCSP" value="true"/>
       <modParam name="ch2enableErrorCode" value="true"/>
-    </slave>
--->    
-    <slave idx="26" type="basic_cia402" vid="0x00004321" pid="0x00002100" name="ls-2cl3">
+    </slave> -->
+
+    <slave idx="26" type="2CS3E-D507" name="ls-2cl3"/>
+<!--    <slave idx="26" type="basic_cia402" vid="0x00004321" pid="0x00002100" name="ls-2cl3">
       <dcConf assignActivate="700" sync0Cycle="*1" sync0Shift="0"/>
-      <!--2CL3-EC507(COE)-->
+
       <modParam name="ciaChannels" value="2"/>
       <modParam name="ciaRxPDOEntryLimit" value="8"/>
       <modParam name="ciaTxPDOEntryLimit" value="8"/>
@@ -98,12 +100,13 @@
       <modParam name="ch2enableVelocityErrorWindow" value="true"/>
       <modParam name="ch2enableVelocityThresholdTime" value="true"/>
       <modParam name="ch2enableVelocityThresholdWindow" value="true"/>
-    </slave>
+    </slave>-->
 
     <slave idx="28" type="ECT60" name="rt-ect60"/>
-    <slave idx="29" type="ECR60x2" name="rt-ecr60x2">
+<!--    <slave idx="29" type="ECR60x2" name="rt-ecr60x2">
       <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/>
-    </slave>
+      </slave>
+      -->
 
     <slave idx="30" type="basic_cia402" vid="0x00000a88" pid="0x0a880042" name="rt-drv400">
       <!--DRV400E(COE)-->

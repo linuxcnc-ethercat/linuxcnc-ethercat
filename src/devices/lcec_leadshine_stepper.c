@@ -35,7 +35,7 @@
 #include "lcec_class_din.h"
 #include "lcec_class_dout.h"
 
-// Constants for modparams.  The basic_cia402 driver only has one:
+// Constants for modparams.  The leadshine_stepper driver only has one:
 #define M_CHANNELS     0
 #define M_RXPDOLIMIT   1
 #define M_TXPDOLIMIT   2
@@ -51,36 +51,78 @@ static const lcec_modparam_desc_t modparams_base[] = {
     {"ciaChannels", M_CHANNELS, MODPARAM_TYPE_U32},
     {"ciaRxPDOEntryLimit", M_RXPDOLIMIT, MODPARAM_TYPE_U32},
     {"ciaTxPDOEntryLimit", M_TXPDOLIMIT, MODPARAM_TYPE_U32},
-    {"pdoIncrement", M_PDOINCREMENT, MODPARAM_TYPE_U32},
     // XXXX, add device-specific modparams here that aren't duplicated for multi-axis devices
     {NULL},
 };
 
-static const lcec_modparam_desc_t overrides[] = {
-    // XXXX, add overrides here
+static const lcec_modparam_desc_t overrides1[] = {
+    {"feedRatio", 0, 0, "10000", "Microsteps per rotation"},
+    {"encoderRatio", 0, 0, "4000", "Encoder steps per rotation"},
     {NULL},
 };
 
-static int lcec_basic_cia402_init(int comp_id, lcec_slave_t *slave);
-
-// XXXX: remove `basic_cia402` and replace it with your device name,
-// then change the next two parameters to match your device's VID and
-// PID.  Feel free to add multiple devices here if they can share the
-// same driver.
-static lcec_typelist_t types[] = {
-    {"basic_cia402", /* fake vid */ 0xffffffff, /* fake pid */ 0xffffffff, 0, NULL, lcec_basic_cia402_init,
-        /* modparams implicitly added below */},
+static const lcec_modparam_desc_t overrides2[] = {
+    {"ch1feedRatio", 0, 0, "10000", "Microsteps per rotation"},
+    {"ch2feedRatio", 0, 0, "10000", "Microsteps per rotation"},
+    {"ch1encoderRatio", 0, 0, "4000", "Encoder steps per rotation"},
+    {"ch2encoderRatio", 0, 0, "4000", "Encoder steps per rotation"},
     {NULL},
 };
-ADD_TYPES_WITH_CIA402_MODPARAMS(types, modparams_perchannel, modparams_base, overrides)
 
-static void lcec_basic_cia402_read(lcec_slave_t *slave, long period);
-static void lcec_basic_cia402_write(lcec_slave_t *slave, long period);
+static int lcec_leadshine_stepper_init(int comp_id, lcec_slave_t *slave);
+
+#define AXES(flags)  ((flags >> 60) & 0xf)
+#define DIN(flags)   ((flags >> 56) & 0xf)
+#define DOUT(flags)  ((flags >> 52) & 0xf)
+#define F_AXES(axes) ((uint64_t)axes << 60)
+#define F_DIN(din)   ((uint64_t)din << 56)
+#define F_DOUT(dout) ((uint64_t)dout << 52)
+
+static lcec_typelist_t types1[] = {
+    // Single axis, closed loop
+    {"CS3E-D503", 0x00004321, 0x1300, 0, NULL, lcec_leadshine_stepper_init, NULL, F_DIN(7) | F_DOUT(7)},
+    {"CS3E-D507", 0x00004321, 0x1100, 0, NULL, lcec_leadshine_stepper_init, NULL, F_DIN(7) | F_DOUT(7)},
+    {"CS3E-D1008", 0x00004321, 0x1200, 0, NULL, lcec_leadshine_stepper_init, NULL, F_DIN(7) | F_DOUT(7)},
+    {"CS3E-D503E", 0x00004321, 0x700, 0, NULL, lcec_leadshine_stepper_init, NULL, F_DIN(6) | F_DOUT(2)},
+    {"CS3E-D507E", 0x00004321, 0x500, 0, NULL, lcec_leadshine_stepper_init, NULL, F_DIN(6) | F_DOUT(2)},
+    //{"CS3E-D503B", 0x00004321, ?, 0, NULL, lcec_leadshine_stepper_init, NULL, F_DIN(6) | F_DOUT(2)}, // On website, ID unknown
+    //{"CS3E-D507B", 0x00004321, ?, 0, NULL, lcec_leadshine_stepper_init, NULL, F_DIN(6) | F_DOUT(2)}, // On website, ID unknown
+
+    // Single axis, open loop
+    {"EM3E-522E", 0x00004321, 0x8800, 0, NULL, lcec_leadshine_stepper_init, NULL, F_DIN(6) | F_DOUT(2)},
+    {"EM3E-556E", 0x00004321, 0x8600, 0, NULL, lcec_leadshine_stepper_init, NULL, F_DIN(6) | F_DOUT(2)},
+    {"EM3E-870E", 0x00004321, 0x8700, 0, NULL, lcec_leadshine_stepper_init, NULL, F_DIN(6) | F_DOUT(2)},
+
+    //{"EM3E-522B", 0x00004321, ?, 0, NULL, lcec_leadshine_stepper_init, NULL, F_DIN(6) | F_DOUT(2)}, // On website, ID unknown
+    //{"EM3E-556B", 0x00004321, ?, 0, NULL, lcec_leadshine_stepper_init, NULL, F_DIN(6) | F_DOUT(2)}, // On website, ID unknown
+    //{"EM3E-870B", 0x00004321, ?, 0, NULL, lcec_leadshine_stepper_init, NULL, F_DIN(6) | F_DOUT(2)}, // On website, ID unknown
+    //{"DM3C-EC882AC", 0x00004321, 0x00008a00, 0, NULL, lcec_leadshine_stepper_init, NULL, F_DIN(6) | F_DOUT(2)},  // Not on website
+
+    {NULL},
+};
+
+static lcec_typelist_t types2[] = {
+    // Dual axis, closed loop
+    {"2CS3E-D503", 0x00004321, 0x00002200, 0, NULL, lcec_leadshine_stepper_init, NULL, F_AXES(2) | F_DIN(4) | F_DOUT(2)},
+    {"2CS3E-D507", 0x00004321, 0x00002100, 0, NULL, lcec_leadshine_stepper_init, NULL, F_AXES(2) | F_DIN(4) | F_DOUT(2)},
+
+    // Dual axis, open loop
+    {"2EM3E-D522", 0x00004321, 0x0000a300, 0, NULL, lcec_leadshine_stepper_init, NULL, F_AXES(2) | F_DIN(4) | F_DOUT(2)},
+    {"2EM3E-D556", 0x00004321, 0x0000a100, 0, NULL, lcec_leadshine_stepper_init, NULL, F_AXES(2) | F_DIN(4) | F_DOUT(2)},
+    {"2EM3E-D870", 0x00004321, 0x0000a200, 0, NULL, lcec_leadshine_stepper_init, NULL, F_AXES(2) | F_DIN(4) | F_DOUT(2)},
+    {NULL},
+};
+
+ADD_TYPES_WITH_CIA402_MODPARAMS(types1, modparams_perchannel, modparams_base, overrides1)
+ADD_TYPES_WITH_CIA402_MODPARAMS(types2, modparams_perchannel, modparams_base, overrides2)
+
+static void lcec_leadshine_stepper_read(lcec_slave_t *slave, long period);
+static void lcec_leadshine_stepper_write(lcec_slave_t *slave, long period);
 
 typedef struct {
   lcec_class_cia402_channels_t *cia402;
   // XXXX: Add pins and vars for PDO offsets here.
-} lcec_basic_cia402_data_t;
+} lcec_leadshine_stepper_data_t;
 
 static const lcec_pindesc_t slave_pins[] = {
     // XXXX: add device-specific pins here.
@@ -128,38 +170,17 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
   return 0;
 }
 
-static int lcec_basic_cia402_init(int comp_id, lcec_slave_t *slave) {
-  lcec_basic_cia402_data_t *hal_data;
+static int lcec_leadshine_stepper_init(int comp_id, lcec_slave_t *slave) {
+  lcec_leadshine_stepper_data_t *hal_data;
   int err;
 
-  // XXXX: you can remove this if you replace the /* fake vid */ and /* fake pid */ in `types`, above.
-  if (slave->vid == 0xffffffff || slave->pid == 0xffffffff) {
-    rtapi_print_msg(RTAPI_MSG_ERR,
-        LCEC_MSG_PFX "basic_cia402 device slave %s.%s not configured correctly, you must specify vid and pid in the XML file.\n",
-        slave->master->name, slave->name);
-    return -EIO;
-  }
-
   // alloc hal memory
-  hal_data = LCEC_HAL_ALLOCATE(lcec_basic_cia402_data_t);
+  hal_data = LCEC_HAL_ALLOCATE(lcec_leadshine_stepper_data_t);
   slave->hal_data = hal_data;
 
   // initialize read/write
-  slave->proc_read = lcec_basic_cia402_read;
-  slave->proc_write = lcec_basic_cia402_write;
-
-  // XXXX: we should generally (always?) run CiA 402 devices in
-  // distributed-clock mode.  Consider turning this on by default if
-  // we know the correct values for all of the fields.
-  //
-  // Apply default Distributed Clock settings if it's not already set.
-  //  if (slave->dc_conf == NULL) {
-  //    lcec_slave_dc_t *dc = LCEC_HAL_ALLOCATE(lcec_slave_dc_t);
-  //    dc->assignActivate = 0x300;  // See ESI and/or manufacturer docs
-  //    dc->sync0Cycle = slave->master->app_time_period;
-  //
-  //    slave->dc_conf = dc;
-  //  }
+  slave->proc_read = lcec_leadshine_stepper_read;
+  slave->proc_write = lcec_leadshine_stepper_write;
 
   lcec_class_cia402_options_t *options = lcec_cia402_options();
   // XXXX: set which options this device supports.  This controls
@@ -167,19 +188,31 @@ static int lcec_basic_cia402_init(int comp_id, lcec_slave_t *slave) {
   // lcec_class_cia402.h for the full list of what is currently
   // available, and instructions on how to add additional CiA 402
   // features.
-
-  options->channels = 1;
+  options->channels = AXES(slave->flags);
   options->rxpdolimit = 8;  // See https://github.com/linuxcnc-ethercat/linuxcnc-ethercat/issues/343
   options->txpdolimit = 8;  // See https://github.com/linuxcnc-ethercat/linuxcnc-ethercat/issues/343
 
   for (int channel = 0; channel < options->channels; channel++) {
-    options->channel[channel]->enable_pv = 1;
-    options->channel[channel]->enable_pp = 0;
-    options->channel[channel]->enable_csv = 0;
-    options->channel[channel]->enable_csp = 0;  // Should generally be enabled for servos and steppers
-    options->channel[channel]->enable_actual_torque = 0;
-    options->channel[channel]->enable_digital_input = 0;
-    options->channel[channel]->enable_digital_output = 0;
+    options->channel[channel]->enable_csp = 1;
+    options->channel[channel]->enable_digital_input = 1;
+    options->channel[channel]->enable_digital_output = 1;
+    options->channel[channel]->digital_in_channels = DIN(slave->flags);
+    options->channel[channel]->digital_out_channels = DOUT(slave->flags);
+  }
+
+  // Apply default Distributed Clock settings if it's not already set.
+  if (slave->dc_conf == NULL) {
+    lcec_slave_dc_t *dc = LCEC_HAL_ALLOCATE(lcec_slave_dc_t);
+    if (options->channels == 2) {
+      dc->assignActivate = 0x700;  // 2-channel devices are all 0x700 according to LS's ESI.
+      dc->sync1Cycle = slave->master->app_time_period;
+    } else {
+      dc->assignActivate = 0x300;  // 1-channel devices are all 0x300 according to LS's ESI.
+    }
+
+    dc->sync0Cycle = slave->master->app_time_period;
+
+    slave->dc_conf = dc;
   }
 
   // Handle modparams
@@ -191,14 +224,6 @@ static int lcec_basic_cia402_init(int comp_id, lcec_slave_t *slave) {
     lcec_cia402_rename_multiaxis_channels(options);
   }
 
-  // XXXX: set up syncs.  This is generally needed because CiA 402
-  // covers a lot of area and few (if any) devices have all of the
-  // useful pins pre-mapped.  If you try to use a PDO that hasn't been
-  // mapped, then you will get a runtime error about PDOs not being
-  // mapped, and you'll want to come back here and fix it.
-  //
-  // These need to be done in the correct order, as the `lcec_syncs*`
-  // code only adds new entries at the end.
   lcec_syncs_t *syncs = lcec_cia402_init_sync(slave, options);
   lcec_cia402_add_output_sync(slave, syncs, options);
 
@@ -238,8 +263,8 @@ static int lcec_basic_cia402_init(int comp_id, lcec_slave_t *slave) {
   return 0;
 }
 
-static void lcec_basic_cia402_read(lcec_slave_t *slave, long period) {
-  lcec_basic_cia402_data_t *hal_data = (lcec_basic_cia402_data_t *)slave->hal_data;
+static void lcec_leadshine_stepper_read(lcec_slave_t *slave, long period) {
+  lcec_leadshine_stepper_data_t *hal_data = (lcec_leadshine_stepper_data_t *)slave->hal_data;
 
   // wait for slave to be operational
   if (!slave->state.operational) {
@@ -256,8 +281,8 @@ static void lcec_basic_cia402_read(lcec_slave_t *slave, long period) {
   //  lcec_din_read_all(slave, hal_data->din);
 }
 
-static void lcec_basic_cia402_write(lcec_slave_t *slave, long period) {
-  lcec_basic_cia402_data_t *hal_data = (lcec_basic_cia402_data_t *)slave->hal_data;
+static void lcec_leadshine_stepper_write(lcec_slave_t *slave, long period) {
+  lcec_leadshine_stepper_data_t *hal_data = (lcec_leadshine_stepper_data_t *)slave->hal_data;
 
   // wait for slave to be operational
   if (!slave->state.operational) {

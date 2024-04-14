@@ -259,8 +259,6 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
     lcec_read_sdo16(slave, 0x2008 + 0x800*channel, 0, &input_polarity[0]);
   }
 
-  // We'll need to byte-swap here, for big-endian systems.
-
   for (p = slave->modparams; p != NULL && p->id >= 0; p++) {
     int channel = p->id&7;
     int id = p->id&~7;
@@ -484,7 +482,7 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
   hal_data = LCEC_HAL_ALLOCATE(lcec_rtec_data_t);
   slave->hal_data = hal_data;
 
-  // initialize callbacks
+  // initialize read/write
   slave->proc_read = lcec_rtec_read;
   slave->proc_write = lcec_rtec_write;
 
@@ -503,7 +501,6 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
 
   if (AXES(slave->flags) != 0) {
     options->channels = AXES(slave->flags);
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s has %d channels\n", master->name, slave->name, options->channels);
   } else {
     options->channels = 1;
   }
@@ -514,30 +511,31 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
     options->pdo_increment = 1;
   }
 
-  if (options->channels > 1) {
-    lcec_cia402_rename_multiaxis_channels(options);
-  }
   // The ECT60 supports these CiA 402 features (plus a few others).
   // We'll assume that all of the EC* devices do, until we learn
   // otherwise.
   for (channel = 0; channel < options->channels; channel++) {
     options->channel[channel]->enable_csp = 1;
     options->channel[channel]->enable_csv = 0;
-    options->channel[channel]->enable_hm = 1;
-    options->channel[channel]->enable_actual_following_error = 1;
-    options->channel[channel]->enable_actual_torque = 1;
-    options->channel[channel]->enable_digital_input = 1;
-    options->channel[channel]->enable_digital_output = 1;
+    //options->channel[channel]->enable_hm = 1;
+    //options->channel[channel]->enable_actual_following_error = 1;
+    //options->channel[channel]->enable_actual_torque = 1;
+    //options->channel[channel]->enable_digital_input = 1;
+    //options->channel[channel]->enable_digital_output = 1;
     options->channel[channel]->enable_error_code = 1;
-    options->channel[channel]->enable_home_accel = 1;
-    options->channel[channel]->digital_in_channels = 6;
-    options->channel[channel]->digital_out_channels = 2;
-    options->channel[channel]->enable_actual_following_error = 1;
+    //options->channel[channel]->enable_home_accel = 1;
+    //options->channel[channel]->digital_in_channels = 6;
+    //options->channel[channel]->digital_out_channels = 2;
+    //options->channel[channel]->enable_actual_following_error = 1;
   }
 
   if (handle_modparams(slave, options) != 0) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "modparam handling failure for slave %s.%s\n", master->name, slave->name);
     return -EIO;
+  }
+
+  if (options->channels > 1) {
+    lcec_cia402_rename_multiaxis_channels(options);
   }
 
   // Set up syncs.  This is needed because the ECT60 (at least)
@@ -569,7 +567,7 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
 
   hal_data->cia402 = lcec_cia402_allocate_channels(options->channels);
 
-  for (int channel = 0; channel < options->channels; channel++) {
+  for (channel = 0; channel < options->channels; channel++) {
     hal_data->cia402->channels[channel] = lcec_cia402_register_channel(slave, 0x6000 + 0x800 * channel, options->channel[channel]);
   }
 
