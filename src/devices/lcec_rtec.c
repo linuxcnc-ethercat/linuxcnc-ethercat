@@ -86,27 +86,27 @@ static const lcec_modparam_desc_t modparams_base[] = {
 // overwhelming, but we do want to include the most common things that
 // users will want to change.
 #define PER_CHANNEL_OVERRIDES(ch)                                                                                         \
-  {#ch "enableCSP", 0, 0, "true", "Enable support for Cyclic Synchronous Position mode."},                                \
-      {#ch "enableCSV", 0, 0, "false", "Enable support for Cyclic Synchronous Velocity mode."},                           \
-      {#ch "encoderResolution", 0, 0, "4000", "Number of encoder steps per revolution."},                                 \
-      {#ch "peakCurrent_amps", 0, 0, "6.0", "Maximum stepper Amps."},                                                     \
-      {#ch "output1Func", 0, 0, "alarm", "Output 1 use: general, alarm, brake, in-place."},                               \
-      {#ch "output2Func", 0, 0, "brake", "Output 2 use: general, alarm, brake, in-place."},                               \
-      {#ch "input3Func", 0, 0, "cw-limit",                                                                                \
+  {#ch "enableCSP", 0, MODPARAM_TYPE_BIT, "true", "Enable support for Cyclic Synchronous Position mode."},                \
+      {#ch "enableCSV", 0, MODPARAM_TYPE_BIT, "false", "Enable support for Cyclic Synchronous Velocity mode."},           \
+      {#ch "encoderResolution", 0, MODPARAM_TYPE_BIT, "4000", "Number of encoder steps per revolution."},                 \
+      {#ch "peakCurrent_amps", 0, MODPARAM_TYPE_BIT, "6.0", "Maximum stepper Amps."},                                     \
+      {#ch "output1Func", 0, MODPARAM_TYPE_BIT, "alarm", "Output 1 use: general, alarm, brake, in-place."},               \
+      {#ch "output2Func", 0, MODPARAM_TYPE_BIT, "brake", "Output 2 use: general, alarm, brake, in-place."},               \
+      {#ch "input3Func", 0, MODPARAM_TYPE_BIT, "cw-limit",                                                                \
           "Input 3 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2"}, \
-      {#ch "input4Func", 0, 0, "ccw-limit",                                                                               \
+      {#ch "input4Func", 0, MODPARAM_TYPE_BIT, "ccw-limit",                                                               \
           "Input 4 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2"}, \
-      {#ch "input5Func", 0, 0, "home",                                                                                    \
+      {#ch "input5Func", 0, MODPARAM_TYPE_BIT, "home",                                                                    \
           "Input 5 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2"}, \
   {                                                                                                                       \
-#ch "input6Func", 0, 0, "motor-offline",                                                                              \
+#ch "input6Func", 0, MODPARAM_TYPE_BIT, "motor-offline",                                                              \
         "Input 6 use: general, cw-limit, ccw-limit, home, clear-fault, emergency-stop, motor-offline, probe1, probe2"     \
   }
 
 /// Override values for single-axis open-loop steppers
 static const lcec_modparam_desc_t overrides_open[] = {
     PER_CHANNEL_OVERRIDES(),
-    {"motorResolution_pulses", 0, 0, "10000", "Number of stepper pulses per rotation"},
+    {"motorResolution_pulses", 0, MODPARAM_TYPE_BIT, "10000", "Number of stepper pulses per rotation"},
     {NULL},
 };
 
@@ -114,15 +114,15 @@ static const lcec_modparam_desc_t overrides_open[] = {
 static const lcec_modparam_desc_t overrides_open_x2[] = {
     PER_CHANNEL_OVERRIDES(ch1),
     PER_CHANNEL_OVERRIDES(ch2),
-    {"ch1motorResolution_pulses", 0, 0, "10000", "Number of stepper pulses per rotation"},
-    {"ch1motorResolution_pulses", 0, 0, "10000", "Number of stepper pulses per rotation"},
+    {"ch1motorResolution_pulses", 0, MODPARAM_TYPE_BIT, "10000", "Number of stepper pulses per rotation"},
+    {"ch1motorResolution_pulses", 0, MODPARAM_TYPE_BIT, "10000", "Number of stepper pulses per rotation"},
     {NULL},
 };
 
 /// Override values for single-axis closed-loop steppers
 static const lcec_modparam_desc_t overrides_closed[] = {
     PER_CHANNEL_OVERRIDES(),
-    {"controlMode", 0, 0, "closedloop", "Operation mode: openloop, closedloop, or foc."},
+    {"controlMode", 0, MODPARAM_TYPE_BIT, "closedloop", "Operation mode: openloop, closedloop, or foc."},
     {NULL},
 };
 
@@ -130,8 +130,8 @@ static const lcec_modparam_desc_t overrides_closed[] = {
 static const lcec_modparam_desc_t overrides_closed_x2[] = {
     PER_CHANNEL_OVERRIDES(ch1),
     PER_CHANNEL_OVERRIDES(ch2),
-    {"ch1controlMode", 0, 0, "closedloop", "Operation mode: openloop, closedloop, or foc."},
-    {"ch2controlMode", 0, 0, "closedloop", "Operation mode: openloop, closedloop, or foc."},
+    {"ch1controlMode", 0, MODPARAM_TYPE_BIT, "closedloop", "Operation mode: openloop, closedloop, or foc."},
+    {"ch2controlMode", 0, MODPARAM_TYPE_BIT, "closedloop", "Operation mode: openloop, closedloop, or foc."},
     {NULL},
 };
 
@@ -170,7 +170,7 @@ static lcec_typelist_t types_closed_x2[] = {
     // note that modparams_rtec is added implicitly in ADD_TYPES_WITH_CIA402_MODPARAMS.
 
     // The ECT60X2 only has 2 RX/TX PDOs, at 1600/1610 and 1a00/1a10.
-  {"ECT60x2", LCEC_RTELLIGENT_VID, 0x0a880006, 0, NULL, lcec_rtec_init, NULL, F_AXES(2) | F_PDOINCREMENT(0x10) | F_NOEXTRAS},
+    {"ECT60x2", LCEC_RTELLIGENT_VID, 0x0a880006, 0, NULL, lcec_rtec_init, NULL, F_AXES(2) | F_PDOINCREMENT(0x10) | F_NOEXTRAS},
     {NULL},
 };
 
@@ -253,21 +253,27 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
   uint32_t uval;
   int val, v;
 
+  // Set polarities to 0.
+  for (int channel = 0; channel < 8; channel++) {
+    input_polarity_set[channel] = 0;
+    output_polarity_set[channel] = 0;
+  }
+
   // Read current polarity values, so we don't overwrite them all.
   for (int channel = 0; channel < opt->channels; channel++) {
-    lcec_read_sdo16(slave, 0x2006 + 0x800*channel, 0, &output_polarity[0]);
-    lcec_read_sdo16(slave, 0x2008 + 0x800*channel, 0, &input_polarity[0]);
+    lcec_read_sdo16(slave, 0x2006 + 0x800 * channel, 0, &output_polarity[channel]);
+    lcec_read_sdo16(slave, 0x2008 + 0x800 * channel, 0, &input_polarity[channel]);
   }
 
   for (p = slave->modparams; p != NULL && p->id >= 0; p++) {
-    int channel = p->id&7;
-    int id = p->id&~7;
-    int base = 0x2000 + 0x800*channel;
+    int channel = p->id & 7;
+    int id = p->id & ~7;
+    int base = 0x2000 + 0x800 * channel;
 
     if (channel != 0 && channel != 1) {
       rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid channel in lcec_rtec: %d slave %s.%s\n", channel, master->name, slave->name);
     }
-    
+
     switch (id) {
       case M_PEAKCURRENT:
         uval = p->value.flt * 1000.0 + 0.5;
@@ -452,23 +458,23 @@ static int handle_modparams(lcec_slave_t *slave, lcec_class_cia402_options_t *op
     }
   }
 
-  for (int channel=0;channel<opt->channels;channel++) {
+  for (int channel = 0; channel < opt->channels; channel++) {
     if (output_polarity_set[channel]) {
-      if (lcec_write_sdo16(slave, 0x2006 + 0x800*channel, 0, output_polarity[channel]) != 0) {
-	rtapi_print_msg(
-			RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to set slave %s.%s sdo outputPolarity to %u\n", master->name, slave->name, output_polarity[channel]);
-	return -1;
+      if (lcec_write_sdo16(slave, 0x2006 + 0x800 * channel, 0, output_polarity[channel]) != 0) {
+        rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to set slave %s.%s sdo outputPolarity to %u\n", master->name, slave->name,
+            output_polarity[channel]);
+        return -1;
       }
     }
     if (input_polarity_set[channel]) {
-      if (lcec_write_sdo16(slave, 0x2008 + 0x800*channel, 0, input_polarity[channel]) != 0) {
-	rtapi_print_msg(
-			RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to set slave %s.%s sdo inputPolarity to %u\n", master->name, slave->name, input_polarity[channel]);
-	return -1;
+      if (lcec_write_sdo16(slave, 0x2008 + 0x800 * channel, 0, input_polarity[channel]) != 0) {
+        rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to set slave %s.%s sdo inputPolarity to %u\n", master->name, slave->name,
+            input_polarity[channel]);
+        return -1;
       }
     }
   }
-  
+
   return 0;
 }
 
@@ -517,16 +523,16 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
   for (channel = 0; channel < options->channels; channel++) {
     options->channel[channel]->enable_csp = 1;
     options->channel[channel]->enable_csv = 0;
-    //options->channel[channel]->enable_hm = 1;
-    //options->channel[channel]->enable_actual_following_error = 1;
-    //options->channel[channel]->enable_actual_torque = 1;
-    //options->channel[channel]->enable_digital_input = 1;
-    //options->channel[channel]->enable_digital_output = 1;
+    // options->channel[channel]->enable_hm = 1;
+    // options->channel[channel]->enable_actual_following_error = 1;
+    // options->channel[channel]->enable_actual_torque = 1;
+    // options->channel[channel]->enable_digital_input = 1;
+    // options->channel[channel]->enable_digital_output = 1;
     options->channel[channel]->enable_error_code = 1;
-    //options->channel[channel]->enable_home_accel = 1;
-    //options->channel[channel]->digital_in_channels = 6;
-    //options->channel[channel]->digital_out_channels = 2;
-    //options->channel[channel]->enable_actual_following_error = 1;
+    // options->channel[channel]->enable_home_accel = 1;
+    // options->channel[channel]->digital_in_channels = 6;
+    // options->channel[channel]->digital_out_channels = 2;
+    // options->channel[channel]->enable_actual_following_error = 1;
   }
 
   if (handle_modparams(slave, options) != 0) {
