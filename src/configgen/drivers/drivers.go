@@ -2320,6 +2320,13 @@ var Drivers=[]EthercatDriver{
   },
   EthercatDriver{
     VendorID: "0x00000002",
+    ProductID: "0x23fe4052",
+    Type: "EP9214",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000002",
     ProductID: "0x64765649",
     Type: "EPP2308",
     ModParams: []string{
