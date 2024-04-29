@@ -89,5 +89,8 @@
     <slave idx="18" type="EL4032" name="D19"/>
     <slave idx="20" type="EK1110" name="D21"/>
   </master>
+  <master idx="1" appTimePeriod="1000000" refClockSyncCycles="1000">
+    <slave idx="11" type="EP9214" name="D33"/>
+  </master>
 </masters>
     
