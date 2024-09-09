@@ -26,7 +26,8 @@
 
 static int lcec_omrg5_init(int comp_id, lcec_slave_t *slave);
 
-static lcec_typelist_t types[] = {
+// these types are soon to be deprecated because of their unintuitive naming
+static lcec_typelist_t old_types[] = {
     {"OmrG5_KNA5L", LCEC_OMRON_VID, 0x00000001, 0, NULL, lcec_omrg5_init},
     {"OmrG5_KN01L", LCEC_OMRON_VID, 0x00000002, 0, NULL, lcec_omrg5_init},
     {"OmrG5_KN02L", LCEC_OMRON_VID, 0x00000003, 0, NULL, lcec_omrg5_init},
@@ -52,8 +53,36 @@ static lcec_typelist_t types[] = {
     {"OmrG5_KN150F", LCEC_OMRON_VID, 0x0000005F, 0, NULL, lcec_omrg5_init},
     {NULL},
 };
+ADD_TYPES(old_types);
 
+static lcec_typelist_t types[] = {
+    {"R88D-KNA5L-ECT", LCEC_OMRON_VID, 0x00000001, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN01L-ECT", LCEC_OMRON_VID, 0x00000002, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN02L-ECT", LCEC_OMRON_VID, 0x00000003, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN04L-ECT", LCEC_OMRON_VID, 0x00000004, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN01H-ECT", LCEC_OMRON_VID, 0x00000005, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN02H-ECT", LCEC_OMRON_VID, 0x00000006, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN04H-ECT", LCEC_OMRON_VID, 0x00000007, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN08H-ECT", LCEC_OMRON_VID, 0x00000008, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN10H-ECT", LCEC_OMRON_VID, 0x00000009, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN15H-ECT", LCEC_OMRON_VID, 0x0000000A, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN20H-ECT", LCEC_OMRON_VID, 0x00000056, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN30H-ECT", LCEC_OMRON_VID, 0x00000057, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN50H-ECT", LCEC_OMRON_VID, 0x00000058, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN75H-ECT", LCEC_OMRON_VID, 0x00000059, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN150H-ECT", LCEC_OMRON_VID, 0x0000005A, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN06F-ECT", LCEC_OMRON_VID, 0x0000000B, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN10F-ECT", LCEC_OMRON_VID, 0x0000000C, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN15F-ECT", LCEC_OMRON_VID, 0x0000000D, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN20F-ECT", LCEC_OMRON_VID, 0x0000005B, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN30F-ECT", LCEC_OMRON_VID, 0x0000005C, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN50F-ECT", LCEC_OMRON_VID, 0x0000005D, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN75F-ECT", LCEC_OMRON_VID, 0x0000005E, 0, NULL, lcec_omrg5_init},
+    {"R88D-KN150F-ECT", LCEC_OMRON_VID, 0x0000005F, 0, NULL, lcec_omrg5_init},
+    {NULL},
+};
 ADD_TYPES(types);
+
 typedef struct {
   hal_float_t *pos_cmd;
   hal_s32_t *pos_cmd_raw;
