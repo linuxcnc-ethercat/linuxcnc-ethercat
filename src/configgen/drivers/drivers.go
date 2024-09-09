@@ -2774,6 +2774,167 @@ var Drivers=[]EthercatDriver{
     },
   },
   EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x00000005",
+    Type: "R88D-KN01H-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x00000002",
+    Type: "R88D-KN01L-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x00000006",
+    Type: "R88D-KN02H-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x00000003",
+    Type: "R88D-KN02L-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x00000007",
+    Type: "R88D-KN04H-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x00000004",
+    Type: "R88D-KN04L-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x0000000b",
+    Type: "R88D-KN06F-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x00000008",
+    Type: "R88D-KN08H-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x0000000c",
+    Type: "R88D-KN10F-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x00000009",
+    Type: "R88D-KN10H-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x0000005f",
+    Type: "R88D-KN150F-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x0000005a",
+    Type: "R88D-KN150H-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x0000000d",
+    Type: "R88D-KN15F-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x0000000a",
+    Type: "R88D-KN15H-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x0000005b",
+    Type: "R88D-KN20F-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x00000056",
+    Type: "R88D-KN20H-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x0000005c",
+    Type: "R88D-KN30F-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x00000057",
+    Type: "R88D-KN30H-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x0000005d",
+    Type: "R88D-KN50F-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x00000058",
+    Type: "R88D-KN50H-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x0000005e",
+    Type: "R88D-KN75F-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x00000059",
+    Type: "R88D-KN75H-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000083",
+    ProductID: "0x00000001",
+    Type: "R88D-KNA5L-ECT",
+    ModParams: []string{
+    },
+  },
+  EthercatDriver{
     VendorID: "0x000000b9",
     ProductID: "0x00001388",
     Type: "StMDS5k",
