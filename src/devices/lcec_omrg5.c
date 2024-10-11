@@ -254,7 +254,7 @@ static int lcec_omrg5_init(int comp_id, lcec_slave_t *slave) {
     char new_type_name[16];
     strncpy(new_type_name, slave->type_name + 6, strlen(slave->type_name));
     rtapi_print_msg(RTAPI_MSG_ERR,
-        LCEC_MSG_PFX "The used type name '%s' is deprectaed. Please change the type name in your XML config to 'R88D-%s-ECT'\n",
+        LCEC_MSG_PFX "The used type name '%s' is deprecated. Please change the type name in your XML config to 'R88D-%s-ECT'\n",
         slave->type_name, new_type_name);
   }
 
