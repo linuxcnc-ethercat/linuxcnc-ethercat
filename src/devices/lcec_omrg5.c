@@ -250,10 +250,12 @@ static int lcec_omrg5_init(int comp_id, lcec_slave_t *slave) {
   slave->hal_data = hal_data;
 
   // check for deprecated type names
-  if(strstr(slave->type_name, "OmrG5_") != NULL) {
+  if (strstr(slave->type_name, "OmrG5_") != NULL) {
     char new_type_name[16];
-    strncpy(new_type_name, slave->type_name+6, strlen(slave->type_name));
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "The used type name '%s' is deprectaed. Please change the type name to 'R88D-%s-ECT'\n", slave->type_name, new_type_name);
+    strncpy(new_type_name, slave->type_name + 6, strlen(slave->type_name));
+    rtapi_print_msg(RTAPI_MSG_ERR,
+        LCEC_MSG_PFX "The used type name '%s' is deprectaed. Please change the type name in your XML config to 'R88D-%s-ECT'\n",
+        slave->type_name, new_type_name);
   }
 
   // set to cyclic synchronous position mode
