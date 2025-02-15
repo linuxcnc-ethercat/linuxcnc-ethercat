@@ -56,7 +56,7 @@ and some of which are required:
   to 1,000,000 (without commas), giving a 1 ms cycle time.  If this
   does not match the servo thread time, then an error will be
   reported, eventually.
-- `refClockSyncCycles="<time>": (required) how frequently LinuxCNC-Ethercat
+- `refClockSyncCycles="<time>"`: (required) how frequently LinuxCNC-Ethercat
   resyncs distributed clocks across EtherCAT slaves.  Negative values
   have something to do with distributed clocks.  TODO: explain.
 
