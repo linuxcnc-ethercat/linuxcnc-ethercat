@@ -282,12 +282,27 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
       continue;
     }
 
+    // parse syncServoThreadToRefClock
+    if (strcmp(name, "syncServoThreadToRefClock") == 0) {
+      p->syncServoThreadToRefClock = (strcasecmp(val, "true") == 0) ? 1 : -1; // -1 = Need to know if option was given
+      continue;
+    }
+ 
     // handle error
     fprintf(stderr, "%s: ERROR: Invalid master attribute %s\n", modname, name);
     XML_StopParser(inst->parser, 0);
     return;
   }
 
+  // Backwards compatibility with negative refClockSyncCycles meaning activate DC-servoThread sync
+  if (p->syncServoThreadToRefClock == 0) { // Option not given
+    p->syncServoThreadToRefClock = (p->refClockSyncCycles < 0) ? 1 : 0;
+  } else { // option syncServoThreadToRefClock takes precedent over sign of refClockSyncCycles
+    p->syncServoThreadToRefClock == (p->syncServoThreadToRefClock == -1) ? 0 : 1; // Restore normal true/false
+    p->refClockSyncCycles = abs(p->refClockSyncCycles);
+    fprintf(stderr, "%s: INFO: %s servo-thread with DC reference clock\n", modname, p->syncServoThreadToRefClock ? "Synchronising" : "Not synchronising");
+  }
+  
   // set default name
   if (p->name[0] == 0) {
     snprintf(p->name, LCEC_CONF_STR_MAXLEN, "%d", p->index);
