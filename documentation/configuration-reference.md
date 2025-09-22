@@ -23,7 +23,7 @@ The basic structure of `ethercat.xml` looks like this:
 
 ```xml
 <masters>
-  <master idx="0" appTimePeriod="2000000" refClockSyncCycles="1000">
+  <master idx="0" appTimePeriod="2000000" refClockSyncCycles="1000" syncServoThreadToRefClock="true">
     <slave .../>
 	...
   </master>
@@ -59,12 +59,41 @@ and some of which are required:
 - `refClockSyncCycles="<time>"`: (required) how frequently LinuxCNC-Ethercat
   resyncs distributed clocks across EtherCAT slaves.  Negative values
   have something to do with distributed clocks.  TODO: explain.
+- `syncServoThreadToRefClock="true|false"`: (optional, defaults to `false`)
+  Setting this to `true` will adjust the time of LinuxCNC's servo-thread
+  to be synchronized with the DC reference clock. This is normally
+  wanted when at least one slave uses DC synchronization. More info below.
 
 Generally, for "normal" systems, this will look like 
 
 ```xml
   <master idx="0" appTimePeriod="1000000" refClockSyncCycles="1000">
 ```
+
+### `syncServoThreadToRefClock`
+
+This option enables or disables synchronisation of LinuxCNC'c servo thread
+to the DC reference clock. It's unavoidable that LinuxCNC's timer and
+the DC timer run at slightly different speeds. This is known to
+cause interference in sending PDO, manifesting itself in reoccuring noise
+from servo and stepper motors. Setting this option to "true" keeps
+the two clocks in sync.
+
+Synchronization is done with a bang-bang controller. Two hal parameters
+and three hal pins can be used to control the bang-bang controller.
+
+Hal parameters
+- `pll-step="<n>" RW`. The adjustment step in nanoseconds. Default 0.1% of appTimePeriod.
+- `pll-max-error="<n>" RW`. Max allowed time difference between the servo thread and
+  the reference clock in nanonseconds before a reset. Default one appTimePeriod.
+  
+Hal pins
+- `pll-err="<n>" OUT`. The current time difference between the servo thread
+  and the reference clock in nanoseconds.
+- `pll-out="<n>" OUT`. Current output correction, will always be +/-pll-step.
+- `pll-reset-count="<n>" OUT`. Number of times pll-err has been larger
+  than pll-max-error. 
+
 
 ## Slave Configuration
 
