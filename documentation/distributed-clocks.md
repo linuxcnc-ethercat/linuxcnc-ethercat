@@ -5,6 +5,8 @@ clocks](https://infosys.beckhoff.com/english.php?content=../content/1033/etherca
 that seems to confuse many people on the LinuxCNC forum.  Distributed
 clocks (when enabled) allow devices to stay synchronized to each other
 with very small amounts of jitter (typically a few microseconds).
+The EtherCAT master needs to be told to synchronize LinuxCNC's
+servo thread to the distributed clock time.
 This allows LinuxCNC's motion planner to tell EtherCAT servo and
 stepper drives where to be *at a specific time* around 1 millisecond,
 and have them almost exactly match the plan provided by the software.
@@ -33,7 +35,55 @@ controller expects to receive a new target position every 1 milliscond
 in the future and expect all motors to start their next segment
 precisely on cue, all in sync with each other.
 
-## Settings
+To close the time chain, the LinuxCNC servo thread must be
+synchronized with the DC time. It is inevitable that the distributed clock
+and  the LinuxCNC real-time clock run at different speeds. It is the job
+of the EtherCAT master to slightly adjust the servo thread's timer.
+Unsynchronized distributed clock and servo thread clock are known to
+lead to unpleasant noise from the drives. Users report "gravel noises",
+"friction noises", and rapid peaks in torque and acceleration.
+This only affects drives that use distributed clock synchronization.
+
+## Master settings
+
+The `syncServoThreadToRefClock` option controls synchronization of LinuxCNC's
+servo thread time to the distributed clock time.
+
+```xml
+ <master idx="0" appTimePeriod="2000000" refClockSyncCycles="1000" syncServoThreadToRefClock="true">
+  ....
+ </master>
+
+```
+
+### `syncServoThreadToRefClock`
+
+This option enables or disables synchronization of LinuxCNC's servo thread
+to the DC reference clock. If this option is set to "true", the two clocks
+are kept synchronized. Default is "false".
+
+Synchronization is done with a bang-bang controller. Two hal parameters
+and three hal pins are available.
+
+Hal parameters
+- `pll-step="<n>" RW`. The adjustment step in nanoseconds. Default 0.1% of appTimePeriod.
+- `pll-max-error="<n>" RW`. Max allowed time difference between the servo thread and
+  the reference clock in nanonseconds before a reset. Default one appTimePeriod.
+
+Hal pins
+- `pll-err="<n>" OUT`. The current time difference between the servo thread
+  and the reference clock in nanoseconds.
+- `pll-out="<n>" OUT`. Current output correction, will always be +/-pll-step.
+- `pll-reset-count="<n>" OUT`. Number of times pll-err has been larger
+  than pll-max-error.
+
+`pll-err` varies up and down. `pll-reset-count`should be kept low.
+If `pll-reset-count` continue to increase, the difference in speed between
+the clocks is large. Increasing `pll-step` might help. `pll-step` is limited
+to 1% of appTimePeriod.
+
+
+## Slave settings
 
 Each slave in LCEC has its own (optional) distributed clock config,
 which looks like this:
