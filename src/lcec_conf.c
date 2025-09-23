@@ -285,7 +285,7 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
     // parse syncServoThreadToRefClock
     if (strcmp(name, "syncServoThreadToRefClock") == 0) {
       p->syncServoThreadToRefClock = (strcasecmp(val, "true") == 0) ? 1 : -1; // -1 = Need to know if option was given
-      continue;
+      continue; // TODO: A general function that can handle four states: yes, no, not given, wrong. Recognize yes/on/true/1/enabled as true
     }
  
     // handle error

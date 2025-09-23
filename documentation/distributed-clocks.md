@@ -36,11 +36,12 @@ in the future and expect all motors to start their next segment
 precisely on cue, all in sync with each other.
 
 To close the time chain, the LinuxCNC servo thread must be
-synchronized with the DC time. It is inevitable that the distributed clock
-and  the LinuxCNC real-time clock run at different speeds. It is the job
-of the EtherCAT master to slightly adjust the servo thread's timer.
+synchronized with the distributed clock time. It is inevitable
+that the distributed clock and the LinuxCNC real-time clock
+run at different speeds. The lcec module can adjust the
+servo thread's time to the distributed clock reference time.
 Unsynchronized distributed clock and servo thread clock are known to
-lead to unpleasant noise from the drives. Users report "gravel noises",
+lead to unpleasant noises from the drives. Users report "gravel noises",
 "friction noises", and rapid peaks in torque and acceleration.
 This only affects drives that use distributed clock synchronization.
 
@@ -60,7 +61,9 @@ servo thread time to the distributed clock time.
 
 This option enables or disables synchronization of LinuxCNC's servo thread
 to the DC reference clock. If this option is set to "true", the two clocks
-are kept synchronized. Default is "false".
+are kept synchronized, "false" disables the feature. If the option is not
+specified, a negative `refClockSync` value enables this feature for
+backward compatibility.
 
 Synchronization is done with a bang-bang controller. Two hal parameters
 and three hal pins are available.
@@ -78,7 +81,7 @@ Hal pins
   than pll-max-error.
 
 `pll-err` varies up and down. `pll-reset-count`should be kept low.
-If `pll-reset-count` continue to increase, the difference in speed between
+If `pll-reset-count` increases, the difference in speed between
 the clocks is large. Increasing `pll-step` might help. `pll-step` is limited
 to 1% of appTimePeriod.
 
