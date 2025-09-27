@@ -282,9 +282,9 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
       continue;
     }
 
-    // parse syncServoThreadToRefClock
-    if (strcmp(name, "syncServoThreadToRefClock") == 0) {
-      p->syncServoThreadToRefClock = (strcasecmp(val, "true") == 0) ? 1 : -1; // -1 = Need to know if option was given
+    // parse syncToRefClock
+    if (strcmp(name, "syncToRefClock") == 0) {
+      p->syncToRefClock = (strcasecmp(val, "true") == 0) ? 1 : -1; // -1 = Need to know if option was given
       continue; // TODO: A general function that can handle four states: yes, no, not given, wrong. Recognize yes/on/true/1/enabled as true
     }
  
@@ -295,12 +295,12 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
   }
 
   // Backwards compatibility with negative refClockSyncCycles meaning activate DC-servoThread sync
-  if (p->syncServoThreadToRefClock == 0) { // Option not given
-    p->syncServoThreadToRefClock = (p->refClockSyncCycles < 0) ? 1 : 0;
-  } else { // option syncServoThreadToRefClock takes precedent over sign of refClockSyncCycles
-    p->syncServoThreadToRefClock == (p->syncServoThreadToRefClock == -1) ? 0 : 1; // Restore normal true/false
+  if (p->syncToRefClock == 0) { // Option not given
+    p->syncToRefClock = (p->refClockSyncCycles < 0) ? 1 : 0;
+  } else { // option syncToRefClock takes precedent over sign of refClockSyncCycles
+    p->syncToRefClock == (p->syncToRefClock == -1) ? 0 : 1; // Restore normal true/false
     p->refClockSyncCycles = abs(p->refClockSyncCycles);
-    fprintf(stderr, "%s: INFO: %s servo-thread with DC reference clock\n", modname, p->syncServoThreadToRefClock ? "Synchronising" : "Not synchronising");
+    fprintf(stderr, "%s: INFO: %s servo-thread with DC reference clock\n", modname, p->syncToRefClock ? "Synchronising" : "Not synchronising");
   }
   
   // set default name

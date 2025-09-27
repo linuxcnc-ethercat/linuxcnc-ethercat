@@ -23,7 +23,7 @@ The basic structure of `ethercat.xml` looks like this:
 
 ```xml
 <masters>
-  <master idx="0" appTimePeriod="2000000" refClockSyncCycles="1000" syncServoThreadToRefClock="true">
+  <master idx="0" appTimePeriod="2000000" refClockSyncCycles="1000" syncToRefClock="true">
     <slave .../>
 	...
   </master>
@@ -59,7 +59,7 @@ and some of which are required:
 - `refClockSyncCycles="<time>"`: (required) how frequently LinuxCNC-Ethercat
   resyncs distributed clocks across EtherCAT slaves.  Negative values
   have something to do with distributed clocks.  TODO: explain.
-- `syncServoThreadToRefClock="true|false"`: (optional, defaults to `false`)
+- `syncToRefClock="true|false"`: (optional, defaults to `false`)
   Setting this to `true` will adjust the time of LinuxCNC's servo-thread
   to be synchronized with the DC reference clock. This is normally
   wanted when at least one slave uses DC synchronization.

@@ -216,7 +216,7 @@ typedef struct lcec_master {
   long period_last;
   int sync_ref_cnt;
   int sync_ref_cycles;
-  int sync_servothread_to_ref_clock;
+  int sync_to_ref_clock;
   long long state_update_timer;
   ec_master_state_t ms;
 #ifdef RTAPI_TASK_PLL_SUPPORT

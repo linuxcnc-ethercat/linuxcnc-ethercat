@@ -47,17 +47,17 @@ This only affects drives that use distributed clock synchronization.
 
 ## Master settings
 
-The `syncServoThreadToRefClock` option controls synchronization of LinuxCNC's
+The `syncToRefClock` option controls synchronization of LinuxCNC's
 servo thread time to the distributed clock time.
 
 ```xml
- <master idx="0" appTimePeriod="2000000" refClockSyncCycles="1000" syncServoThreadToRefClock="true">
+ <master idx="0" appTimePeriod="2000000" refClockSyncCycles="1000" syncToRefClock="true">
   ....
  </master>
 
 ```
 
-### `syncServoThreadToRefClock`
+### `syncToRefClock`
 
 This option enables or disables synchronization of LinuxCNC's servo thread
 to the DC reference clock. If this option is set to "true", the two clocks
