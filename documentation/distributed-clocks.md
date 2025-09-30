@@ -62,7 +62,7 @@ servo thread time to the distributed clock time.
 This option enables or disables synchronization of LinuxCNC's servo thread
 to the DC reference clock. If this option is set to "true", the two clocks
 are kept synchronized, "false" disables the feature. If the option is not
-specified, a negative `refClockSync` value enables this feature for
+specified, a negative `refClockSyncCycles` value enables this feature for
 backward compatibility.
 
 Synchronization is done with a bang-bang controller. Two hal parameters
@@ -71,7 +71,7 @@ and three hal pins are available.
 Hal parameters
 - `pll-step="<n>" RW`. The adjustment step in nanoseconds. Default 0.1% of appTimePeriod.
 - `pll-max-error="<n>" RW`. Max allowed time difference between the servo thread and
-  the reference clock in nanonseconds before a reset. Default one appTimePeriod.
+  the reference clock in nanoseconds before a reset. Default one appTimePeriod.
 
 Hal pins
 - `pll-err="<n>" OUT`. The current time difference between the servo thread

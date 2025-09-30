@@ -57,17 +57,19 @@ and some of which are required:
   does not match the servo thread time, then an error will be
   reported, eventually.
 - `refClockSyncCycles="<time>"`: (required) how frequently LinuxCNC-Ethercat
-  resyncs distributed clocks across EtherCAT slaves.  Negative values
-  have something to do with distributed clocks.  TODO: explain.
-- `syncToRefClock="true|false"`: (optional, defaults to `false`)
-  Setting this to `true` will adjust the time of LinuxCNC's servo-thread
-  to be synchronized with the DC reference clock. This is normally
-  wanted when at least one slave uses DC synchronization.
+  resyncs distributed clocks across EtherCAT slaves.  
+- `syncToRefClock="true|false"`: (optional) enables or disables synchronization
+  of LinuxCNC's servo thread to the DC reference clock. When set to "true", 
+  the two clocks are kept synchronized, "false" disables the feature. 
+  If the option is not specified, a negative `refClockSyncCycles` value 
+  enables this feature for backward compatibility.
+  Enabling this feature is normally desirable when at least one slave is using
+  DC synchronization.
 
 Generally, for "normal" systems, this will look like 
 
 ```xml
-  <master idx="0" appTimePeriod="1000000" refClockSyncCycles="1000">
+  <master idx="0" appTimePeriod="1000000" refClockSyncCycles="1000" syncToRefClock="true">
 ```
 
 ## Slave Configuration
