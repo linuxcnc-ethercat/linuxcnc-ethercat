@@ -273,12 +273,12 @@ int rtapi_app_main(void) {
     ecrt_master_application_time(master->master, master->app_time_base);
 #ifdef RTAPI_TASK_PLL_SUPPORT
     master->dc_time_valid_last = 0;
-    if (master->sync_ref_cycles >= 0) {
+    if (!master->sync_to_ref_clock) {
       master->app_time_base -= rtapi_get_time();
     }
 #else
     master->app_time_base -= rtapi_get_time();
-    if (master->sync_ref_cycles < 0) {
+    if (master->sync_to_ref_clock) {
       rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "unable to sync master %s cycle to reference clock, RTAPI_TASK_PLL_SUPPORT not present\n",
           master->name);
     }
@@ -466,7 +466,8 @@ int lcec_parse_config(void) {
         master->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
         master->app_time_period = master_conf->appTimePeriod;
         master->sync_ref_cycles = master_conf->refClockSyncCycles;
-
+	master->sync_to_ref_clock = master_conf->syncToRefClock;
+	
         // add master to list
         LCEC_LIST_APPEND(first_master, last_master, master);
         break;
@@ -1149,7 +1150,7 @@ void lcec_write_master(void *arg, long period) {
   // update application time
   now = rtapi_get_time();
 #ifdef RTAPI_TASK_PLL_SUPPORT
-  if (master->sync_ref_cycles >= 0) {
+  if (!master->sync_to_ref_clock) {
     app_time = master->app_time_base + now;
   } else {
     master->dc_ref += period;
@@ -1162,7 +1163,7 @@ void lcec_write_master(void *arg, long period) {
   ecrt_master_application_time(master->master, app_time);
 
   // sync ref clock to master
-  if (master->sync_ref_cycles > 0) {
+  if (!master->sync_to_ref_clock) {
     if (master->sync_ref_cnt == 0) {
       master->sync_ref_cnt = master->sync_ref_cycles;
       ecrt_master_sync_reference_clock(master->master);
@@ -1173,7 +1174,7 @@ void lcec_write_master(void *arg, long period) {
 #ifdef RTAPI_TASK_PLL_SUPPORT
   // sync master to ref clock
   dc_time = 0;
-  if (master->sync_ref_cycles < 0) {
+  if (master->sync_to_ref_clock) {
     // get reference clock time to synchronize master cycle
     dc_time_valid = (ecrt_master_reference_clock_time(master->master, &dc_time) == 0);
   } else {
