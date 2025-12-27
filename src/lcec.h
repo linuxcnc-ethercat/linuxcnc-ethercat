@@ -185,6 +185,8 @@ typedef struct lcec_master_data {
   hal_u32_t pll_step;
   hal_u32_t pll_max_err;
   hal_u32_t *pll_reset_cnt;
+  hal_u32_t dc_phase_max_err;
+  hal_bit_t *dc_phased;            // DC phase synchronization status
 #endif
 } lcec_master_data_t;
 
@@ -219,8 +221,10 @@ typedef struct lcec_master {
   int sync_to_ref_clock;
   long long state_update_timer;
   ec_master_state_t ms;
+  int activated;                    // Flag: master has been activated (0=not yet, 1=activated)
 #ifdef RTAPI_TASK_PLL_SUPPORT
   uint64_t dc_ref;
+  uint64_t dc_ref_time;          // DC reference time (epoch) - set on first app_time call
   uint32_t app_time_last;
   int dc_time_valid_last;
 #endif

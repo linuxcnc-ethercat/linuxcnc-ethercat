@@ -52,6 +52,7 @@ static const lcec_pindesc_t master_pins[] = {
     {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_err), "%s.pll-err"},
     {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_out), "%s.pll-out"},
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, pll_reset_cnt), "%s.pll-reset-count"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_master_data_t, dc_phased), "%s.dc-phased"},
 #endif
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
@@ -61,6 +62,7 @@ static const lcec_paramdesc_t master_params[] = {
 #ifdef RTAPI_TASK_PLL_SUPPORT
     {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, pll_step), "%s.pll-step"},
     {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, pll_max_err), "%s.pll-max-err"},
+    {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, dc_phase_max_err), "%s.dc-phase-max-err"},
 #endif
     {HAL_TYPE_UNSPECIFIED},
 };
@@ -266,34 +268,10 @@ int rtapi_app_main(void) {
       goto fail2;
     }
 
-    // initialize application time
-    rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "Setting time\n");
-    lcec_gettimeofday(&tv);
-    master->app_time_base = EC_TIMEVAL2NANO(tv);
-    ecrt_master_application_time(master->master, master->app_time_base);
-#ifdef RTAPI_TASK_PLL_SUPPORT
-    master->dc_time_valid_last = 0;
-    if (!master->sync_to_ref_clock) {
-      master->app_time_base -= rtapi_get_time();
-    }
-#else
-    master->app_time_base -= rtapi_get_time();
-    if (master->sync_to_ref_clock) {
-      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "unable to sync master %s cycle to reference clock, RTAPI_TASK_PLL_SUPPORT not present\n",
-          master->name);
-    }
-#endif
-
-    // activating master
-    rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "Activating master\n");
-    if (ecrt_master_activate(master->master)) {
-      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to activate master %s\n", master->name);
-      goto fail2;
-    }
-
-    // Get internal process data for domain
-    master->process_data = ecrt_domain_data(master->domain);
-    master->process_data_len = ecrt_domain_size(master->domain);
+    // Mark master as not yet activated (will be activated on first read/write call)
+    master->activated = 0;
+    master->process_data = NULL;
+    master->process_data_len = 0;
 
     // init hal data
     rtapi_snprintf(name, HAL_NAME_LEN, "%s.%s", LCEC_MODULE_NAME, master->name);
@@ -307,6 +285,8 @@ int rtapi_app_main(void) {
     master->hal_data->pll_step = master->app_time_period / 1000;
     // set default PLL_MAX_ERR: one period
     master->hal_data->pll_max_err = master->app_time_period;
+    // set default DC_PHASE_MAX_ERR: 10% of period
+    master->hal_data->dc_phase_max_err = master->app_time_period / 10;
 #endif
 
     // export read function
@@ -466,8 +446,12 @@ int lcec_parse_config(void) {
         master->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
         master->app_time_period = master_conf->appTimePeriod;
         master->sync_ref_cycles = master_conf->refClockSyncCycles;
-	master->sync_to_ref_clock = master_conf->syncToRefClock;
-	
+        // sync_to_ref_clock controls clock sync direction:
+        //   false: master is clock source, DC syncs to master (default)
+        //   true: DC is clock source, servo thread syncs to DC via PLL
+        // Note: legacy mode - negative refClockSyncCycles enables sync_to_ref_clock
+        master->sync_to_ref_clock = master_conf->syncToRefClock;
+
         // add master to list
         LCEC_LIST_APPEND(first_master, last_master, master);
         break;
@@ -1058,11 +1042,79 @@ void lcec_write_all(void *arg, long period) {
   }
 }
 
+/// @brief Activate master on first call (delayed activation)
+/// This ensures activation happens inside the real-time thread,
+/// minimizing the delay between activation and cyclic communication.
+static int lcec_activate_master(lcec_master_t *master) {
+  struct timeval tv;
+  
+  uint64_t initial_app_time;
+  
+  if (master->activated) {
+    return 0;  // Already activated
+  }
+  
+  rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "Activating master %s (delayed activation in RT thread)\n", master->name);
+  
+  // Initialize application time base (now we're in the RT thread context)
+  lcec_gettimeofday(&tv);
+  master->app_time_base = EC_TIMEVAL2NANO(tv);
+  
+#ifdef RTAPI_TASK_PLL_SUPPORT
+  master->dc_time_valid_last = 0;
+  master->dc_ref = 0;
+  if (!master->sync_to_ref_clock) {
+    master->app_time_base -= rtapi_get_time();
+  }
+  // Calculate initial app_time (same formula as in cyclic write)
+  initial_app_time = master->app_time_base + (master->sync_to_ref_clock ? 0 : rtapi_get_time());
+#else
+  master->app_time_base -= rtapi_get_time();
+  initial_app_time = master->app_time_base + rtapi_get_time();
+  if (master->sync_to_ref_clock) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "unable to sync master %s cycle to reference clock, RTAPI_TASK_PLL_SUPPORT not present\n",
+        master->name);
+  }
+#endif
+
+  // Set application time BEFORE activate
+  // This sets dc_ref_time in the kernel, which is needed for DC SYNC0 phase calculation
+  ecrt_master_application_time(master->master, initial_app_time);
+#ifdef RTAPI_TASK_PLL_SUPPORT
+  master->dc_ref_time = initial_app_time;  // Record the same value we sent to kernel
+#endif
+  rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "Initial app_time set to %llu\n", (unsigned long long)initial_app_time);
+
+  // Activate master
+  if (ecrt_master_activate(master->master)) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to activate master %s\n", master->name);
+    return -1;
+  }
+  
+  // Get internal process data for domain
+  master->process_data = ecrt_domain_data(master->domain);
+  master->process_data_len = ecrt_domain_size(master->domain);
+  
+  master->activated = 1;
+  rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "Master %s activated successfully\n", master->name);
+  
+  return 0;
+}
+
 /// @brief Read all input pins on a master and its slaves.
 void lcec_read_master(void *arg, long period) {
   lcec_master_t *master = (lcec_master_t *)arg;
   lcec_slave_t *slave;
   int check_states;
+
+  // Delayed activation: activate master on first read call
+  // Per EtherCAT standard, the cycle starts with receive, so activate here
+  // First receive will be empty (no frame sent yet), but that's safe
+  if (!master->activated) {
+    if (lcec_activate_master(master) != 0) {
+      return;  // Activation failed, skip this cycle
+    }
+  }
 
   // check period
   if (period != master->period_last) {
@@ -1131,6 +1183,11 @@ void lcec_write_master(void *arg, long period) {
   lcec_master_data_t *hal_data;
 #endif
 
+  // Skip if master not yet activated (should have been activated in read)
+  if (!master->activated) {
+    return;
+  }
+
   // process slaves
   for (slave = master->first_slave; slave != NULL; slave = slave->next) {
     if (slave->proc_write != NULL) {
@@ -1153,8 +1210,10 @@ void lcec_write_master(void *arg, long period) {
   if (!master->sync_to_ref_clock) {
     app_time = master->app_time_base + now;
   } else {
-    master->dc_ref += period;
+    // CRITICAL: dc_ref MUST be incremented AFTER calculating app_time, NOT before!
+    // DO NOT REVERT THIS ORDER without understanding the implications.
     app_time = master->app_time_base + master->dc_ref + (now - ref);
+    master->dc_ref += period;
   }
 #else
   app_time = master->app_time_base + now;
@@ -1172,14 +1231,9 @@ void lcec_write_master(void *arg, long period) {
   }
 
 #ifdef RTAPI_TASK_PLL_SUPPORT
-  // sync master to ref clock
+  // Get reference clock time (always needed for DC phase checking, regardless of sync_to_ref_clock mode)
   dc_time = 0;
-  if (master->sync_to_ref_clock) {
-    // get reference clock time to synchronize master cycle
-    dc_time_valid = (ecrt_master_reference_clock_time(master->master, &dc_time) == 0);
-  } else {
-    dc_time_valid = 0;
-  }
+  dc_time_valid = (ecrt_master_reference_clock_time(master->master, &dc_time) == 0);
 #endif
 
   // sync slaves to ref clock
@@ -1195,20 +1249,45 @@ void lcec_write_master(void *arg, long period) {
   hal_data = master->hal_data;
   *(hal_data->pll_err) = 0;
   *(hal_data->pll_out) = 0;
-  // the first read dc_time value semms to be invalid, so wait for two successive succesfull reads
+  *(hal_data->dc_phased) = 0;
+
+  // the first read dc_time value seems to be invalid, so wait for two successive successful reads
   if (dc_time_valid && master->dc_time_valid_last) {
-    *(hal_data->pll_err) = master->app_time_last - dc_time;
-    // check for invalid error values
-    if (abs(*(hal_data->pll_err)) > hal_data->pll_max_err) {
-      // force resync of master time
-      master->dc_ref -= *(hal_data->pll_err);
-      // skip next control cycle to allow resync
-      dc_time_valid = 0;
-      // increment reset counter to document this event
-      (*(hal_data->pll_reset_cnt))++;
-    } else {
-      *(hal_data->pll_out) = (*(hal_data->pll_err) < 0) ? -(hal_data->pll_step) : (hal_data->pll_step);
+    // Raw offset between app_time and dc_time (this is what varies at each startup)
+    int32_t raw_offset = master->app_time_last - dc_time;
+
+    // Apply automatic drift compensation: (period - app_phase) % period
+    // Calculate app_phase: our execution position in local cycle relative to dc_ref_time
+    int32_t period = (int32_t)master->app_time_period;
+    int32_t app_phase = (int32_t)((app_time - master->dc_ref_time) % master->app_time_period);
+    int32_t drift = (period - app_phase) % period;
+    if (drift < 0) drift += period;
+
+    *(hal_data->pll_err) = raw_offset + drift;
+
+    // DC is considered phased if error is within dc_phase_max_err tolerance
+    // This works regardless of sync_to_ref_clock mode
+    if (abs(*(hal_data->pll_err)) < hal_data->dc_phase_max_err) {
+      *(hal_data->dc_phased) = 1;
     }
+    
+    // Only run automatic PLL adjustment when sync_to_ref_clock is enabled
+    // When sync_to_ref_clock = false, master is the clock source, DC syncs to us
+    // When sync_to_ref_clock = true, DC is the clock source, we sync to DC
+    if (master->sync_to_ref_clock) {
+      // check for invalid error values
+      if (abs(*(hal_data->pll_err)) > hal_data->pll_max_err) {
+        // force resync of master time
+        master->dc_ref -= *(hal_data->pll_err);
+        // skip next control cycle to allow resync
+        dc_time_valid = 0;
+        // increment reset counter to document this event
+        (*(hal_data->pll_reset_cnt))++;
+      } else {
+        *(hal_data->pll_out) = (*(hal_data->pll_err) < 0) ? -(hal_data->pll_step) : (hal_data->pll_step);
+      }
+    }
+    // When sync_to_ref_clock = false: pll_out stays 0, but pll_err is still calculated for monitoring
   }
 
   rtapi_task_pll_set_correction(*(hal_data->pll_out));
