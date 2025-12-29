@@ -32,7 +32,7 @@ jobs:
         steps:
             - name: cache linuxcnc
               id: cache-linuxcnc
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               env:
                   cache-name: cache-linuxcnc
               with:
@@ -81,9 +81,9 @@ jobs:
         steps:
             - name: cache Ethercat Master
               id: cache-ethercatmaster
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               env:
-                  cache-name: cache-ethercatmaster2
+                  cache-name: cache-ethercatmaster3
               with:
                   key: ${{ runner.os }}-build-${{ env.cache-name }}
                   path: ethercat/
@@ -137,7 +137,7 @@ jobs:
             - name: Restore Ethercat Master cache
               uses: actions/cache/restore@v4
               env:
-                  cache-name: cache-ethercatmaster2
+                  cache-name: cache-ethercatmaster3
               with:
                   key: ${{ runner.os }}-build-${{ env.cache-name }}
                   path: ethercat/

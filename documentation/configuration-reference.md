@@ -23,7 +23,7 @@ The basic structure of `ethercat.xml` looks like this:
 
 ```xml
 <masters>
-  <master idx="0" appTimePeriod="2000000" refClockSyncCycles="1000">
+  <master idx="0" appTimePeriod="2000000" refClockSyncCycles="1000" syncToRefClock="true">
     <slave .../>
 	...
   </master>
@@ -57,13 +57,19 @@ and some of which are required:
   does not match the servo thread time, then an error will be
   reported, eventually.
 - `refClockSyncCycles="<time>"`: (required) how frequently LinuxCNC-Ethercat
-  resyncs distributed clocks across EtherCAT slaves.  Negative values
-  have something to do with distributed clocks.  TODO: explain.
+  resyncs distributed clocks across EtherCAT slaves.  
+- `syncToRefClock="true|false"`: (optional) enables or disables synchronization
+  of LinuxCNC's servo thread to the DC reference clock. When set to "true", 
+  the two clocks are kept synchronized, "false" disables the feature. 
+  If the option is not specified, a negative `refClockSyncCycles` value 
+  enables this feature for backward compatibility.
+  Enabling this feature is normally desirable when at least one slave is using
+  DC synchronization.
 
 Generally, for "normal" systems, this will look like 
 
 ```xml
-  <master idx="0" appTimePeriod="1000000" refClockSyncCycles="1000">
+  <master idx="0" appTimePeriod="1000000" refClockSyncCycles="1000" syncToRefClock="true">
 ```
 
 ## Slave Configuration
