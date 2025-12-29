@@ -297,8 +297,9 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
   // Backwards compatibility with negative refClockSyncCycles meaning activate DC-servoThread sync
   if (p->syncToRefClock == 0) { // Option not given
     p->syncToRefClock = (p->refClockSyncCycles < 0) ? 1 : 0;
+    p->refClockSyncCycles = abs(p->refClockSyncCycles); // Always use absolute value
   } else { // option syncToRefClock takes precedent over sign of refClockSyncCycles
-    p->syncToRefClock == (p->syncToRefClock == -1) ? 0 : 1; // Restore normal true/false
+    p->syncToRefClock = (p->syncToRefClock == -1) ? 0 : 1; // Restore normal true/false (FIX: was == instead of =)
     p->refClockSyncCycles = abs(p->refClockSyncCycles);
     fprintf(stderr, "%s: INFO: %s servo-thread with DC reference clock\n", modname, p->syncToRefClock ? "Synchronising" : "Not synchronising");
   }
