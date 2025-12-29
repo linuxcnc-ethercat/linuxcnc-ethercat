@@ -1062,15 +1062,14 @@ static int lcec_activate_master(lcec_master_t *master) {
   
 #ifdef RTAPI_TASK_PLL_SUPPORT
   master->dc_time_valid_last = 0;
-  master->dc_ref = 0;
-  if (!master->sync_to_ref_clock) {
-    master->app_time_base -= rtapi_get_time();
-  }
-  // Calculate initial app_time (same formula as in cyclic write)
-  initial_app_time = master->app_time_base + (master->sync_to_ref_clock ? 0 : rtapi_get_time());
-#else
+#endif
+
+  // Always use simple wall-clock time formula
   master->app_time_base -= rtapi_get_time();
   initial_app_time = master->app_time_base + rtapi_get_time();
+
+#ifdef RTAPI_TASK_PLL_SUPPORT
+#else
   if (master->sync_to_ref_clock) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "unable to sync master %s cycle to reference clock, RTAPI_TASK_PLL_SUPPORT not present\n",
         master->name);
@@ -1177,7 +1176,6 @@ void lcec_write_master(void *arg, long period) {
   uint64_t app_time;
   long long now;
 #ifdef RTAPI_TASK_PLL_SUPPORT
-  long long ref;
   uint32_t dc_time;
   int dc_time_valid;
   lcec_master_data_t *hal_data;
@@ -1195,11 +1193,6 @@ void lcec_write_master(void *arg, long period) {
     }
   }
 
-#ifdef RTAPI_TASK_PLL_SUPPORT
-  // get reference time
-  ref = rtapi_task_pll_get_reference();
-#endif
-
   // send process data
   rtapi_mutex_get(&master->mutex);
   ecrt_domain_queue(master->domain);
@@ -1207,14 +1200,9 @@ void lcec_write_master(void *arg, long period) {
   // update application time
   now = rtapi_get_time();
 #ifdef RTAPI_TASK_PLL_SUPPORT
-  if (!master->sync_to_ref_clock) {
-    app_time = master->app_time_base + now;
-  } else {
-    // CRITICAL: dc_ref MUST be incremented AFTER calculating app_time, NOT before!
-    // DO NOT REVERT THIS ORDER without understanding the implications.
-    app_time = master->app_time_base + master->dc_ref + (now - ref);
-    master->dc_ref += period;
-  }
+  // Use simple wall-clock time for app_time in both modes
+  // Phase synchronization is handled by PLL corrections to servo thread timing
+  app_time = master->app_time_base + now;
 #else
   app_time = master->app_time_base + now;
 #endif
@@ -1277,9 +1265,7 @@ void lcec_write_master(void *arg, long period) {
     if (master->sync_to_ref_clock) {
       // check for invalid error values
       if (abs(*(hal_data->pll_err)) > hal_data->pll_max_err) {
-        // force resync of master time
-        master->dc_ref -= *(hal_data->pll_err);
-        // skip next control cycle to allow resync
+        // Error too large - skip next control cycle to allow resync
         dc_time_valid = 0;
         // increment reset counter to document this event
         (*(hal_data->pll_reset_cnt))++;
