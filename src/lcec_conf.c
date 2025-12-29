@@ -298,9 +298,8 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
   if (p->syncToRefClock == 0) { // Option not given
     p->syncToRefClock = (p->refClockSyncCycles < 0) ? 1 : 0;
   } else { // option syncToRefClock takes precedent over sign of refClockSyncCycles
-    p->syncToRefClock == (p->syncToRefClock == -1) ? 0 : 1; // Restore normal true/false
+    p->syncToRefClock = (p->syncToRefClock == -1) ? 0 : 1; // Restore normal true/false
     p->refClockSyncCycles = abs(p->refClockSyncCycles);
-    fprintf(stderr, "%s: INFO: %s servo-thread with DC reference clock\n", modname, p->syncToRefClock ? "Synchronising" : "Not synchronising");
   }
   
   // set default name
