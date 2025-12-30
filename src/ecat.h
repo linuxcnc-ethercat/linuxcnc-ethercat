@@ -185,23 +185,25 @@ typedef struct ecat_master_data {
 #ifdef RTAPI_TASK_PLL_SUPPORT
   hal_s32_t *pll_err;
   hal_s32_t *pll_out;
-  hal_s32_t *pll_drift;            // Input pin for PLL drift correction (manual, used when auto-drift-mode=0)
   hal_u32_t pll_step;
   hal_u32_t pll_max_err;
   hal_u32_t *pll_reset_cnt;
   hal_s32_t *app_phase;            // Our execution phase in local cycle (ns, real-time)
-  hal_s32_t *app_phase_startup;    // Captured app_phase at startup (fixed value)
-  hal_s32_t *phase_diff;           // (app_phase - dc_ref_time) % period - phase difference within cycle
-  hal_s32_t *auto_drift_val;       // Calculated auto drift value being used
-  hal_s32_t *auto_drift_calc;     // Calculated value: (sync0shift - phase_diff + period/2) % period
   hal_bit_t *pll_locked;           // PLL lock status indicator
-  hal_s32_t *auto_drift_mode;      // Input: 0=manual, 1=sync0shift based, 2=simple (period-phase_diff)
-  hal_s32_t *pll_correction_offset; // Input: debug offset added to PLL correction (ns)
-  hal_s32_t *pll_correction_final;  // Output: final PLL correction value sent to rtapi (ns)
+  hal_s32_t *phase_jitter_out;     // Output: measured app_phase jitter amplitude (ns)
+  hal_s32_t *drift_mode;            // Input: 0=simple, 1=manual
+  hal_s32_t *pll_drift;            // Input: debug offset added to PLL correction (ns)
+  hal_s32_t *pll_final;            // Output: final PLL correction value sent to rtapi (ns)
 #endif
-  int32_t startup_phase;           // Internal: captured app_phase at startup
-  int32_t startup_captured;        // Internal: capture counter
   int32_t auto_drift_delay;        // Internal: delay counter before applying auto drift
+  // Phase calibration for sync_to_ref_clock=false mode
+  int32_t phase_measure_cnt;       // Internal: measurement cycle counter
+  int32_t phase_min;               // Internal: minimum app_phase during measurement
+  int32_t phase_max;               // Internal: maximum app_phase during measurement
+  int32_t phase_last;              // Internal: last app_phase value (for boundary detection)
+  int32_t phase_jitter;            // Internal: calculated jitter amplitude
+  int32_t phase_target;            // Internal: target app_phase position
+  int32_t phase_calibrated;        // Internal: 0=measuring, 1=calibrated
 } ecat_master_data_t;
 
 typedef struct ecat_slave_state {
@@ -241,7 +243,7 @@ typedef struct ecat_master {
   uint64_t dc_ref_time;          // DC reference time (epoch) - set on first app_time call
   int32_t sync0_shift;            // sync0Shift from first DC slave (for auto-drift calculation)
   uint32_t app_time_last;
-  int dc_time_valid_last;
+  int dc_time_valid_last;         // Previous cycle's dc_time_valid (for detecting consecutive valid reads)
 #endif
 } ecat_master_t;
 
