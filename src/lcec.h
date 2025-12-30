@@ -223,6 +223,7 @@ typedef struct lcec_master {
   ec_master_state_t ms;
   int activated;                    // Flag: master has been activated (0=not yet, 1=activated)
 #ifdef RTAPI_TASK_PLL_SUPPORT
+  uint64_t dc_ref;
   uint64_t dc_ref_time;          // DC reference time (epoch) - set on first app_time call
   uint32_t app_time_last;
   int dc_time_valid_last;
