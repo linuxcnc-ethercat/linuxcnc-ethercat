@@ -1408,11 +1408,7 @@ void ecat_write_master(void *arg, long period) {
           hal_data->auto_drift_delay = 100;
         }
       } else {
-        if (*(hal_data->pll_locked)) {
-          *(hal_data->pll_out) = 0;
-        } else {
           *(hal_data->pll_out) = (*(hal_data->pll_err) < 0) ? -(hal_data->pll_step) : (hal_data->pll_step);
-        }
       }
     }
     // Note: When sync_to_ref_clock = false, pll_out is set in the phase calibration code above
@@ -1423,7 +1419,7 @@ void ecat_write_master(void *arg, long period) {
   // pll_drift is user-provided offset for debugging
   // Once locked, stop adjusting to maintain stability
   int32_t pll_correction;
-  if (*(hal_data->pll_locked)) {
+  if (!master->sync_to_ref_clock && *(hal_data->pll_locked)) {
     pll_correction = *(hal_data->pll_drift);  // Stop adjusting once locked
   } else {
     pll_correction = *(hal_data->pll_out) + *(hal_data->pll_drift);
