@@ -187,7 +187,20 @@ typedef struct lcec_master_data {
   hal_u32_t *pll_reset_cnt;
   hal_u32_t dc_phase_max_err;
   hal_bit_t *dc_phased;            // DC phase synchronization status
+  hal_s32_t *app_phase;            // Our execution phase in local cycle (ns, real-time)
+  hal_s32_t *phase_jitter_out;     // Output: measured app_phase jitter amplitude (ns)
+  hal_s32_t *drift_mode;            // Input: 0=simple, 1=manual
+  hal_s32_t *pll_drift;            // Input: debug offset added to PLL correction (ns)
+  hal_s32_t *pll_final;            // Output: final PLL correction value sent to rtapi (ns)
 #endif
+  // Phase calibration for sync_to_ref_clock=false mode
+  int32_t phase_measure_cnt;       // Internal: measurement cycle counter
+  int32_t phase_min;               // Internal: minimum app_phase during measurement
+  int32_t phase_max;               // Internal: maximum app_phase during measurement
+  int32_t phase_last;              // Internal: last app_phase value (for boundary detection)
+  int32_t phase_jitter;            // Internal: calculated jitter amplitude
+  int32_t phase_target;            // Internal: target app_phase position
+  int32_t phase_calibrated;        // Internal: 0=measuring, 1=calibrated
 } lcec_master_data_t;
 
 typedef struct lcec_slave_state {
@@ -226,7 +239,7 @@ typedef struct lcec_master {
   uint64_t dc_ref;
   uint64_t dc_ref_time;          // DC reference time (epoch) - set on first app_time call
   uint32_t app_time_last;
-  int dc_time_valid_last;
+  int dc_time_valid_last;         // Previous cycle's dc_time_valid (for detecting consecutive valid reads)
 #endif
 } lcec_master_t;
 
