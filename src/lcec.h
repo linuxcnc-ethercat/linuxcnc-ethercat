@@ -192,6 +192,7 @@ typedef struct lcec_master_data {
   hal_s32_t *drift_mode;            // Input: 0=simple, 1=manual
   hal_s32_t *pll_drift;            // Input: debug offset added to PLL correction (ns)
   hal_s32_t *pll_final;            // Output: final PLL correction value sent to rtapi (ns)
+  int32_t auto_drift_delay;        // Internal: delay counter for auto drift activation
 #endif
   // Phase calibration for sync_to_ref_clock=false mode
   int32_t phase_measure_cnt;       // Internal: measurement cycle counter
@@ -201,6 +202,7 @@ typedef struct lcec_master_data {
   int32_t phase_jitter;            // Internal: calculated jitter amplitude
   int32_t phase_target;            // Internal: target app_phase position
   int32_t phase_calibrated;        // Internal: 0=measuring, 1=calibrated
+  int32_t phase_lock_cnt;          // Internal: consecutive cycles within lock threshold
 } lcec_master_data_t;
 
 typedef struct lcec_slave_state {

@@ -284,6 +284,10 @@ int rtapi_app_main(void) {
     master->hal_data->pll_step = master->app_time_period / 1000;
     // set default PLL_MAX_ERR: one period
     master->hal_data->pll_max_err = master->app_time_period;
+    // Initialize auto-drift delay counter (wait 100 cycles before applying)
+    master->hal_data->auto_drift_delay = 0;
+    // Initialize phase lock counter (require 100 consecutive cycles to confirm phased)
+    master->hal_data->phase_lock_cnt = 0;
 #endif
 
     // Activate master
@@ -1325,7 +1329,15 @@ void lcec_write_master(void *arg, long period) {
         lock_threshold = app_period / 100;
       }
       if (abs(phase_error) < lock_threshold) {
-        *(hal_data->dc_phased) = 1;
+        // Increment lock counter - require 100 consecutive cycles within threshold
+        hal_data->phase_lock_cnt++;
+        if (hal_data->phase_lock_cnt >= 100) {
+          *(hal_data->dc_phased) = 1;
+        }
+      } else {
+        // Reset lock counter if we fall out of threshold
+        hal_data->phase_lock_cnt = 0;
+        *(hal_data->dc_phased) = 0;
       }
       
       // BANG-BANG control: small steps to move towards target
@@ -1364,7 +1376,11 @@ void lcec_write_master(void *arg, long period) {
         // Mode 0: simple - (app_period - app_phase) % app_period
         int32_t calc_val = (app_period - current_app_phase) % app_period;
         if (calc_val < 0) calc_val += app_period;
-        drift = calc_val;
+        if (hal_data->auto_drift_delay < 100) {
+          hal_data->auto_drift_delay++;
+        } else {
+          drift = calc_val;
+        }
       }
     }
     // Mode 1 or other: use manual pll-drift value
@@ -1389,6 +1405,10 @@ void lcec_write_master(void *arg, long period) {
         dc_time_valid = 0;
         // increment reset counter to document this event
         (*(hal_data->pll_reset_cnt))++;
+        // Reset auto-drift delay on resync
+        if (*(hal_data->drift_mode) == 0) {
+          hal_data->auto_drift_delay = 0;
+        }
       } else {
         if (*(hal_data->dc_phased)) {
           *(hal_data->pll_out) = 0;
