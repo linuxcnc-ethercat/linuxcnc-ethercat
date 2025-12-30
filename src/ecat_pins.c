@@ -19,26 +19,26 @@
 /// @file
 /// @brief HAL Pin registration code
 
-#include "lcec.h"
+#include "ecat.h"
 
-static int lcec_pin_newfv(hal_type_t type, hal_pin_dir_t dir, void **data_ptr_addr, const char *fmt, va_list ap);
-static int lcec_pin_newfv_list(void *base, const lcec_pindesc_t *list, va_list ap);
-extern int lcec_comp_id;
+static int ecat_pin_newfv(hal_type_t type, hal_pin_dir_t dir, void **data_ptr_addr, const char *fmt, va_list ap);
+static int ecat_pin_newfv_list(void *base, const ecat_pindesc_t *list, va_list ap);
+extern int ecat_comp_id;
 
-static int lcec_pin_newfv(hal_type_t type, hal_pin_dir_t dir, void **data_ptr_addr, const char *fmt, va_list ap) {
+static int ecat_pin_newfv(hal_type_t type, hal_pin_dir_t dir, void **data_ptr_addr, const char *fmt, va_list ap) {
   char name[HAL_NAME_LEN + 1];
   int sz;
   int err;
 
   sz = rtapi_vsnprintf(name, sizeof(name), fmt, ap);
   if (sz == -1 || sz > HAL_NAME_LEN) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "length %d too long for name starting '%s'\n", sz, name);
+    rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "length %d too long for name starting '%s'\n", sz, name);
     return -ENOMEM;
   }
 
-  err = hal_pin_new(name, type, dir, data_ptr_addr, lcec_comp_id);
+  err = hal_pin_new(name, type, dir, data_ptr_addr, ecat_comp_id);
   if (err) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
+    rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "exporting pin %s failed\n", name);
     return err;
   }
 
@@ -68,25 +68,25 @@ static int lcec_pin_newfv(hal_type_t type, hal_pin_dir_t dir, void **data_ptr_ad
 /// @param[out] data_ptr_addr A pointer to the data behind the pin.
 /// @param[in] fmt A string with printf() formatting for building the pin name.
 /// @return 0 if successful, negative for error.
-int lcec_pin_newf(hal_type_t type, hal_pin_dir_t dir, void **data_ptr_addr, const char *fmt, ...) {
+int ecat_pin_newf(hal_type_t type, hal_pin_dir_t dir, void **data_ptr_addr, const char *fmt, ...) {
   va_list ap;
   int err;
 
   va_start(ap, fmt);
-  err = lcec_pin_newfv(type, dir, data_ptr_addr, fmt, ap);
+  err = ecat_pin_newfv(type, dir, data_ptr_addr, fmt, ap);
   va_end(ap);
 
   return err;
 }
 
-static int lcec_pin_newfv_list(void *base, const lcec_pindesc_t *list, va_list ap) {
+static int ecat_pin_newfv_list(void *base, const ecat_pindesc_t *list, va_list ap) {
   va_list ac;
   int err;
-  const lcec_pindesc_t *p;
+  const ecat_pindesc_t *p;
 
   for (p = list; p->type != HAL_TYPE_UNSPECIFIED; p++) {
     va_copy(ac, ap);
-    err = lcec_pin_newfv(p->type, p->dir, (void **)((char *)base + p->offset), p->fmt, ac);
+    err = ecat_pin_newfv(p->type, p->dir, (void **)((char *)base + p->offset), p->fmt, ac);
     va_end(ac);
     if (err) {
       return err;
@@ -100,12 +100,12 @@ static int lcec_pin_newfv_list(void *base, const lcec_pindesc_t *list, va_list a
 /// @param base Data structure behind the pins.
 /// @param list The a list of pins to register, with types and formats.
 /// @return 0 if successful, negative for error.
-int lcec_pin_newf_list(void *base, const lcec_pindesc_t *list, ...) {
+int ecat_pin_newf_list(void *base, const ecat_pindesc_t *list, ...) {
   va_list ap;
   int err;
 
   va_start(ap, list);
-  err = lcec_pin_newfv_list(base, list, ap);
+  err = ecat_pin_newfv_list(base, list, ap);
   va_end(ap);
 
   return err;

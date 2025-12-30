@@ -19,19 +19,19 @@
 /// @file
 /// @brief Code for manipulating device definitions and finding devices by name
 
-#include "lcec.h"
+#include "ecat.h"
 
-lcec_typelinkedlist_t *typeslist = NULL;
+ecat_typelinkedlist_t *typeslist = NULL;
 
 /// @brief Register a single slave type with LinuxCNC-Ethercat.
 /// @param[in] type the definition of the device type to add.
-void lcec_addtype(lcec_typelist_t *type, const char *sourcefile) {
-  lcec_typelinkedlist_t *t, *l;
+void ecat_addtype(ecat_typelist_t *type, const char *sourcefile) {
+  ecat_typelinkedlist_t *t, *l;
 
   // using malloc instead of hal_malloc because this can be called
-  // from either lcec.so (inside of LinuxCNC) or lcec_conf (a
+  // from either ecat.so (inside of LinuxCNC) or ecat_xml (a
   // standalone binary).
-  t = LCEC_ALLOCATE(lcec_typelinkedlist_t);
+  t = ECAT_ALLOCATE(ecat_typelinkedlist_t);
 
   type->sourcefile = sourcefile;
   t->type = type;
@@ -42,11 +42,11 @@ void lcec_addtype(lcec_typelist_t *type, const char *sourcefile) {
   } else {
     // This should really validate that we don't have duplicate names,
     // but there's no good way to print error messages here.  If we're
-    // running in lcec_main, then we would need to use different code
-    // from lcec_conf.
+    // running in ecat_main, then we would need to use different code
+    // from ecat_xml.
     //
     // Note that if there are duplicate names, then the first match
-    // found will win in lcec_findslavetype, below.
+    // found will win in ecat_findslavetype, below.
     for (l = typeslist; l->next != NULL; l = l->next)
       ;
     l->next = t;
@@ -55,19 +55,19 @@ void lcec_addtype(lcec_typelist_t *type, const char *sourcefile) {
 
 /// @brief Register an array of new slave types with LinuxCNC-Ethercat.
 /// @param[in] types A list of types to add, terminated with a `NULL`.
-void lcec_addtypes(lcec_typelist_t types[], const char *sourcefile) {
-  lcec_typelist_t *type;
+void ecat_addtypes(ecat_typelist_t types[], const char *sourcefile) {
+  ecat_typelist_t *type;
 
   for (type = types; type->name != NULL; type++) {
-    lcec_addtype(type, sourcefile);
+    ecat_addtype(type, sourcefile);
   }
 }
 
 /// @brief Find a slave type by name.
 /// @param[in] name the name to find.
-/// @returns a pointer to the `lcec_typelist_t` for the slave, or NULL if the type is not found.
-const lcec_typelist_t *lcec_findslavetype(const char *name) {
-  lcec_typelinkedlist_t *tl;
+/// @returns a pointer to the `ecat_typelist_t` for the slave, or NULL if the type is not found.
+const ecat_typelist_t *ecat_findslavetype(const char *name) {
+  ecat_typelinkedlist_t *tl;
 
   for (tl = typeslist; tl != NULL && tl->type != NULL && strcmp(tl->type->name, name); tl = tl->next)
     ;

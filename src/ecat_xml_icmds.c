@@ -24,8 +24,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "lcec_conf.h"
-#include "lcec_conf_priv.h"
+#include "ecat_xml.h"
+#include "ecat_xml_priv.h"
 
 typedef enum {
   icmdTypeNone = 0,
@@ -52,26 +52,26 @@ typedef enum {
   icmdTypeSoeIcmdElements,
   icmdTypeSoeIcmdAttribute,
   icmdTypeSoeIcmdData
-} LCEC_ICMD_TYPE_T;
+} ECAT_ICMD_TYPE_T;
 
 typedef struct {
-  LCEC_CONF_XML_INST_T xml;
+  ECAT_CONF_XML_INST_T xml;
 
-  LCEC_CONF_SLAVE_T *currSlave;
-  LCEC_CONF_OUTBUF_T *outputBuf;
+  ECAT_CONF_SLAVE_T *currSlave;
+  ECAT_CONF_OUTBUF_T *outputBuf;
 
-  LCEC_CONF_SDOCONF_T *currSdoConf;
-  LCEC_CONF_IDNCONF_T *currIdnConf;
-} LCEC_CONF_ICMDS_STATE_T;
+  ECAT_CONF_SDOCONF_T *currSdoConf;
+  ECAT_CONF_IDNCONF_T *currIdnConf;
+} ECAT_CONF_ICMDS_STATE_T;
 
 static void xml_data_handler(void *data, const XML_Char *s, int len);
 
-static void icmdTypeCoeIcmdStart(LCEC_CONF_XML_INST_T *inst, int next, const char **attr);
-static void icmdTypeCoeIcmdEnd(LCEC_CONF_XML_INST_T *inst, int next);
-static void icmdTypeSoeIcmdStart(LCEC_CONF_XML_INST_T *inst, int next, const char **attr);
-static void icmdTypeSoeIcmdEnd(LCEC_CONF_XML_INST_T *inst, int next);
+static void icmdTypeCoeIcmdStart(ECAT_CONF_XML_INST_T *inst, int next, const char **attr);
+static void icmdTypeCoeIcmdEnd(ECAT_CONF_XML_INST_T *inst, int next);
+static void icmdTypeSoeIcmdStart(ECAT_CONF_XML_INST_T *inst, int next, const char **attr);
+static void icmdTypeSoeIcmdEnd(ECAT_CONF_XML_INST_T *inst, int next);
 
-static const LCEC_CONF_XML_HANLDER_T xml_states[] = {
+static const ECAT_CONF_XML_HANLDER_T xml_states[] = {
     {"EtherCATMailbox", icmdTypeNone, icmdTypeMailbox, NULL, NULL},
     {"CoE", icmdTypeMailbox, icmdTypeCoe, NULL, NULL},
     {"InitCmds", icmdTypeCoe, icmdTypeCoeIcmds, NULL, NULL},
@@ -98,15 +98,15 @@ static const LCEC_CONF_XML_HANLDER_T xml_states[] = {
     {"NULL", -1, -1, NULL, NULL},
 };
 
-static long int parse_int(LCEC_CONF_ICMDS_STATE_T *state, const char *s, unsigned int len, long int min, long int max);
-static int parse_data(LCEC_CONF_ICMDS_STATE_T *state, const char *s, int len);
+static long int parse_int(ECAT_CONF_ICMDS_STATE_T *state, const char *s, unsigned int len, long int min, long int max);
+static int parse_data(ECAT_CONF_ICMDS_STATE_T *state, const char *s, int len);
 
-int parseIcmds(LCEC_CONF_SLAVE_T *slave, LCEC_CONF_OUTBUF_T *outputBuf, const char *filename) {
+int parseIcmds(ECAT_CONF_SLAVE_T *slave, ECAT_CONF_OUTBUF_T *outputBuf, const char *filename) {
   int ret = 1;
   int done;
   char buffer[BUFFSIZE];
   FILE *file;
-  LCEC_CONF_ICMDS_STATE_T state;
+  ECAT_CONF_ICMDS_STATE_T state;
 
   // open file
   file = fopen(filename, "r");
@@ -117,7 +117,7 @@ int parseIcmds(LCEC_CONF_SLAVE_T *slave, LCEC_CONF_OUTBUF_T *outputBuf, const ch
 
   // create xml parser
   memset(&state, 0, sizeof(state));
-  if (initXmlInst((LCEC_CONF_XML_INST_T *)&state, xml_states)) {
+  if (initXmlInst((ECAT_CONF_XML_INST_T *)&state, xml_states)) {
     fprintf(stderr, "%s: ERROR: Couldn't allocate memory for parser\n", modname);
     goto fail2;
   }
@@ -158,8 +158,8 @@ fail1:
 }
 
 static void xml_data_handler(void *data, const XML_Char *s, int len) {
-  LCEC_CONF_XML_INST_T *inst = (LCEC_CONF_XML_INST_T *)data;
-  LCEC_CONF_ICMDS_STATE_T *state = (LCEC_CONF_ICMDS_STATE_T *)inst;
+  ECAT_CONF_XML_INST_T *inst = (ECAT_CONF_XML_INST_T *)data;
+  ECAT_CONF_ICMDS_STATE_T *state = (ECAT_CONF_ICMDS_STATE_T *)inst;
 
   switch (inst->state) {
     case icmdTypeCoeIcmdTrans:
@@ -178,7 +178,7 @@ static void xml_data_handler(void *data, const XML_Char *s, int len) {
       state->currSdoConf->index = parse_int(state, s, len, 0, 0xffff);
       return;
     case icmdTypeCoeIcmdSubindex:
-      if (state->currSdoConf->subindex != LCEC_CONF_SDO_COMPLETE_SUBIDX) {
+      if (state->currSdoConf->subindex != ECAT_CONF_SDO_COMPLETE_SUBIDX) {
         state->currSdoConf->subindex = parse_int(state, s, len, 0, 0xff);
       }
       return;
@@ -216,10 +216,10 @@ static void xml_data_handler(void *data, const XML_Char *s, int len) {
   }
 }
 
-static void icmdTypeCoeIcmdStart(LCEC_CONF_XML_INST_T *inst, int next, const char **attr) {
-  LCEC_CONF_ICMDS_STATE_T *state = (LCEC_CONF_ICMDS_STATE_T *)inst;
+static void icmdTypeCoeIcmdStart(ECAT_CONF_XML_INST_T *inst, int next, const char **attr) {
+  ECAT_CONF_ICMDS_STATE_T *state = (ECAT_CONF_ICMDS_STATE_T *)inst;
 
-  state->currSdoConf = ADD_OUTPUT_BUFFER(state->outputBuf, LCEC_CONF_SDOCONF_T);
+  state->currSdoConf = ADD_OUTPUT_BUFFER(state->outputBuf, ECAT_CONF_SDOCONF_T);
 
   if (state->currSdoConf == NULL) {
     XML_StopParser(inst->parser, 0);
@@ -237,15 +237,15 @@ static void icmdTypeCoeIcmdStart(LCEC_CONF_XML_INST_T *inst, int next, const cha
     // parse CompleteAccess
     if (strcmp(name, "CompleteAccess") == 0) {
       if (atoi(val)) {
-        state->currSdoConf->subindex = LCEC_CONF_SDO_COMPLETE_SUBIDX;
+        state->currSdoConf->subindex = ECAT_CONF_SDO_COMPLETE_SUBIDX;
       }
       continue;
     }
   }
 }
 
-static void icmdTypeCoeIcmdEnd(LCEC_CONF_XML_INST_T *inst, int next) {
-  LCEC_CONF_ICMDS_STATE_T *state = (LCEC_CONF_ICMDS_STATE_T *)inst;
+static void icmdTypeCoeIcmdEnd(ECAT_CONF_XML_INST_T *inst, int next) {
+  ECAT_CONF_ICMDS_STATE_T *state = (ECAT_CONF_ICMDS_STATE_T *)inst;
 
   if (state->currSdoConf->index == 0xffff) {
     fprintf(stderr, "%s: ERROR: sdoConfig has no idx attribute\n", modname);
@@ -259,13 +259,13 @@ static void icmdTypeCoeIcmdEnd(LCEC_CONF_XML_INST_T *inst, int next) {
     return;
   }
 
-  state->currSlave->sdoConfigLength += sizeof(LCEC_CONF_SDOCONF_T) + state->currSdoConf->length;
+  state->currSlave->sdoConfigLength += sizeof(ECAT_CONF_SDOCONF_T) + state->currSdoConf->length;
 }
 
-static void icmdTypeSoeIcmdStart(LCEC_CONF_XML_INST_T *inst, int next, const char **attr) {
-  LCEC_CONF_ICMDS_STATE_T *state = (LCEC_CONF_ICMDS_STATE_T *)inst;
+static void icmdTypeSoeIcmdStart(ECAT_CONF_XML_INST_T *inst, int next, const char **attr) {
+  ECAT_CONF_ICMDS_STATE_T *state = (ECAT_CONF_ICMDS_STATE_T *)inst;
 
-  state->currIdnConf = ADD_OUTPUT_BUFFER(state->outputBuf, LCEC_CONF_IDNCONF_T);
+  state->currIdnConf = ADD_OUTPUT_BUFFER(state->outputBuf, ECAT_CONF_IDNCONF_T);
 
   if (state->currIdnConf == NULL) {
     XML_StopParser(inst->parser, 0);
@@ -278,8 +278,8 @@ static void icmdTypeSoeIcmdStart(LCEC_CONF_XML_INST_T *inst, int next, const cha
   state->currIdnConf->state = (ec_al_state_t)0;
 }
 
-static void icmdTypeSoeIcmdEnd(LCEC_CONF_XML_INST_T *inst, int next) {
-  LCEC_CONF_ICMDS_STATE_T *state = (LCEC_CONF_ICMDS_STATE_T *)inst;
+static void icmdTypeSoeIcmdEnd(ECAT_CONF_XML_INST_T *inst, int next) {
+  ECAT_CONF_ICMDS_STATE_T *state = (ECAT_CONF_ICMDS_STATE_T *)inst;
 
   if (state->currIdnConf->idn == 0xffff) {
     fprintf(stderr, "%s: ERROR: idnConfig has no idn attribute\n", modname);
@@ -293,10 +293,10 @@ static void icmdTypeSoeIcmdEnd(LCEC_CONF_XML_INST_T *inst, int next) {
     return;
   }
 
-  state->currSlave->idnConfigLength += sizeof(LCEC_CONF_IDNCONF_T) + state->currIdnConf->length;
+  state->currSlave->idnConfigLength += sizeof(ECAT_CONF_IDNCONF_T) + state->currIdnConf->length;
 }
 
-static long int parse_int(LCEC_CONF_ICMDS_STATE_T *state, const char *s, unsigned int len, long int min, long int max) {
+static long int parse_int(ECAT_CONF_ICMDS_STATE_T *state, const char *s, unsigned int len, long int min, long int max) {
   char buf[32];
   char *end;
   long int ret;
@@ -326,7 +326,7 @@ static long int parse_int(LCEC_CONF_ICMDS_STATE_T *state, const char *s, unsigne
   return ret;
 }
 
-static int parse_data(LCEC_CONF_ICMDS_STATE_T *state, const char *s, int len) {
+static int parse_data(ECAT_CONF_ICMDS_STATE_T *state, const char *s, int len) {
   uint8_t *p;
   int size;
 

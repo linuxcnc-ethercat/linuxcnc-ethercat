@@ -21,23 +21,23 @@
 
 #include <stdio.h>
 
-#include "lcec.h"
+#include "ecat.h"
 
-void *lcec_hal_malloc(size_t size, const char *file, const char *func, int line) {
+void *ecat_hal_malloc(size_t size, const char *file, const char *func, int line) {
   void *result = hal_malloc(size);
   if (result == NULL) {
     rtapi_print_msg(
-        RTAPI_MSG_ERR, LCEC_MSG_PFX "MEMORY ALLOCATION FAILURE, hal_malloc() returned NULL in function %s at %s:%d\n", func, file, line);
+        RTAPI_MSG_ERR, ECAT_MSG_PFX "MEMORY ALLOCATION FAILURE, hal_malloc() returned NULL in function %s at %s:%d\n", func, file, line);
     exit(1);
   }
   memset(result, 0, size);
   return result;
 }
 
-void *lcec_malloc(size_t size, const char *file, const char *func, int line) {
+void *ecat_malloc(size_t size, const char *file, const char *func, int line) {
   void *result = malloc(size);
   if (result == NULL) {
-    fprintf(stderr, LCEC_MSG_PFX "MEMORY ALLOCATION FAILURE, hal_malloc() returned NULL in function %s at %s:%d\n", func, file, line);
+    fprintf(stderr, ECAT_MSG_PFX "MEMORY ALLOCATION FAILURE, hal_malloc() returned NULL in function %s at %s:%d\n", func, file, line);
     exit(1);
   }
   return result;

@@ -18,22 +18,22 @@
 
 /// @file
 
-#ifndef _LCEC_CONF_H_
-#define _LCEC_CONF_H_
+#ifndef _ECAT_CONF_H_
+#define _ECAT_CONF_H_
 
 #include "ecrt.h"
 #include "hal.h"
 
-#define LCEC_MODULE_NAME "lcec"
+#define ECAT_MODULE_NAME "ecat"
 
-#define LCEC_CONF_SHMEM_KEY   0xACB572C7
-#define LCEC_CONF_SHMEM_MAGIC 0x036ED5A3
+#define ECAT_CONF_SHMEM_KEY   0xACB572C7
+#define ECAT_CONF_SHMEM_MAGIC 0x036ED5A3
 
-#define LCEC_CONF_STR_MAXLEN 48
+#define ECAT_CONF_STR_MAXLEN 48
 
-#define LCEC_CONF_SDO_COMPLETE_SUBIDX -1
-#define LCEC_CONF_GENERIC_MAX_SUBPINS 32
-#define LCEC_CONF_GENERIC_MAX_BITLEN  255
+#define ECAT_CONF_SDO_COMPLETE_SUBIDX -1
+#define ECAT_CONF_GENERIC_MAX_SUBPINS 32
+#define ECAT_CONF_GENERIC_MAX_BITLEN  255
 
 typedef enum {
   lcecConfTypeNone = 0,
@@ -52,7 +52,7 @@ typedef enum {
   lcecConfTypeInitCmds,
   lcecConfTypeComplexEntry,
   lcecConfTypeModParam
-} LCEC_CONF_TYPE_T;
+} ECAT_CONF_TYPE_T;
 
 typedef enum {
   lcecPdoEntTypeSimple,
@@ -61,26 +61,26 @@ typedef enum {
   lcecPdoEntTypeComplex,
   lcecPdoEntTypeFloatIeee,
   lcecPdoEntTypeFloatDoubleIeee,
-} LCEC_PDOENT_TYPE_T;
+} ECAT_PDOENT_TYPE_T;
 
 typedef struct {
   uint32_t magic;
   size_t length;
-} LCEC_CONF_HEADER_T;
+} ECAT_CONF_HEADER_T;
 
 typedef struct {
-  LCEC_CONF_TYPE_T confType;
+  ECAT_CONF_TYPE_T confType;
   int index;
   uint32_t appTimePeriod;
   int refClockSyncCycles;
   int syncToRefClock;
-  char name[LCEC_CONF_STR_MAXLEN];
-} LCEC_CONF_MASTER_T;
+  char name[ECAT_CONF_STR_MAXLEN];
+} ECAT_CONF_MASTER_T;
 
 typedef struct {
-  LCEC_CONF_TYPE_T confType;
+  ECAT_CONF_TYPE_T confType;
   int index;
-  char type_name[LCEC_CONF_STR_MAXLEN];
+  char type_name[ECAT_CONF_STR_MAXLEN];
   uint32_t vid;
   uint32_t pid;
   int configPdos;
@@ -91,94 +91,94 @@ typedef struct {
   size_t sdoConfigLength;
   size_t idnConfigLength;
   unsigned int modParamCount;
-  char name[LCEC_CONF_STR_MAXLEN];
-} LCEC_CONF_SLAVE_T;
+  char name[ECAT_CONF_STR_MAXLEN];
+} ECAT_CONF_SLAVE_T;
 
 typedef struct {
-  LCEC_CONF_TYPE_T confType;
+  ECAT_CONF_TYPE_T confType;
   uint16_t assignActivate;
   uint32_t sync0Cycle;
   int32_t sync0Shift;
   uint32_t sync1Cycle;
   int32_t sync1Shift;
-} LCEC_CONF_DC_T;
+} ECAT_CONF_DC_T;
 
 typedef struct {
-  LCEC_CONF_TYPE_T confType;
+  ECAT_CONF_TYPE_T confType;
   uint16_t divider;
   uint16_t intervals;
-} LCEC_CONF_WATCHDOG_T;
+} ECAT_CONF_WATCHDOG_T;
 
 typedef struct {
-  LCEC_CONF_TYPE_T confType;
+  ECAT_CONF_TYPE_T confType;
   uint8_t index;
   ec_direction_t dir;
   unsigned int pdoCount;
-} LCEC_CONF_SYNCMANAGER_T;
+} ECAT_CONF_SYNCMANAGER_T;
 
 typedef struct {
-  LCEC_CONF_TYPE_T confType;
+  ECAT_CONF_TYPE_T confType;
   uint16_t index;
   unsigned int pdoEntryCount;
-} LCEC_CONF_PDO_T;
+} ECAT_CONF_PDO_T;
 
 typedef struct {
-  LCEC_CONF_TYPE_T confType;
+  ECAT_CONF_TYPE_T confType;
   uint16_t index;
   uint8_t subindex;
   uint8_t bitLength;
-  LCEC_PDOENT_TYPE_T subType;
+  ECAT_PDOENT_TYPE_T subType;
   hal_type_t halType;
   hal_float_t floatScale;
   hal_float_t floatOffset;
-  char halPin[LCEC_CONF_STR_MAXLEN];
-} LCEC_CONF_PDOENTRY_T;
+  char halPin[ECAT_CONF_STR_MAXLEN];
+} ECAT_CONF_PDOENTRY_T;
 
 typedef struct {
-  LCEC_CONF_TYPE_T confType;
+  ECAT_CONF_TYPE_T confType;
   uint8_t bitOffset;
   uint8_t bitLength;
-  LCEC_PDOENT_TYPE_T subType;
+  ECAT_PDOENT_TYPE_T subType;
   hal_type_t halType;
   hal_float_t floatScale;
   hal_float_t floatOffset;
-  char halPin[LCEC_CONF_STR_MAXLEN];
-} LCEC_CONF_COMPLEXENTRY_T;
+  char halPin[ECAT_CONF_STR_MAXLEN];
+} ECAT_CONF_COMPLEXENTRY_T;
 
 typedef struct {
-  LCEC_CONF_TYPE_T confType;
-} LCEC_CONF_NULL_T;
+  ECAT_CONF_TYPE_T confType;
+} ECAT_CONF_NULL_T;
 
 typedef struct {
-  LCEC_CONF_TYPE_T confType;
+  ECAT_CONF_TYPE_T confType;
   uint16_t index;
   int16_t subindex;
   size_t length;
   uint8_t data[];
-} LCEC_CONF_SDOCONF_T;
+} ECAT_CONF_SDOCONF_T;
 
 typedef struct {
-  LCEC_CONF_TYPE_T confType;
+  ECAT_CONF_TYPE_T confType;
   uint8_t drive;
   uint16_t idn;
   ec_al_state_t state;
   size_t length;
   uint8_t data[];
-} LCEC_CONF_IDNCONF_T;
+} ECAT_CONF_IDNCONF_T;
 
 typedef union {
   hal_bit_t bit;
   hal_s32_t s32;
   hal_u32_t u32;
   hal_float_t flt;
-  char str[LCEC_CONF_STR_MAXLEN];
-} LCEC_CONF_MODPARAM_VAL_T;
+  char str[ECAT_CONF_STR_MAXLEN];
+} ECAT_CONF_MODPARAM_VAL_T;
 
 typedef struct {
-  LCEC_CONF_TYPE_T confType;
+  ECAT_CONF_TYPE_T confType;
   int id;
-  char name[LCEC_CONF_STR_MAXLEN];
-  LCEC_CONF_MODPARAM_VAL_T value;
-} LCEC_CONF_MODPARAM_T;
+  char name[ECAT_CONF_STR_MAXLEN];
+  ECAT_CONF_MODPARAM_VAL_T value;
+} ECAT_CONF_MODPARAM_T;
 
 #endif

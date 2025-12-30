@@ -18,27 +18,33 @@
 
 /// @file
 
-#ifndef _LCEC_RTAPI_H_
-#define _LCEC_RTAPI_H_
+#ifndef _ECAT_RTAPI_USER_H_
+#define _ECAT_RTAPI_USER_H_
 
-#include <rtapi.h>
-#include <rtapi_stdint.h>
+#include <sched.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/time.h>
+#include <time.h>
 
-// hack to identify LinuxCNC >= 2.8
-#ifdef RTAPI_UINT64_MAX
-#include <rtapi_mutex.h>
-#endif
+static inline void *ecat_zalloc(size_t size) {
+  void *p = malloc(size);
+  if (p) memset(p, 0, size);
+  return p;
+}
+#define ecat_free(ptr) free(ptr)
 
-#ifdef __KERNEL__
-#include "lcec_rtapi_kmod.h"
-#else
-#include "lcec_rtapi_user.h"
-#endif
+#define ecat_gettimeofday(x) gettimeofday(x, NULL)
 
-#if defined RTAPI_SERIAL && RTAPI_SERIAL >= 2
-#define lcec_rtapi_shmem_getptr(id, ptr) rtapi_shmem_getptr(id, ptr, NULL)
-#else
-#define lcec_rtapi_shmem_getptr(id, ptr) rtapi_shmem_getptr(id, ptr)
-#endif
+#define ECAT_MS_TO_TICKS(x) (x / 10)
+static inline long ecat_get_ticks(void) {
+  struct timespec tp;
+  clock_gettime(CLOCK_MONOTONIC, &tp);
+  return ((long)(tp.tv_sec * 100LL)) + (tp.tv_nsec / 10000000L);
+}
+
+#define ecat_schedule() sched_yield()
+
+static inline long long ecat_mod_64(long long val, unsigned long div) { return val % div; }
 
 #endif

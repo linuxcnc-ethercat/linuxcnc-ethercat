@@ -19,10 +19,10 @@
 /// @file
 /// @brief Modparam-handling library code
 
-#include "lcec.h"
+#include "ecat.h"
 
-/// @brief Cound the number of entries in a `lcec_modparam_desc_t[]`.
-int lcec_modparam_desc_len(const lcec_modparam_desc_t *mp) {
+/// @brief Cound the number of entries in a `ecat_modparam_desc_t[]`.
+int ecat_modparam_desc_len(const ecat_modparam_desc_t *mp) {
   int l;
 
   if (mp == NULL) return 0;
@@ -33,8 +33,8 @@ int lcec_modparam_desc_len(const lcec_modparam_desc_t *mp) {
   return l;
 }
 
-/// @brief Cound the number of entries in a `lcec_modparam_doc_t[]`.
-int lcec_modparam_doc_len(const lcec_modparam_doc_t *mp) {
+/// @brief Cound the number of entries in a `ecat_modparam_doc_t[]`.
+int ecat_modparam_doc_len(const ecat_modparam_doc_t *mp) {
   int l;
 
   if (mp == NULL) return 0;
@@ -45,14 +45,14 @@ int lcec_modparam_doc_len(const lcec_modparam_doc_t *mp) {
   return l;
 }
 
-lcec_modparam_desc_t *lcec_modparam_desc_concat(lcec_modparam_desc_t const *a, lcec_modparam_desc_t const *b) {
+ecat_modparam_desc_t *ecat_modparam_desc_concat(ecat_modparam_desc_t const *a, ecat_modparam_desc_t const *b) {
   int a_len, b_len, i;
-  lcec_modparam_desc_t *c;
+  ecat_modparam_desc_t *c;
 
-  a_len = lcec_modparam_desc_len(a);
-  b_len = lcec_modparam_desc_len(b);
+  a_len = ecat_modparam_desc_len(a);
+  b_len = ecat_modparam_desc_len(b);
 
-  c = LCEC_ALLOCATE_ARRAY(lcec_modparam_desc_t, (a_len + b_len + 1));
+  c = ECAT_ALLOCATE_ARRAY(ecat_modparam_desc_t, (a_len + b_len + 1));
 
   for (i = 0; i < a_len; i++) {
     c[i] = a[i];
@@ -66,17 +66,17 @@ lcec_modparam_desc_t *lcec_modparam_desc_concat(lcec_modparam_desc_t const *a, l
 }
 
 /// @brief Merge the docs and config values for entries in a with values from b.
-lcec_modparam_desc_t *lcec_modparam_desc_merge_docs(lcec_modparam_desc_t const *a, lcec_modparam_doc_t const *b) {
+ecat_modparam_desc_t *ecat_modparam_desc_merge_docs(ecat_modparam_desc_t const *a, ecat_modparam_doc_t const *b) {
   int a_len, b_len, i, j;
-  lcec_modparam_desc_t const *aa;
-  lcec_modparam_doc_t const *bb;
-  lcec_modparam_desc_t *c, *cc;
+  ecat_modparam_desc_t const *aa;
+  ecat_modparam_doc_t const *bb;
+  ecat_modparam_desc_t *c, *cc;
 
-  a_len = lcec_modparam_desc_len(a);
-  b_len = lcec_modparam_doc_len(b);
+  a_len = ecat_modparam_desc_len(a);
+  b_len = ecat_modparam_doc_len(b);
 
   // Duplicate a into c
-  c = LCEC_ALLOCATE_ARRAY(lcec_modparam_desc_t, a_len + 1);
+  c = ECAT_ALLOCATE_ARRAY(ecat_modparam_desc_t, a_len + 1);
 
   for (j = 0; j < a_len; j++) {
     aa = a + j;

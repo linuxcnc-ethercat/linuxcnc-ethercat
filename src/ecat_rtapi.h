@@ -18,29 +18,27 @@
 
 /// @file
 
-#ifndef _LCEC_RTAPI_KMOD_H_
-#define _LCEC_RTAPI_KMOD_H_
+#ifndef _ECAT_RTAPI_H_
+#define _ECAT_RTAPI_H_
 
-#include <linux/jiffies.h>
-#include <linux/math64.h>
-#include <linux/sched.h>
-#include <linux/slab.h>
-#include <linux/time.h>
+#include <rtapi.h>
+#include <rtapi_stdint.h>
 
-#define lcec_zalloc(size) kzalloc(size, GFP_KERNEL)
-#define lcec_free(ptr)    kfree(ptr)
+// hack to identify LinuxCNC >= 2.8
+#ifdef RTAPI_UINT64_MAX
+#include <rtapi_mutex.h>
+#endif
 
-#define lcec_gettimeofday(x) do_gettimeofday(x)
+#ifdef __KERNEL__
+#include "ecat_rtapi_kmod.h"
+#else
+#include "ecat_rtapi_user.h"
+#endif
 
-#define LCEC_MS_TO_TICKS(x) (HZ * x / 1000)
-#define lcec_get_ticks()    ((long)jiffies)
-
-#define lcec_schedule() schedule()
-
-static inline long long lcec_mod_64(long long val, unsigned long div) {
-  s32 rem;
-  div_s64_rem(val, div, &rem);
-  return rem;
-}
+#if defined RTAPI_SERIAL && RTAPI_SERIAL >= 2
+#define ecat_rtapi_shmem_getptr(id, ptr) rtapi_shmem_getptr(id, ptr, NULL)
+#else
+#define ecat_rtapi_shmem_getptr(id, ptr) rtapi_shmem_getptr(id, ptr)
+#endif
 
 #endif

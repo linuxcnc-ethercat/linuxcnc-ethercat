@@ -18,33 +18,29 @@
 
 /// @file
 
-#ifndef _LCEC_RTAPI_USER_H_
-#define _LCEC_RTAPI_USER_H_
+#ifndef _ECAT_RTAPI_KMOD_H_
+#define _ECAT_RTAPI_KMOD_H_
 
-#include <sched.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/time.h>
-#include <time.h>
+#include <linux/jiffies.h>
+#include <linux/math64.h>
+#include <linux/sched.h>
+#include <linux/slab.h>
+#include <linux/time.h>
 
-static inline void *lcec_zalloc(size_t size) {
-  void *p = malloc(size);
-  if (p) memset(p, 0, size);
-  return p;
+#define ecat_zalloc(size) kzalloc(size, GFP_KERNEL)
+#define ecat_free(ptr)    kfree(ptr)
+
+#define ecat_gettimeofday(x) do_gettimeofday(x)
+
+#define ECAT_MS_TO_TICKS(x) (HZ * x / 1000)
+#define ecat_get_ticks()    ((long)jiffies)
+
+#define ecat_schedule() schedule()
+
+static inline long long ecat_mod_64(long long val, unsigned long div) {
+  s32 rem;
+  div_s64_rem(val, div, &rem);
+  return rem;
 }
-#define lcec_free(ptr) free(ptr)
-
-#define lcec_gettimeofday(x) gettimeofday(x, NULL)
-
-#define LCEC_MS_TO_TICKS(x) (x / 10)
-static inline long lcec_get_ticks(void) {
-  struct timespec tp;
-  clock_gettime(CLOCK_MONOTONIC, &tp);
-  return ((long)(tp.tv_sec * 100LL)) + (tp.tv_nsec / 10000000L);
-}
-
-#define lcec_schedule() sched_yield()
-
-static inline long long lcec_mod_64(long long val, unsigned long div) { return val % div; }
 
 #endif

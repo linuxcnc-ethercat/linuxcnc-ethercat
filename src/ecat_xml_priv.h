@@ -18,51 +18,51 @@
 
 /// @file
 
-#ifndef _LCEC_CONF_PRIV_H_
-#define _LCEC_CONF_PRIV_H_
+#ifndef _ECAT_CONF_PRIV_H_
+#define _ECAT_CONF_PRIV_H_
 
 #include <expat.h>
 
 #define BUFFSIZE 8192
 
-struct LCEC_CONF_XML_HANLDER;
+struct ECAT_CONF_XML_HANLDER;
 
-typedef struct LCEC_CONF_XML_INST {
+typedef struct ECAT_CONF_XML_INST {
   XML_Parser parser;
-  const struct LCEC_CONF_XML_HANLDER *states;
+  const struct ECAT_CONF_XML_HANLDER *states;
   int state;
-} LCEC_CONF_XML_INST_T;
+} ECAT_CONF_XML_INST_T;
 
-typedef struct LCEC_CONF_XML_HANLDER {
+typedef struct ECAT_CONF_XML_HANLDER {
   const char *el;
   int state_from;
   int state_to;
-  void (*start_handler)(struct LCEC_CONF_XML_INST *inst, int next, const char **attr);
-  void (*end_handler)(struct LCEC_CONF_XML_INST *inst, int next);
-} LCEC_CONF_XML_HANLDER_T;
+  void (*start_handler)(struct ECAT_CONF_XML_INST *inst, int next, const char **attr);
+  void (*end_handler)(struct ECAT_CONF_XML_INST *inst, int next);
+} ECAT_CONF_XML_HANLDER_T;
 
-typedef struct LCEC_CONF_OUTBUF_ITEM {
+typedef struct ECAT_CONF_OUTBUF_ITEM {
   size_t len;
-  struct LCEC_CONF_OUTBUF_ITEM *next;
-} LCEC_CONF_OUTBUF_ITEM_T;
+  struct ECAT_CONF_OUTBUF_ITEM *next;
+} ECAT_CONF_OUTBUF_ITEM_T;
 
 typedef struct {
-  LCEC_CONF_OUTBUF_ITEM_T *head;
-  LCEC_CONF_OUTBUF_ITEM_T *tail;
+  ECAT_CONF_OUTBUF_ITEM_T *head;
+  ECAT_CONF_OUTBUF_ITEM_T *tail;
   size_t len;
-} LCEC_CONF_OUTBUF_T;
+} ECAT_CONF_OUTBUF_T;
 
 extern const char *modname;
 
 #define ADD_OUTPUT_BUFFER(buf, type) ((type *)addOutputBuffer(buf, sizeof(type)))
 
-void initOutputBuffer(LCEC_CONF_OUTBUF_T *buf);
-void *addOutputBuffer(LCEC_CONF_OUTBUF_T *buf, size_t len);
-void copyFreeOutputBuffer(LCEC_CONF_OUTBUF_T *buf, char *dest);
+void initOutputBuffer(ECAT_CONF_OUTBUF_T *buf);
+void *addOutputBuffer(ECAT_CONF_OUTBUF_T *buf, size_t len);
+void copyFreeOutputBuffer(ECAT_CONF_OUTBUF_T *buf, char *dest);
 
-int parseIcmds(LCEC_CONF_SLAVE_T *slave, LCEC_CONF_OUTBUF_T *outputBuf, const char *filename);
+int parseIcmds(ECAT_CONF_SLAVE_T *slave, ECAT_CONF_OUTBUF_T *outputBuf, const char *filename);
 
-int initXmlInst(LCEC_CONF_XML_INST_T *inst, const LCEC_CONF_XML_HANLDER_T *states);
+int initXmlInst(ECAT_CONF_XML_INST_T *inst, const ECAT_CONF_XML_HANLDER_T *states);
 
 int parseHex(const char *s, int slen, uint8_t *buf);
 

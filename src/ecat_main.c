@@ -25,8 +25,8 @@
 #include <stdio.h>
 #endif
 
-#include "devices/lcec_generic.h"
-#include "lcec.h"
+#include "devices/ecat_generic.h"
+#include "ecat.h"
 #include "rtapi_app.h"
 //#include <linuxcnc/rtapi_mutex.h>
 
@@ -35,89 +35,93 @@ MODULE_AUTHOR("Sascha Ittner <sascha.ittner@modusoft.de>")
 MODULE_DESCRIPTION("Driver for EtherCAT devices")
 
 /// @brief Global HAL Pins
-static const lcec_pindesc_t master_global_pins[] = {
-    {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, slaves_responding), "%s.slaves-responding"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_master_data_t, state_init), "%s.state-init"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_master_data_t, state_preop), "%s.state-preop"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_master_data_t, state_safeop), "%s.state-safeop"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_master_data_t, state_op), "%s.state-op"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_master_data_t, link_up), "%s.link-up"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_master_data_t, all_op), "%s.all-op"},
+static const ecat_pindesc_t master_global_pins[] = {
+    {HAL_U32, HAL_OUT, offsetof(ecat_master_data_t, slaves_responding), "%s.slaves-responding"},
+    {HAL_BIT, HAL_OUT, offsetof(ecat_master_data_t, state_init), "%s.state-init"},
+    {HAL_BIT, HAL_OUT, offsetof(ecat_master_data_t, state_preop), "%s.state-preop"},
+    {HAL_BIT, HAL_OUT, offsetof(ecat_master_data_t, state_safeop), "%s.state-safeop"},
+    {HAL_BIT, HAL_OUT, offsetof(ecat_master_data_t, state_op), "%s.state-op"},
+    {HAL_BIT, HAL_OUT, offsetof(ecat_master_data_t, link_up), "%s.link-up"},
+    {HAL_BIT, HAL_OUT, offsetof(ecat_master_data_t, all_op), "%s.all-op"},
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
 /// @brief Master HAL pins
-static const lcec_pindesc_t master_pins[] = {
+static const ecat_pindesc_t master_pins[] = {
 #ifdef RTAPI_TASK_PLL_SUPPORT
-    {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_err), "%s.pll-err"},
-    {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_out), "%s.pll-out"},
-    {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, pll_reset_cnt), "%s.pll-reset-count"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_master_data_t, dc_phased), "%s.dc-phased"},
-    {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, app_phase), "%s.app-phase"},
-    {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, phase_jitter_out), "%s.phase-jitter"},
-    {HAL_S32, HAL_IN, offsetof(lcec_master_data_t, drift_mode), "%s.drift-mode"},
-    {HAL_S32, HAL_IN, offsetof(lcec_master_data_t, pll_drift), "%s.pll-drift"},
-    {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_final), "%s.pll-final"},
+    {HAL_S32, HAL_OUT, offsetof(ecat_master_data_t, pll_err), "%s.pll-err"},
+    {HAL_S32, HAL_OUT, offsetof(ecat_master_data_t, pll_out), "%s.pll-out"},
+    {HAL_S32, HAL_IN, offsetof(ecat_master_data_t, pll_drift), "%s.pll-drift"},
+    {HAL_U32, HAL_OUT, offsetof(ecat_master_data_t, pll_reset_cnt), "%s.pll-reset-count"},
+    {HAL_S32, HAL_OUT, offsetof(ecat_master_data_t, app_phase), "%s.app-phase"},
+    {HAL_S32, HAL_OUT, offsetof(ecat_master_data_t, app_phase_startup), "%s.app-phase-startup"},
+    {HAL_S32, HAL_OUT, offsetof(ecat_master_data_t, phase_diff), "%s.phase-diff"},
+    {HAL_S32, HAL_OUT, offsetof(ecat_master_data_t, auto_drift_val), "%s.auto-drift-val"},
+    {HAL_S32, HAL_OUT, offsetof(ecat_master_data_t, auto_drift_calc), "%s.auto-drift-calc"},
+    {HAL_BIT, HAL_OUT, offsetof(ecat_master_data_t, pll_locked), "%s.pll-locked"},
+    {HAL_S32, HAL_IN, offsetof(ecat_master_data_t, auto_drift_mode), "%s.auto-drift-mode"},
+    {HAL_S32, HAL_IN, offsetof(ecat_master_data_t, pll_correction_offset), "%s.pll-correction-offset"},
+    {HAL_S32, HAL_OUT, offsetof(ecat_master_data_t, pll_correction_final), "%s.pll-correction-final"},
 #endif
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
 /// @brief Master params
-static const lcec_paramdesc_t master_params[] = {
+static const ecat_paramdesc_t master_params[] = {
 #ifdef RTAPI_TASK_PLL_SUPPORT
-    {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, pll_step), "%s.pll-step"},
-    {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, pll_max_err), "%s.pll-max-err"},
+    {HAL_U32, HAL_RW, offsetof(ecat_master_data_t, pll_step), "%s.pll-step"},
+    {HAL_U32, HAL_RW, offsetof(ecat_master_data_t, pll_max_err), "%s.pll-max-err"},
 #endif
     {HAL_TYPE_UNSPECIFIED},
 };
 
 /// @brief Basic Slave pins
-static const lcec_pindesc_t slave_pins[] = {
-    {HAL_BIT, HAL_OUT, offsetof(lcec_slave_state_t, online), "%s.%s.%s.slave-online"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_slave_state_t, operational), "%s.%s.%s.slave-oper"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_slave_state_t, state_init), "%s.%s.%s.slave-state-init"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_slave_state_t, state_preop), "%s.%s.%s.slave-state-preop"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_slave_state_t, state_safeop), "%s.%s.%s.slave-state-safeop"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_slave_state_t, state_op), "%s.%s.%s.slave-state-op"},
+static const ecat_pindesc_t slave_pins[] = {
+    {HAL_BIT, HAL_OUT, offsetof(ecat_slave_state_t, online), "%s.%s.%s.slave-online"},
+    {HAL_BIT, HAL_OUT, offsetof(ecat_slave_state_t, operational), "%s.%s.%s.slave-oper"},
+    {HAL_BIT, HAL_OUT, offsetof(ecat_slave_state_t, state_init), "%s.%s.%s.slave-state-init"},
+    {HAL_BIT, HAL_OUT, offsetof(ecat_slave_state_t, state_preop), "%s.%s.%s.slave-state-preop"},
+    {HAL_BIT, HAL_OUT, offsetof(ecat_slave_state_t, state_safeop), "%s.%s.%s.slave-state-safeop"},
+    {HAL_BIT, HAL_OUT, offsetof(ecat_slave_state_t, state_op), "%s.%s.%s.slave-state-op"},
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
-static lcec_master_t *first_master = NULL;
-static lcec_master_t *last_master = NULL;
-extern int lcec_comp_id;
+static ecat_master_t *first_master = NULL;
+static ecat_master_t *last_master = NULL;
+extern int ecat_comp_id;
 
-static lcec_master_data_t *global_hal_data;
+static ecat_master_data_t *global_hal_data;
 static ec_master_state_t global_ms;
 
-int lcec_parse_config(void);
-void lcec_clear_config(void);
+int ecat_parse_config(void);
+void ecat_clear_config(void);
 
 #ifdef __KERNEL__
-static void lcec_request_lock(void *data);
-static void lcec_release_lock(void *data);
+static void ecat_request_lock(void *data);
+static void ecat_release_lock(void *data);
 #endif
 
-lcec_master_data_t *lcec_init_master_hal(const char *pfx, int global);
-lcec_slave_state_t *lcec_init_slave_state_hal(char *master_name, char *slave_name);
-void lcec_update_master_hal(lcec_master_data_t *hal_data, ec_master_state_t *ms);
-void lcec_update_slave_state_hal(lcec_slave_state_t *hal_data, ec_slave_config_state_t *ss);
+ecat_master_data_t *ecat_init_master_hal(const char *pfx, int global);
+ecat_slave_state_t *ecat_init_slave_state_hal(char *master_name, char *slave_name);
+void ecat_update_master_hal(ecat_master_data_t *hal_data, ec_master_state_t *ms);
+void ecat_update_slave_state_hal(ecat_slave_state_t *hal_data, ec_slave_config_state_t *ss);
 
-void lcec_read_all(void *arg, long period);
-void lcec_write_all(void *arg, long period);
-void lcec_read_master(void *arg, long period);
-void lcec_write_master(void *arg, long period);
-static int lcec_activate_master(lcec_master_t *master);
+void ecat_read_all(void *arg, long period);
+void ecat_write_all(void *arg, long period);
+void ecat_read_master(void *arg, long period);
+void ecat_write_master(void *arg, long period);
 
 static void sigsegv_handler(int sig);
 
 /// @brief Main entrypoint from LinuxCNC
 int rtapi_app_main(void) {
   int slave_count;
-  lcec_master_t *master;
-  lcec_slave_t *slave;
+  ecat_master_t *master;
+  ecat_slave_t *slave;
   char name[HAL_NAME_LEN + 1];
-  lcec_slave_sdoconf_t *sdo_config;
-  lcec_slave_idnconf_t *idn_config;
+  ecat_slave_sdoconf_t *sdo_config;
+  ecat_slave_idnconf_t *idn_config;
+  struct timeval tv;
   int pdo_entry_count = 0;
 
 #ifndef __KERNEL
@@ -133,18 +137,18 @@ int rtapi_app_main(void) {
 #endif
 
   // connect to the HAL
-  if ((lcec_comp_id = hal_init(LCEC_MODULE_NAME)) < 0) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_init() failed\n");
+  if ((ecat_comp_id = hal_init(ECAT_MODULE_NAME)) < 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "hal_init() failed\n");
     goto fail0;
   }
 
   // parse configuration
-  if ((slave_count = lcec_parse_config()) < 0) {
+  if ((slave_count = ecat_parse_config()) < 0) {
     goto fail1;
   }
 
   // init global hal data
-  if ((global_hal_data = lcec_init_master_hal(LCEC_MODULE_NAME, 1)) == NULL) {
+  if ((global_hal_data = ecat_init_master_hal(ECAT_MODULE_NAME, 1)) == NULL) {
     goto fail2;
   }
 
@@ -152,18 +156,18 @@ int rtapi_app_main(void) {
   for (master = first_master; master != NULL; master = master->next) {
     // request ethercat master
     if (!(master->master = ecrt_request_master(master->index))) {
-      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "requesting master %s (index %d) failed\n", master->name, master->index);
+      rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "requesting master %s (index %d) failed\n", master->name, master->index);
       goto fail2;
     }
 
 #ifdef __KERNEL__
     // register callbacks
-    ecrt_master_callbacks(master->master, lcec_request_lock, lcec_release_lock, master);
+    ecrt_master_callbacks(master->master, ecat_request_lock, ecat_release_lock, master);
 #endif
 
     // create domain
     if (!(master->domain = ecrt_master_create_domain(master->master))) {
-      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s domain creation failed\n", master->name);
+      rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "master %s domain creation failed\n", master->name);
       goto fail2;
     }
 
@@ -171,24 +175,24 @@ int rtapi_app_main(void) {
     for (slave = master->first_slave; slave != NULL; slave = slave->next) {
       // read slave config
 
-      rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "calling ecrt_master_slave_config for slave %s.%s\n", master->name, slave->name);
+      rtapi_print_msg(RTAPI_MSG_DBG, ECAT_MSG_PFX "calling ecrt_master_slave_config for slave %s.%s\n", master->name, slave->name);
       if (!(slave->config = ecrt_master_slave_config(master->master, 0, slave->index, slave->vid, slave->pid))) {
-        rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "fail to read slave %s.%s configuration\n", master->name, slave->name);
+        rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "fail to read slave %s.%s configuration\n", master->name, slave->name);
         goto fail2;
       }
 
       // initialize sdos
       if (slave->sdo_config != NULL) {
         for (sdo_config = slave->sdo_config; sdo_config->index != 0xffff;
-             sdo_config = (lcec_slave_sdoconf_t *)&sdo_config->data[sdo_config->length]) {
-          if (sdo_config->subindex == LCEC_CONF_SDO_COMPLETE_SUBIDX) {
+             sdo_config = (ecat_slave_sdoconf_t *)&sdo_config->data[sdo_config->length]) {
+          if (sdo_config->subindex == ECAT_CONF_SDO_COMPLETE_SUBIDX) {
             if (ecrt_slave_config_complete_sdo(slave->config, sdo_config->index, &sdo_config->data[0], sdo_config->length) != 0) {
-              rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to configure slave %s.%s sdo %04x (complete)\n", master->name,
+              rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "failed to configure slave %s.%s sdo %04x (complete)\n", master->name,
                   slave->name, sdo_config->index);
             }
           } else {
-            if (lcec_write_sdo(slave, sdo_config->index, sdo_config->subindex, &sdo_config->data[0], sdo_config->length) != 0) {
-              rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to configure slave %s.%s sdo %04x:%02x\n", master->name, slave->name,
+            if (ecat_write_sdo(slave, sdo_config->index, sdo_config->subindex, &sdo_config->data[0], sdo_config->length) != 0) {
+              rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "failed to configure slave %s.%s sdo %04x:%02x\n", master->name, slave->name,
                   sdo_config->index, sdo_config->subindex);
             }
           }
@@ -198,27 +202,27 @@ int rtapi_app_main(void) {
       // initialize idns
       if (slave->idn_config != NULL) {
         for (idn_config = slave->idn_config; idn_config->state != 0;
-             idn_config = (lcec_slave_idnconf_t *)&idn_config->data[idn_config->length]) {
+             idn_config = (ecat_slave_idnconf_t *)&idn_config->data[idn_config->length]) {
           if (ecrt_slave_config_idn(
                   slave->config, idn_config->drive, idn_config->idn, idn_config->state, &idn_config->data[0], idn_config->length) != 0) {
-            rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "fail to configure slave %s.%s drive %d idn %c-%d-%d (state %d, length %u)\n",
+            rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "fail to configure slave %s.%s drive %d idn %c-%d-%d (state %d, length %u)\n",
                 master->name, slave->name, idn_config->drive, (idn_config->idn & 0x8000) ? 'P' : 'S', (idn_config->idn >> 12) & 0x0007,
                 idn_config->idn & 0x0fff, idn_config->state, (unsigned int)idn_config->length);
           }
         }
       }
 
-      slave->regs = lcec_allocate_pdo_entry_reg(LCEC_MAX_PDO_REG_COUNT);
+      slave->regs = ecat_allocate_pdo_entry_reg(ECAT_MAX_PDO_REG_COUNT);
       if (slave->regs == NULL) {
-        rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failure allocating PDO entries for slave %s.%s\n", master->name, slave->name);
+        rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "failure allocating PDO entries for slave %s.%s\n", master->name, slave->name);
         goto fail2;
       }
 
       // setup pdos
       if (slave->proc_init != NULL) {
-        rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "proc_init for slave %s.%s\n", master->name, slave->name);
-        if ((slave->proc_init(lcec_comp_id, slave)) != 0) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failure in proc_init for slave %s.%s\n", master->name, slave->name);
+        rtapi_print_msg(RTAPI_MSG_DBG, ECAT_MSG_PFX "proc_init for slave %s.%s\n", master->name, slave->name);
+        if ((slave->proc_init(ecat_comp_id, slave)) != 0) {
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "failure in proc_init for slave %s.%s\n", master->name, slave->name);
           goto fail2;
         }
       }
@@ -226,11 +230,19 @@ int rtapi_app_main(void) {
       // configure dc for this slave
       if (slave->dc_conf != NULL) {
         ecrt_slave_config_dc(slave->config, slave->dc_conf->assignActivate, slave->dc_conf->sync0Cycle, slave->dc_conf->sync0Shift,
-            slave->dc_conf->sync1Cycle, slave->dc_conf->sync1Shift);
+          slave->dc_conf->sync1Cycle, slave->dc_conf->sync1Shift);
         rtapi_print_msg(RTAPI_MSG_DBG,
-            LCEC_MSG_PFX "configuring DC for slave %s.%s: assignActivate=x%x sync0Cycle=%d sync0Shift=%d sync1Cycle=%d sync1Shift=%d\n",
+            ECAT_MSG_PFX "configuring DC for slave %s.%s: assignActivate=x%x sync0Cycle=%d sync0Shift=%d sync1Cycle=%d sync1Shift=%d\n",
             master->name, slave->name, slave->dc_conf->assignActivate, slave->dc_conf->sync0Cycle, slave->dc_conf->sync0Shift,
-            slave->dc_conf->sync1Cycle, slave->dc_conf->sync1Shift);
+          slave->dc_conf->sync1Cycle, slave->dc_conf->sync1Shift);
+#ifdef RTAPI_TASK_PLL_SUPPORT
+        // Store sync0Shift from first DC slave for auto-drift calculation
+        if (master->sync0_shift == 0) {
+          master->sync0_shift = slave->dc_conf->sync0Shift;
+          rtapi_print_msg(RTAPI_MSG_DBG, ECAT_MSG_PFX "stored sync0Shift=%d from slave %s.%s for auto-drift\n",
+              master->sync0_shift, master->name, slave->name);
+        }
+#endif
       }
 
       // Configure the slave's watchdog times.
@@ -240,42 +252,47 @@ int rtapi_app_main(void) {
 
       // configure slave
       if (slave->sync_info != NULL) {
-        rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "sync_info setup for slave %s.%s\n", master->name, slave->name);
+        rtapi_print_msg(RTAPI_MSG_DBG, ECAT_MSG_PFX "sync_info setup for slave %s.%s\n", master->name, slave->name);
         if (ecrt_slave_config_pdos(slave->config, EC_END, slave->sync_info)) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "fail to configure slave %s.%s\n", master->name, slave->name);
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "fail to configure slave %s.%s\n", master->name, slave->name);
           goto fail2;
         }
       }
 
       // export state pins
-      rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "init slave state hal for slave %s.%s\n", master->name, slave->name);
-      if ((slave->hal_state_data = lcec_init_slave_state_hal(master->name, slave->name)) == NULL) {
-        rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failure to export slave pins for slave %s.%s\n", master->name, slave->name);
+      rtapi_print_msg(RTAPI_MSG_DBG, ECAT_MSG_PFX "init slave state hal for slave %s.%s\n", master->name, slave->name);
+      if ((slave->hal_state_data = ecat_init_slave_state_hal(master->name, slave->name)) == NULL) {
+        rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "failure to export slave pins for slave %s.%s\n", master->name, slave->name);
         goto fail2;
       }
 
-      pdo_entry_count += lcec_pdo_entry_reg_len(slave->regs);
+      pdo_entry_count += ecat_pdo_entry_reg_len(slave->regs);
     }
 
-    lcec_pdo_entry_reg_t *master_regs = lcec_allocate_pdo_entry_reg(pdo_entry_count + 1);
+    ecat_pdo_entry_reg_t *master_regs = ecat_allocate_pdo_entry_reg(pdo_entry_count + 1);
     for (slave = master->first_slave; slave != NULL; slave = slave->next) {
-      if (lcec_append_pdo_entry_reg(master_regs, slave->regs) < 0) {
-        rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failure to append PDO entries for slave %s.%s\n", master->name, slave->name);
+      if (ecat_append_pdo_entry_reg(master_regs, slave->regs) < 0) {
+        rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "failure to append PDO entries for slave %s.%s\n", master->name, slave->name);
         goto fail2;
       }
     }
 
     // register PDO entries
-    rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "register PDO entries\n");
+    rtapi_print_msg(RTAPI_MSG_DBG, ECAT_MSG_PFX "register PDO entries\n");
     if (ecrt_domain_reg_pdo_entry_list(master->domain, master_regs->pdo_entry_regs)) {
-      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s PDO entry registration failed\n", master->name);
+      rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "master %s PDO entry registration failed\n", master->name);
       goto fail2;
     }
 
+    // Mark master as not yet activated (will be activated on first read/write call)
+    master->activated = 0;
+    master->process_data = NULL;
+    master->process_data_len = 0;
+
     // init hal data
-    rtapi_snprintf(name, HAL_NAME_LEN, "%s.%s", LCEC_MODULE_NAME, master->name);
-    if ((master->hal_data = lcec_init_master_hal(name, 0)) == NULL) {
-      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failure to init hal pins for slave %s.%s\n", master->name, slave->name);
+    rtapi_snprintf(name, HAL_NAME_LEN, "%s.%s", ECAT_MODULE_NAME, master->name);
+    if ((master->hal_data = ecat_init_master_hal(name, 0)) == NULL) {
+      rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "failure to init hal pins for slave %s.%s\n", master->name, slave->name);
       goto fail2;
     }
 
@@ -284,139 +301,140 @@ int rtapi_app_main(void) {
     master->hal_data->pll_step = master->app_time_period / 1000;
     // set default PLL_MAX_ERR: one period
     master->hal_data->pll_max_err = master->app_time_period;
+    // Initialize auto-drift delay counter (wait 100 cycles before applying)
+    master->hal_data->auto_drift_delay = 100;
+    // Initialize sync0_shift if not set
+    if (master->sync0_shift == 0) {
+      master->sync0_shift = 0;  // Will use 0 if no DC slave found
+    }
 #endif
 
-    // Activate master
-    if (lcec_activate_master(master) != 0) {
-      goto fail2;
-    }
-
     // export read function
-    rtapi_snprintf(name, HAL_NAME_LEN, "%s.%s.read", LCEC_MODULE_NAME, master->name);
-    if (hal_export_funct(name, lcec_read_master, master, 0, 0, lcec_comp_id) != 0) {
-      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s read funct export failed\n", master->name);
+    rtapi_snprintf(name, HAL_NAME_LEN, "%s.%s.read", ECAT_MODULE_NAME, master->name);
+    if (hal_export_funct(name, ecat_read_master, master, 0, 0, ecat_comp_id) != 0) {
+      rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "master %s read funct export failed\n", master->name);
       goto fail2;
     }
     // export write function
-    rtapi_snprintf(name, HAL_NAME_LEN, "%s.%s.write", LCEC_MODULE_NAME, master->name);
-    if (hal_export_funct(name, lcec_write_master, master, 0, 0, lcec_comp_id) != 0) {
-      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s write funct export failed\n", master->name);
+    rtapi_snprintf(name, HAL_NAME_LEN, "%s.%s.write", ECAT_MODULE_NAME, master->name);
+    if (hal_export_funct(name, ecat_write_master, master, 0, 0, ecat_comp_id) != 0) {
+      rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "master %s write funct export failed\n", master->name);
       goto fail2;
     }
   }
 
   // export read-all function
-  rtapi_snprintf(name, HAL_NAME_LEN, "%s.read-all", LCEC_MODULE_NAME);
-  if (hal_export_funct(name, lcec_read_all, NULL, 0, 0, lcec_comp_id) != 0) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "read-all funct export failed\n");
+  rtapi_snprintf(name, HAL_NAME_LEN, "%s.read-all", ECAT_MODULE_NAME);
+  if (hal_export_funct(name, ecat_read_all, NULL, 0, 0, ecat_comp_id) != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "read-all funct export failed\n");
     goto fail2;
   }
   // export write-all function
-  rtapi_snprintf(name, HAL_NAME_LEN, "%s.write-all", LCEC_MODULE_NAME);
-  if (hal_export_funct(name, lcec_write_all, NULL, 0, 0, lcec_comp_id) != 0) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "write-all funct export failed\n");
+  rtapi_snprintf(name, HAL_NAME_LEN, "%s.write-all", ECAT_MODULE_NAME);
+  if (hal_export_funct(name, ecat_write_all, NULL, 0, 0, ecat_comp_id) != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "write-all funct export failed\n");
     goto fail2;
   }
 
-  rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "installed driver for %d slaves\n", slave_count);
-  hal_ready(lcec_comp_id);
+  rtapi_print_msg(RTAPI_MSG_INFO, ECAT_MSG_PFX "installed driver for %d slaves\n", slave_count);
+  hal_ready(ecat_comp_id);
   return 0;
 
 fail2:
-  rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failure, clearing config\n");
-  lcec_clear_config();
+  rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "failure, clearing config\n");
+  ecat_clear_config();
 fail1:
-  rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exiting\n");
-  hal_exit(lcec_comp_id);
+  rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "exiting\n");
+  hal_exit(ecat_comp_id);
 fail0:
-  rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "returning -EINVAL\n");
+  rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "returning -EINVAL\n");
   return -EINVAL;
 }
 
 /// @brief Shut down LinuxCNC-Ethercat
 void rtapi_app_exit(void) {
-  lcec_master_t *master;
+  ecat_master_t *master;
 
   // deactivate all masters
   for (master = first_master; master != NULL; master = master->next) {
     ecrt_master_deactivate(master->master);
   }
 
-  lcec_clear_config();
-  hal_exit(lcec_comp_id);
+  ecat_clear_config();
+  hal_exit(ecat_comp_id);
 }
 
-/// @brief Parse configuration from `lcec_conf`.
-int lcec_parse_config(void) {
+/// @brief Parse configuration from `ecat_xml`.
+int ecat_parse_config(void) {
   int shmem_id;
   void *shmem_ptr;
-  LCEC_CONF_HEADER_T *header;
+  ECAT_CONF_HEADER_T *header;
   size_t length;
   char *conf;
   int slave_count;
-  const lcec_typelist_t *type;
-  lcec_master_t *master;
-  lcec_slave_t *slave;
-  lcec_slave_dc_t *dc;
-  lcec_slave_watchdog_t *wd;
-  LCEC_CONF_TYPE_T conf_type;
-  LCEC_CONF_MASTER_T *master_conf;
-  LCEC_CONF_SLAVE_T *slave_conf;
-  LCEC_CONF_DC_T *dc_conf;
-  LCEC_CONF_WATCHDOG_T *wd_conf;
-  LCEC_CONF_SYNCMANAGER_T *sm_conf;
-  LCEC_CONF_PDO_T *pdo_conf;
-  LCEC_CONF_PDOENTRY_T *pe_conf;
-  LCEC_CONF_COMPLEXENTRY_T *ce_conf;
-  LCEC_CONF_SDOCONF_T *sdo_conf;
-  LCEC_CONF_IDNCONF_T *idn_conf;
-  LCEC_CONF_MODPARAM_T *modparam_conf;
+  const ecat_typelist_t *type;
+  ecat_master_t *master;
+  ecat_slave_t *slave;
+  ecat_slave_dc_t *dc;
+  ecat_slave_watchdog_t *wd;
+  ECAT_CONF_TYPE_T conf_type;
+  ECAT_CONF_MASTER_T *master_conf;
+  ECAT_CONF_SLAVE_T *slave_conf;
+  ECAT_CONF_DC_T *dc_conf;
+  ECAT_CONF_WATCHDOG_T *wd_conf;
+  ECAT_CONF_SYNCMANAGER_T *sm_conf;
+  ECAT_CONF_PDO_T *pdo_conf;
+  ECAT_CONF_PDOENTRY_T *pe_conf;
+  ECAT_CONF_COMPLEXENTRY_T *ce_conf;
+  ECAT_CONF_SDOCONF_T *sdo_conf;
+  ECAT_CONF_IDNCONF_T *idn_conf;
+  ECAT_CONF_MODPARAM_T *modparam_conf;
   ec_pdo_entry_info_t *generic_pdo_entries;
   ec_pdo_info_t *generic_pdos;
   ec_sync_info_t *generic_sync_managers;
-  lcec_generic_pin_t *generic_hal_data;
+  ecat_generic_pin_t *generic_hal_data;
   hal_pin_dir_t generic_hal_dir;
-  lcec_slave_sdoconf_t *sdo_config;
-  lcec_slave_idnconf_t *idn_config;
-  lcec_slave_modparam_t *modparams;
+  ecat_slave_sdoconf_t *sdo_config;
+  ecat_slave_idnconf_t *idn_config;
+  ecat_slave_modparam_t *modparams;
 
   // initialize list
   first_master = NULL;
   last_master = NULL;
 
   // try to get config header
-  shmem_id = rtapi_shmem_new(LCEC_CONF_SHMEM_KEY, lcec_comp_id, sizeof(LCEC_CONF_HEADER_T));
+  shmem_id = rtapi_shmem_new(ECAT_CONF_SHMEM_KEY, ecat_comp_id, sizeof(ECAT_CONF_HEADER_T));
   if (shmem_id < 0) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "couldn't allocate user/RT shared memory\n");
+    rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "couldn't allocate user/RT shared memory\n");
     goto fail0;
   }
-  if (lcec_rtapi_shmem_getptr(shmem_id, &shmem_ptr) < 0) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "couldn't map user/RT shared memory\n");
+  if (ecat_rtapi_shmem_getptr(shmem_id, &shmem_ptr) < 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "couldn't map user/RT shared memory\n");
     goto fail1;
   }
 
   // check magic, get length and close shmem
-  header = (LCEC_CONF_HEADER_T *)shmem_ptr;
-  if (header->magic != LCEC_CONF_SHMEM_MAGIC) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "lcec_conf is not loaded\n");
+  header = (ECAT_CONF_HEADER_T *)shmem_ptr;
+  if (header->magic != ECAT_CONF_SHMEM_MAGIC) {
+    rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "ecat_xml is not loaded\n");
     goto fail1;
   }
   length = header->length;
-  rtapi_shmem_delete(shmem_id, lcec_comp_id);
+  rtapi_shmem_delete(shmem_id, ecat_comp_id);
 
   // reopen shmem with proper size
-  shmem_id = rtapi_shmem_new(LCEC_CONF_SHMEM_KEY, lcec_comp_id, sizeof(LCEC_CONF_HEADER_T) + length);
+  shmem_id = rtapi_shmem_new(ECAT_CONF_SHMEM_KEY, ecat_comp_id, sizeof(ECAT_CONF_HEADER_T) + length);
   if (shmem_id < 0) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "couldn't allocate user/RT shared memory\n");
+    rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "couldn't allocate user/RT shared memory\n");
     goto fail0;
   }
-  if (lcec_rtapi_shmem_getptr(shmem_id, &shmem_ptr) < 0) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "couldn't map user/RT shared memory\n");
+  if (ecat_rtapi_shmem_getptr(shmem_id, &shmem_ptr) < 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "couldn't map user/RT shared memory\n");
     goto fail1;
   }
 
   // get pointer to config
-  conf = ((char *)shmem_ptr + sizeof(LCEC_CONF_HEADER_T));
+  conf = ((char *)shmem_ptr + sizeof(ECAT_CONF_HEADER_T));
 
   // process config items
   slave_count = 0;
@@ -431,41 +449,37 @@ int lcec_parse_config(void) {
   idn_config = NULL;
   pe_conf = NULL;
   modparams = NULL;
-  while ((conf_type = ((LCEC_CONF_NULL_T *)conf)->confType) != lcecConfTypeNone) {
+  while ((conf_type = ((ECAT_CONF_NULL_T *)conf)->confType) != lcecConfTypeNone) {
     // get type
     switch (conf_type) {
       case lcecConfTypeMaster:
         // get config token
-        master_conf = (LCEC_CONF_MASTER_T *)conf;
-        conf += sizeof(LCEC_CONF_MASTER_T);
+        master_conf = (ECAT_CONF_MASTER_T *)conf;
+        conf += sizeof(ECAT_CONF_MASTER_T);
 
         // alloc master memory
-        master = LCEC_ALLOCATE(lcec_master_t);
+        master = ECAT_ALLOCATE(ecat_master_t);
 
         // initialize master
         master->index = master_conf->index;
-        strncpy(master->name, master_conf->name, LCEC_CONF_STR_MAXLEN);
-        master->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
+        strncpy(master->name, master_conf->name, ECAT_CONF_STR_MAXLEN);
+        master->name[ECAT_CONF_STR_MAXLEN - 1] = 0;
         master->app_time_period = master_conf->appTimePeriod;
         master->sync_ref_cycles = master_conf->refClockSyncCycles;
-        // sync_to_ref_clock controls clock sync direction:
-        //   false: master is clock source, DC syncs to master (default)
-        //   true: DC is clock source, servo thread syncs to DC via PLL
-        // Note: legacy mode - negative refClockSyncCycles enables sync_to_ref_clock
-        master->sync_to_ref_clock = master_conf->syncToRefClock;
+	      master->sync_to_ref_clock = master_conf->syncToRefClock;
 
         // add master to list
-        LCEC_LIST_APPEND(first_master, last_master, master);
+        ECAT_LIST_APPEND(first_master, last_master, master);
         break;
 
       case lcecConfTypeSlave:
         // get config token
-        slave_conf = (LCEC_CONF_SLAVE_T *)conf;
-        conf += sizeof(LCEC_CONF_SLAVE_T);
+        slave_conf = (ECAT_CONF_SLAVE_T *)conf;
+        conf += sizeof(ECAT_CONF_SLAVE_T);
 
         // check for master
         if (master == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Master node for slave missing\n");
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "Master node for slave missing\n");
           goto fail2;
         }
 
@@ -473,16 +487,16 @@ int lcec_parse_config(void) {
         if (!strcmp(slave_conf->type_name, "generic")) {
           type = NULL;
         } else {
-          type = lcec_findslavetype(slave_conf->type_name);
+          type = ecat_findslavetype(slave_conf->type_name);
 
           if (type == NULL) {
-            rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "Invalid slave name \"%s\"\n", slave_conf->type_name);
+            rtapi_print_msg(RTAPI_MSG_WARN, ECAT_MSG_PFX "Invalid slave name \"%s\"\n", slave_conf->type_name);
             continue;
           }
         }
 
         // create new slave
-        slave = LCEC_ALLOCATE(lcec_slave_t);
+        slave = ECAT_ALLOCATE(ecat_slave_t);
 
         // initialize slave
         generic_pdo_entries = NULL;
@@ -495,24 +509,24 @@ int lcec_parse_config(void) {
         modparams = NULL;
 
         slave->index = slave_conf->index;
-        strncpy(slave->name, slave_conf->name, LCEC_CONF_STR_MAXLEN);
-        slave->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
+        strncpy(slave->name, slave_conf->name, ECAT_CONF_STR_MAXLEN);
+        slave->name[ECAT_CONF_STR_MAXLEN - 1] = 0;
         slave->master = master;
 
         // add slave to list
-        LCEC_LIST_APPEND(master->first_slave, master->last_slave, slave);
+        ECAT_LIST_APPEND(master->first_slave, master->last_slave, slave);
 
         if (type != NULL) {
           // normal slave
           if (slave_conf->vid)
             slave->vid = slave_conf->vid;
           else
-            slave->vid = type->vid;
+          slave->vid = type->vid;
 
           if (slave_conf->pid)
             slave->pid = slave_conf->pid;
           else
-            slave->pid = type->pid;
+          slave->pid = type->pid;
 
           slave->is_fsoe_logic = type->is_fsoe_logic;
           slave->proc_preinit = type->proc_preinit;
@@ -523,50 +537,50 @@ int lcec_parse_config(void) {
           slave->vid = slave_conf->vid;
           slave->pid = slave_conf->pid;
           slave->generic_pdo_entry_count = slave_conf->pdoMappingCount;
-          slave->proc_init = lcec_generic_init;
+          slave->proc_init = ecat_generic_init;
 
           // alloc hal memory
-          if ((generic_hal_data = LCEC_HAL_ALLOCATE_ARRAY(lcec_generic_pin_t, slave_conf->pdoMappingCount)) == NULL) {
-            rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", master->name, slave_conf->name);
+          if ((generic_hal_data = ECAT_HAL_ALLOCATE_ARRAY(ecat_generic_pin_t, slave_conf->pdoMappingCount)) == NULL) {
+            rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "hal_malloc() for slave %s.%s failed\n", master->name, slave_conf->name);
             goto fail2;
           }
-          memset(generic_hal_data, 0, sizeof(lcec_generic_pin_t) * slave_conf->pdoMappingCount);
+          memset(generic_hal_data, 0, sizeof(ecat_generic_pin_t) * slave_conf->pdoMappingCount);
 
           // alloc pdo entry memory
-          generic_pdo_entries = LCEC_ALLOCATE_ARRAY(ec_pdo_entry_info_t, slave_conf->pdoEntryCount);
+          generic_pdo_entries = ECAT_ALLOCATE_ARRAY(ec_pdo_entry_info_t, slave_conf->pdoEntryCount);
 
           // alloc pdo memory
-          generic_pdos = LCEC_ALLOCATE_ARRAY(ec_pdo_info_t, slave_conf->pdoCount);
+          generic_pdos = ECAT_ALLOCATE_ARRAY(ec_pdo_info_t, slave_conf->pdoCount);
 
           // alloc sync manager memory
-          generic_sync_managers = LCEC_ALLOCATE_ARRAY(ec_sync_info_t, (slave_conf->syncManagerCount + 1));
+          generic_sync_managers = ECAT_ALLOCATE_ARRAY(ec_sync_info_t, (slave_conf->syncManagerCount + 1));
 
           generic_sync_managers->index = 0xff;
         }
 
         // alloc sdo config memory
         if (slave_conf->sdoConfigLength > 0) {
-          sdo_config = (lcec_slave_sdoconf_t *)lcec_zalloc(slave_conf->sdoConfigLength + sizeof(lcec_slave_sdoconf_t));
+          sdo_config = (ecat_slave_sdoconf_t *)ecat_zalloc(slave_conf->sdoConfigLength + sizeof(ecat_slave_sdoconf_t));
           if (sdo_config == NULL) {
             rtapi_print_msg(
-                RTAPI_MSG_ERR, LCEC_MSG_PFX "Unable to allocate slave %s.%s sdo entry memory\n", master->name, slave_conf->name);
+                RTAPI_MSG_ERR, ECAT_MSG_PFX "Unable to allocate slave %s.%s sdo entry memory\n", master->name, slave_conf->name);
             goto fail2;
           }
         }
 
         // alloc idn config memory
         if (slave_conf->idnConfigLength > 0) {
-          idn_config = (lcec_slave_idnconf_t *)lcec_zalloc(slave_conf->idnConfigLength + sizeof(lcec_slave_idnconf_t));
+          idn_config = (ecat_slave_idnconf_t *)ecat_zalloc(slave_conf->idnConfigLength + sizeof(ecat_slave_idnconf_t));
           if (idn_config == NULL) {
             rtapi_print_msg(
-                RTAPI_MSG_ERR, LCEC_MSG_PFX "Unable to allocate slave %s.%s idn entry memory\n", master->name, slave_conf->name);
+                RTAPI_MSG_ERR, ECAT_MSG_PFX "Unable to allocate slave %s.%s idn entry memory\n", master->name, slave_conf->name);
             goto fail2;
           }
         }
 
         // alloc modparam memory
         if (slave_conf->modParamCount > 0) {
-          modparams = LCEC_ALLOCATE_ARRAY(lcec_slave_modparam_t, (slave_conf->modParamCount + 1));
+          modparams = ECAT_ALLOCATE_ARRAY(ecat_slave_modparam_t, (slave_conf->modParamCount + 1));
           modparams[slave_conf->modParamCount].id = -1;
         }
 
@@ -589,23 +603,23 @@ int lcec_parse_config(void) {
 
       case lcecConfTypeDcConf:
         // get config token
-        dc_conf = (LCEC_CONF_DC_T *)conf;
-        conf += sizeof(LCEC_CONF_DC_T);
+        dc_conf = (ECAT_CONF_DC_T *)conf;
+        conf += sizeof(ECAT_CONF_DC_T);
 
         // check for slave
         if (slave == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Slave node for dc config missing\n");
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "Slave node for dc config missing\n");
           goto fail2;
         }
 
         // check for double dc config
         if (slave->dc_conf != NULL) {
-          rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "Double dc config for slave %s.%s\n", master->name, slave->name);
+          rtapi_print_msg(RTAPI_MSG_WARN, ECAT_MSG_PFX "Double dc config for slave %s.%s\n", master->name, slave->name);
           continue;
         }
 
         // create new dc config
-        dc = LCEC_ALLOCATE(lcec_slave_dc_t);
+        dc = ECAT_ALLOCATE(ecat_slave_dc_t);
 
         // initialize dc conf
         dc->assignActivate = dc_conf->assignActivate;
@@ -620,23 +634,23 @@ int lcec_parse_config(void) {
 
       case lcecConfTypeWatchdog:
         // get config token
-        wd_conf = (LCEC_CONF_WATCHDOG_T *)conf;
-        conf += sizeof(LCEC_CONF_WATCHDOG_T);
+        wd_conf = (ECAT_CONF_WATCHDOG_T *)conf;
+        conf += sizeof(ECAT_CONF_WATCHDOG_T);
 
         // check for slave
         if (slave == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Slave node for watchdog config missing\n");
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "Slave node for watchdog config missing\n");
           goto fail2;
         }
 
         // check for double wd config
         if (slave->wd_conf != NULL) {
-          rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "Double watchdog config for slave %s.%s\n", master->name, slave->name);
+          rtapi_print_msg(RTAPI_MSG_WARN, ECAT_MSG_PFX "Double watchdog config for slave %s.%s\n", master->name, slave->name);
           continue;
         }
 
         // create new wd config
-        wd = LCEC_ALLOCATE(lcec_slave_watchdog_t);
+        wd = ECAT_ALLOCATE(ecat_slave_watchdog_t);
 
         // initialize wd conf
         wd->divider = wd_conf->divider;
@@ -648,18 +662,18 @@ int lcec_parse_config(void) {
 
       case lcecConfTypeSyncManager:
         // get config token
-        sm_conf = (LCEC_CONF_SYNCMANAGER_T *)conf;
-        conf += sizeof(LCEC_CONF_SYNCMANAGER_T);
+        sm_conf = (ECAT_CONF_SYNCMANAGER_T *)conf;
+        conf += sizeof(ECAT_CONF_SYNCMANAGER_T);
 
         // check for syncmanager
         if (generic_sync_managers == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Sync manager for generic device missing\n");
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "Sync manager for generic device missing\n");
           goto fail2;
         }
 
         // check for pdos
         if (generic_pdos == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "PDOs for generic device missing\n");
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "PDOs for generic device missing\n");
           goto fail2;
         }
 
@@ -688,18 +702,18 @@ int lcec_parse_config(void) {
 
       case lcecConfTypePdo:
         // get config token
-        pdo_conf = (LCEC_CONF_PDO_T *)conf;
-        conf += sizeof(LCEC_CONF_PDO_T);
+        pdo_conf = (ECAT_CONF_PDO_T *)conf;
+        conf += sizeof(ECAT_CONF_PDO_T);
 
         // check for pdos
         if (generic_pdos == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "PDOs for generic device missing\n");
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "PDOs for generic device missing\n");
           goto fail2;
         }
 
         // check for pdos entries
         if (generic_pdo_entries == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "PDO entries for generic device missing\n");
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "PDO entries for generic device missing\n");
           goto fail2;
         }
 
@@ -714,24 +728,24 @@ int lcec_parse_config(void) {
 
       case lcecConfTypePdoEntry:
         // get config token
-        pe_conf = (LCEC_CONF_PDOENTRY_T *)conf;
-        conf += sizeof(LCEC_CONF_PDOENTRY_T);
+        pe_conf = (ECAT_CONF_PDOENTRY_T *)conf;
+        conf += sizeof(ECAT_CONF_PDOENTRY_T);
 
         // check for pdos entries
         if (generic_pdo_entries == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "PDO entries for generic device missing\n");
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "PDO entries for generic device missing\n");
           goto fail2;
         }
 
         // check for hal data
         if (generic_hal_data == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "HAL data for generic device missing\n");
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "HAL data for generic device missing\n");
           goto fail2;
         }
 
         // check for hal dir
         if (generic_hal_dir == HAL_DIR_UNSPECIFIED) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "HAL direction for generic device missing\n");
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "HAL direction for generic device missing\n");
           goto fail2;
         }
 
@@ -742,8 +756,8 @@ int lcec_parse_config(void) {
 
         // initialize hal data
         if (pe_conf->halPin[0] != 0) {
-          strncpy(generic_hal_data->name, pe_conf->halPin, LCEC_CONF_STR_MAXLEN);
-          generic_hal_data->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
+          strncpy(generic_hal_data->name, pe_conf->halPin, ECAT_CONF_STR_MAXLEN);
+          generic_hal_data->name[ECAT_CONF_STR_MAXLEN - 1] = 0;
           generic_hal_data->type = pe_conf->halType;
           generic_hal_data->subType = pe_conf->subType;
           generic_hal_data->floatScale = pe_conf->floatScale;
@@ -762,25 +776,25 @@ int lcec_parse_config(void) {
 
       case lcecConfTypeComplexEntry:
         // get config token
-        ce_conf = (LCEC_CONF_COMPLEXENTRY_T *)conf;
-        conf += sizeof(LCEC_CONF_COMPLEXENTRY_T);
+        ce_conf = (ECAT_CONF_COMPLEXENTRY_T *)conf;
+        conf += sizeof(ECAT_CONF_COMPLEXENTRY_T);
 
         // check for pdoEntry
         if (pe_conf == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "pdoEntry for generic device missing\n");
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "pdoEntry for generic device missing\n");
           goto fail2;
         }
 
         // check for hal data
         if (generic_hal_data == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "HAL data for generic device missing\n");
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "HAL data for generic device missing\n");
           goto fail2;
         }
 
         // initialize hal data
         if (ce_conf->halPin[0] != 0) {
-          strncpy(generic_hal_data->name, ce_conf->halPin, LCEC_CONF_STR_MAXLEN);
-          generic_hal_data->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
+          strncpy(generic_hal_data->name, ce_conf->halPin, ECAT_CONF_STR_MAXLEN);
+          generic_hal_data->name[ECAT_CONF_STR_MAXLEN - 1] = 0;
           generic_hal_data->type = ce_conf->halType;
           generic_hal_data->subType = ce_conf->subType;
           generic_hal_data->floatScale = ce_conf->floatScale;
@@ -796,11 +810,11 @@ int lcec_parse_config(void) {
 
       case lcecConfTypeSdoConfig:
         // get config token
-        sdo_conf = (LCEC_CONF_SDOCONF_T *)conf;
-        conf += sizeof(LCEC_CONF_SDOCONF_T) + sdo_conf->length;
+        sdo_conf = (ECAT_CONF_SDOCONF_T *)conf;
+        conf += sizeof(ECAT_CONF_SDOCONF_T) + sdo_conf->length;
 
         if (sdo_config == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "sdo_config is NULL\n");
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "sdo_config is NULL\n");
           goto fail2;
         }
 
@@ -812,17 +826,17 @@ int lcec_parse_config(void) {
         // copy data
         memcpy(sdo_config->data, sdo_conf->data, sdo_config->length);
 
-        sdo_config = (lcec_slave_sdoconf_t *)&sdo_config->data[sdo_config->length];
+        sdo_config = (ecat_slave_sdoconf_t *)&sdo_config->data[sdo_config->length];
         sdo_config->index = 0xffff;
         break;
 
       case lcecConfTypeIdnConfig:
         // get config token
-        idn_conf = (LCEC_CONF_IDNCONF_T *)conf;
-        conf += sizeof(LCEC_CONF_IDNCONF_T) + idn_conf->length;
+        idn_conf = (ECAT_CONF_IDNCONF_T *)conf;
+        conf += sizeof(ECAT_CONF_IDNCONF_T) + idn_conf->length;
 
         if (idn_config == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "idn_config is NULL\n");
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "idn_config is NULL\n");
           goto fail2;
         }
 
@@ -835,22 +849,22 @@ int lcec_parse_config(void) {
         // copy data
         memcpy(idn_config->data, idn_conf->data, idn_config->length);
 
-        idn_config = (lcec_slave_idnconf_t *)&idn_config->data[idn_config->length];
+        idn_config = (ecat_slave_idnconf_t *)&idn_config->data[idn_config->length];
         break;
 
       case lcecConfTypeModParam:
         // get config token
-        modparam_conf = (LCEC_CONF_MODPARAM_T *)conf;
-        conf += sizeof(LCEC_CONF_MODPARAM_T);
+        modparam_conf = (ECAT_CONF_MODPARAM_T *)conf;
+        conf += sizeof(ECAT_CONF_MODPARAM_T);
 
         // check for slave
         if (slave == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Slave node for modparam config missing\n");
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "Slave node for modparam config missing\n");
           goto fail2;
         }
 
         if (modparams == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "modparams is nullg\n");
+          rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "modparams is nullg\n");
           goto fail2;
         }
 
@@ -864,13 +878,13 @@ int lcec_parse_config(void) {
         break;
 
       default:
-        rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Unknown config item type\n");
+        rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "Unknown config item type\n");
         goto fail2;
     }
   }
 
   // close shmem
-  rtapi_shmem_delete(shmem_id, lcec_comp_id);
+  rtapi_shmem_delete(shmem_id, ecat_comp_id);
 
   // allocate PDO entity memory
   for (master = first_master; master != NULL; master = master->next) {
@@ -896,17 +910,17 @@ int lcec_parse_config(void) {
   return slave_count;
 
 fail2:
-  lcec_clear_config();
+  ecat_clear_config();
 fail1:
-  rtapi_shmem_delete(shmem_id, lcec_comp_id);
+  rtapi_shmem_delete(shmem_id, ecat_comp_id);
 fail0:
   return -1;
 }
 
 /// @brief Clear configuration.
-void lcec_clear_config(void) {
-  lcec_master_t *master, *prev_master;
-  lcec_slave_t *slave, *prev_slave;
+void ecat_clear_config(void) {
+  ecat_master_t *master, *prev_master;
+  ecat_slave_t *slave, *prev_slave;
 
   // iterate all masters
   master = last_master;
@@ -937,38 +951,38 @@ void lcec_clear_config(void) {
 
 #ifdef __KERNEL__
 /// @brief Lock LCEC.
-static void lcec_request_lock(void *data) {
-  lcec_master_t *master = (lcec_master_t *)data;
+static void ecat_request_lock(void *data) {
+  ecat_master_t *master = (ecat_master_t *)data;
   rtapi_mutex_get(&master->mutex);
 }
 
 /// @brief Unlock LCEC.
-static void lcec_release_lock(void *data) {
-  lcec_master_t *master = (lcec_master_t *)data;
+static void ecat_release_lock(void *data) {
+  ecat_master_t *master = (ecat_master_t *)data;
   rtapi_mutex_give(&master->mutex);
 }
 #endif
 
 /// @brief Initialize LinuxCNC HAL pins for the master device.
-lcec_master_data_t *lcec_init_master_hal(const char *pfx, int global) {
-  lcec_master_data_t *hal_data;
+ecat_master_data_t *ecat_init_master_hal(const char *pfx, int global) {
+  ecat_master_data_t *hal_data;
 
   // alloc hal data
-  if ((hal_data = LCEC_HAL_ALLOCATE(lcec_master_data_t)) == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for %s failed\n", pfx);
+  if ((hal_data = ECAT_HAL_ALLOCATE(ecat_master_data_t)) == NULL) {
+    rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "hal_malloc() for %s failed\n", pfx);
     return NULL;
   }
-  memset(hal_data, 0, sizeof(lcec_master_data_t));
+  memset(hal_data, 0, sizeof(ecat_master_data_t));
 
   // export pins
-  if (lcec_pin_newf_list(hal_data, master_global_pins, pfx) != 0) {
+  if (ecat_pin_newf_list(hal_data, master_global_pins, pfx) != 0) {
     return NULL;
   }
   if (!global) {
-    if (lcec_pin_newf_list(hal_data, master_pins, pfx) != 0) {
+    if (ecat_pin_newf_list(hal_data, master_pins, pfx) != 0) {
       return NULL;
     }
-    if (lcec_param_newf_list(hal_data, master_params, pfx) != 0) {
+    if (ecat_param_newf_list(hal_data, master_params, pfx) != 0) {
       return NULL;
     }
   }
@@ -977,18 +991,18 @@ lcec_master_data_t *lcec_init_master_hal(const char *pfx, int global) {
 }
 
 /// @brief Initialize generic LinuxCNC HAL pins for a slave
-lcec_slave_state_t *lcec_init_slave_state_hal(char *master_name, char *slave_name) {
-  lcec_slave_state_t *hal_data;
+ecat_slave_state_t *ecat_init_slave_state_hal(char *master_name, char *slave_name) {
+  ecat_slave_state_t *hal_data;
 
   // alloc hal data
-  if ((hal_data = LCEC_HAL_ALLOCATE(lcec_slave_state_t)) == NULL) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for %s.%s.%s failed\n", LCEC_MODULE_NAME, master_name, slave_name);
+  if ((hal_data = ECAT_HAL_ALLOCATE(ecat_slave_state_t)) == NULL) {
+    rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "hal_malloc() for %s.%s.%s failed\n", ECAT_MODULE_NAME, master_name, slave_name);
     return NULL;
   }
-  memset(hal_data, 0, sizeof(lcec_slave_state_t));
+  memset(hal_data, 0, sizeof(ecat_slave_state_t));
 
   // export pins
-  if (lcec_pin_newf_list(hal_data, slave_pins, LCEC_MODULE_NAME, master_name, slave_name) != 0) {
+  if (ecat_pin_newf_list(hal_data, slave_pins, ECAT_MODULE_NAME, master_name, slave_name) != 0) {
     return NULL;
   }
 
@@ -996,7 +1010,7 @@ lcec_slave_state_t *lcec_init_slave_state_hal(char *master_name, char *slave_nam
 }
 
 /// @brief Update HAL pins for the master.
-void lcec_update_master_hal(lcec_master_data_t *hal_data, ec_master_state_t *ms) {
+void ecat_update_master_hal(ecat_master_data_t *hal_data, ec_master_state_t *ms) {
   *(hal_data->slaves_responding) = ms->slaves_responding;
   *(hal_data->state_init) = (ms->al_states & 0x01) != 0;
   *(hal_data->state_preop) = (ms->al_states & 0x02) != 0;
@@ -1007,7 +1021,7 @@ void lcec_update_master_hal(lcec_master_data_t *hal_data, ec_master_state_t *ms)
 }
 
 /// @brief Update generic HAL pins for a slave.
-void lcec_update_slave_state_hal(lcec_slave_state_t *hal_data, ec_slave_config_state_t *ss) {
+void ecat_update_slave_state_hal(ecat_slave_state_t *hal_data, ec_slave_config_state_t *ss) {
   *(hal_data->online) = ss->online;
   *(hal_data->operational) = ss->operational;
   *(hal_data->state_init) = (ss->al_state & 0x01) != 0;
@@ -1017,8 +1031,8 @@ void lcec_update_slave_state_hal(lcec_slave_state_t *hal_data, ec_slave_config_s
 }
 
 /// @brief Update all input pins across all masters and slaves.
-void lcec_read_all(void *arg, long period) {
-  lcec_master_t *master;
+void ecat_read_all(void *arg, long period) {
+  ecat_master_t *master;
 
   // initialize global state
   global_ms.slaves_responding = 0;
@@ -1027,27 +1041,27 @@ void lcec_read_all(void *arg, long period) {
 
   // process slaves
   for (master = first_master; master != NULL; master = master->next) {
-    lcec_read_master(master, period);
+    ecat_read_master(master, period);
   }
 
   // update global state pins
-  lcec_update_master_hal(global_hal_data, &global_ms);
+  ecat_update_master_hal(global_hal_data, &global_ms);
 }
 
 /// @brief Update all output pins across all masters and slaves.
-void lcec_write_all(void *arg, long period) {
-  lcec_master_t *master;
+void ecat_write_all(void *arg, long period) {
+  ecat_master_t *master;
 
   // process slaves
   for (master = first_master; master != NULL; master = master->next) {
-    lcec_write_master(master, period);
+    ecat_write_master(master, period);
   }
 }
 
 /// @brief Activate master on first call (delayed activation)
 /// This ensures activation happens inside the real-time thread,
 /// minimizing the delay between activation and cyclic communication.
-static int lcec_activate_master(lcec_master_t *master) {
+static int ecat_activate_master(ecat_master_t *master) {
   struct timeval tv;
   
   uint64_t initial_app_time;
@@ -1056,10 +1070,10 @@ static int lcec_activate_master(lcec_master_t *master) {
     return 0;  // Already activated
   }
   
-  rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "Activating master %s (delayed activation in RT thread)\n", master->name);
+  rtapi_print_msg(RTAPI_MSG_INFO, ECAT_MSG_PFX "Activating master %s (delayed activation in RT thread)\n", master->name);
   
   // Initialize application time base (now we're in the RT thread context)
-  lcec_gettimeofday(&tv);
+  ecat_gettimeofday(&tv);
   master->app_time_base = EC_TIMEVAL2NANO(tv);
   
 #ifdef RTAPI_TASK_PLL_SUPPORT
@@ -1074,7 +1088,7 @@ static int lcec_activate_master(lcec_master_t *master) {
   master->app_time_base -= rtapi_get_time();
   initial_app_time = master->app_time_base + rtapi_get_time();
   if (master->sync_to_ref_clock) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "unable to sync master %s cycle to reference clock, RTAPI_TASK_PLL_SUPPORT not present\n",
+    rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "unable to sync master %s cycle to reference clock, RTAPI_TASK_PLL_SUPPORT not present\n",
         master->name);
   }
 #endif
@@ -1085,11 +1099,11 @@ static int lcec_activate_master(lcec_master_t *master) {
 #ifdef RTAPI_TASK_PLL_SUPPORT
   master->dc_ref_time = initial_app_time;  // Record the same value we sent to kernel
 #endif
-  rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "Initial app_time set to %llu\n", (unsigned long long)initial_app_time);
+  rtapi_print_msg(RTAPI_MSG_INFO, ECAT_MSG_PFX "Initial app_time set to %llu\n", (unsigned long long)initial_app_time);
 
   // Activate master
   if (ecrt_master_activate(master->master)) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to activate master %s\n", master->name);
+    rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "failed to activate master %s\n", master->name);
     return -1;
   }
   
@@ -1098,22 +1112,31 @@ static int lcec_activate_master(lcec_master_t *master) {
   master->process_data_len = ecrt_domain_size(master->domain);
   
   master->activated = 1;
-  rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "Master %s activated successfully\n", master->name);
+  rtapi_print_msg(RTAPI_MSG_INFO, ECAT_MSG_PFX "Master %s activated successfully\n", master->name);
   
   return 0;
 }
 
 /// @brief Read all input pins on a master and its slaves.
-void lcec_read_master(void *arg, long period) {
-  lcec_master_t *master = (lcec_master_t *)arg;
-  lcec_slave_t *slave;
+void ecat_read_master(void *arg, long period) {
+  ecat_master_t *master = (ecat_master_t *)arg;
+  ecat_slave_t *slave;
   int check_states;
+
+  // Delayed activation: activate master on first read call
+  // Per EtherCAT standard, the cycle starts with receive, so activate here
+  // First receive will be empty (no frame sent yet), but that's safe
+  if (!master->activated) {
+    if (ecat_activate_master(master) != 0) {
+      return;  // Activation failed, skip this cycle
+    }
+  }
 
   // check period
   if (period != master->period_last) {
     master->period_last = period;
     if (master->app_time_period != period) {
-      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Invalid appTimePeriod of %u for master %s (should be %ld).\n", master->app_time_period,
+      rtapi_print_msg(RTAPI_MSG_ERR, ECAT_MSG_PFX "Invalid appTimePeriod of %u for master %s (should be %ld).\n", master->app_time_period,
           master->name, period);
     }
   }
@@ -1124,7 +1147,7 @@ void lcec_read_master(void *arg, long period) {
     master->state_update_timer -= period;
   } else {
     check_states = 1;
-    master->state_update_timer = LCEC_STATE_UPDATE_PERIOD;
+    master->state_update_timer = ECAT_STATE_UPDATE_PERIOD;
   }
 
   // receive process data & master state
@@ -1137,7 +1160,7 @@ void lcec_read_master(void *arg, long period) {
   rtapi_mutex_give(&master->mutex);
 
   // update state pins
-  lcec_update_master_hal(master->hal_data, &master->ms);
+  ecat_update_master_hal(master->hal_data, &master->ms);
 
   // update global state
   global_ms.slaves_responding += master->ms.slaves_responding;
@@ -1153,7 +1176,7 @@ void lcec_read_master(void *arg, long period) {
     }
     rtapi_mutex_give(&master->mutex);
     if (check_states) {
-      lcec_update_slave_state_hal(slave->hal_state_data, &slave->state);
+      ecat_update_slave_state_hal(slave->hal_state_data, &slave->state);
     }
 
     // process read function
@@ -1164,14 +1187,16 @@ void lcec_read_master(void *arg, long period) {
 }
 
 /// @brief Write all output pins on a master and its slaves.
-void lcec_write_master(void *arg, long period) {
-  lcec_master_t *master = (lcec_master_t *)arg;
-  lcec_slave_t *slave;
+void ecat_write_master(void *arg, long period) {
+  ecat_master_t *master = (ecat_master_t *)arg;
+  ecat_slave_t *slave;
   uint64_t app_time;
   long long now;
 #ifdef RTAPI_TASK_PLL_SUPPORT
   long long ref;
-  lcec_master_data_t *hal_data;
+  uint32_t dc_time;
+  int dc_time_valid;
+  ecat_master_data_t *hal_data;
 #endif
 
   // Skip if master not yet activated (should have been activated in read)
@@ -1222,6 +1247,12 @@ void lcec_write_master(void *arg, long period) {
     master->sync_ref_cnt--;
   }
 
+#ifdef RTAPI_TASK_PLL_SUPPORT
+  // Get reference clock time (always try, useful for monitoring even if not syncing)
+  dc_time = 0;
+  dc_time_valid = (ecrt_master_reference_clock_time(master->master, &dc_time) == 0);
+#endif
+
   // sync slaves to ref clock
   ecrt_master_sync_slave_clocks(master->master);
 
@@ -1235,146 +1266,77 @@ void lcec_write_master(void *arg, long period) {
   hal_data = master->hal_data;
   *(hal_data->pll_err) = 0;
   *(hal_data->pll_out) = 0;
-  *(hal_data->dc_phased) = 0;
-
+  *(hal_data->pll_locked) = 0;
+  
   // Calculate app_phase: our execution position in local cycle
   // This is relative to dc_ref_time (the time we set at activation)
   // app_phase = (app_time - dc_ref_time) % period
   // This represents where we are within the current cycle since activation
   int32_t current_app_phase = (int32_t)((app_time - master->dc_ref_time) % master->app_time_period);
+  int32_t half_period = master->app_time_period / 2;
   *(hal_data->app_phase) = current_app_phase;
-  int32_t app_period = (int32_t)master->app_time_period;
   
-  // When sync_to_ref_clock = false: adjust app_phase to a stable position using PLL
-  // This is needed because app_phase is random at startup
-  if (!master->sync_to_ref_clock) {
-    #define PHASE_MEASURE_CYCLES 100
-    
-    if (!hal_data->phase_calibrated) {
-      // Phase 1: Measure app_phase jitter over PHASE_MEASURE_CYCLES cycles
-      if (hal_data->phase_measure_cnt == 0) {
-        // First measurement - initialize
-        hal_data->phase_min = current_app_phase;
-        hal_data->phase_max = current_app_phase;
-        hal_data->phase_last = current_app_phase;
-        hal_data->phase_measure_cnt = 1;
-      } else if (hal_data->phase_measure_cnt < PHASE_MEASURE_CYCLES) {
-        // Detect boundary crossing: if difference > app_period/2, phase wrapped around
-        int32_t diff = current_app_phase - hal_data->phase_last;
-        int32_t adjusted_phase = current_app_phase;
-        
-        // Unwrap: if phase jumped by more than half period, adjust for continuity
-        if (diff > app_period / 2) {
-          // Jumped from low to high (e.g., 10000 -> 990000), adjust down
-          adjusted_phase = current_app_phase - app_period;
-        } else if (diff < -app_period / 2) {
-          // Jumped from high to low (e.g., 990000 -> 10000), adjust up
-          adjusted_phase = current_app_phase + app_period;
-        }
-        
-        // Update min/max with adjusted phase
-        if (adjusted_phase < hal_data->phase_min) {
-          hal_data->phase_min = adjusted_phase;
-        }
-        if (adjusted_phase > hal_data->phase_max) {
-          hal_data->phase_max = adjusted_phase;
-        }
-        
-        hal_data->phase_last = current_app_phase;
-        hal_data->phase_measure_cnt++;
-      } else {
-        // Phase 2: Calculate jitter and target position
-        hal_data->phase_jitter = hal_data->phase_max - hal_data->phase_min;
-        *(hal_data->phase_jitter_out) = hal_data->phase_jitter;  // Output jitter for debugging
-        
-        // Target position: jitter + jitter/2 = jitter * 1.5
-        int32_t target = hal_data->phase_jitter + hal_data->phase_jitter / 2;
-        
-        // Limit target to app_period/8
-        int32_t max_target = app_period / 8;
-        if (target > max_target) {
-          target = max_target;
-        }
-        
-        hal_data->phase_target = target;
-        hal_data->phase_calibrated = 1;
-        
-        rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "Phase calibration complete: jitter=%d target=%d\n",
-            hal_data->phase_jitter, hal_data->phase_target);
-      }
-    } else {
-      // Phase 3: Use PLL to move app_phase towards target
-      // Calculate error: how far are we from target?
-      // Positive error (app_phase > target) means we need to speed up to reduce app_phase
-      // Negative error (app_phase < target) means we need to slow down to increase app_phase
-      int32_t phase_error = current_app_phase - hal_data->phase_target;
-      
-      // Handle wrap-around: if error > app_period/2, adjust
-      if (phase_error > app_period / 2) {
-        phase_error -= app_period;
-      } else if (phase_error < -app_period / 2) {
-        phase_error += app_period;
-      }
-      
-      // Set pll_err for monitoring
-      *(hal_data->pll_err) = phase_error;
-      
-      // Check if phased (within 10% of jitter or 1% of app_period, whichever is larger)
-      int32_t lock_threshold = hal_data->phase_jitter;
-      if (lock_threshold < app_period / 100) {
-        lock_threshold = app_period / 100;
-      }
-      if (abs(phase_error) < lock_threshold) {
-        *(hal_data->dc_phased) = 1;
-      }
-      
-      // BANG-BANG control: small steps to move towards target
-      // Positive pll_out = slow down = app_phase increases
-      // Negative pll_out = speed up = app_phase decreases
-      if (*(hal_data->dc_phased)) {
-        *(hal_data->pll_out) = 0;
-      } else {
-        if (phase_error > 0) {
-          *(hal_data->pll_out) = -(hal_data->pll_step);  // Speed up to reduce app_phase
-        } else if (phase_error < 0) {
-          *(hal_data->pll_out) = hal_data->pll_step;  // Slow down to increase app_phase
-        }
-      }
-
-    }
+  // Capture app_phase at startup (first 100 cycles, use average for stability)
+  // This is done BEFORE PLL starts adjusting, so we get the initial phase
+  if (hal_data->startup_captured < 100) {
+    // Simple averaging (good enough since app_phase doesn't wrap much in early cycles)
+    hal_data->startup_phase = 
+      (hal_data->startup_phase * hal_data->startup_captured + current_app_phase) / 
+      (hal_data->startup_captured + 1);
+    hal_data->startup_captured++;
+    *(hal_data->app_phase_startup) = hal_data->startup_phase;
   }
   
-  // Read DC reference clock time (local variable)
-  uint32_t dc_time = 0;
-  int dc_time_valid = (ecrt_master_reference_clock_time(master->master, &dc_time) == 0);
+  // phase_diff is now the same as app_phase since app_phase is already
+  // relative to dc_ref_time: app_phase = (app_time - dc_ref_time) % period
+  *(hal_data->phase_diff) = current_app_phase;
   
   // the first read dc_time value seems to be invalid, so wait for two successive successful reads
   if (dc_time_valid && master->dc_time_valid_last) {
     // Raw offset between app_time and dc_time (this is what varies at each startup)
     int32_t raw_offset = master->app_time_last - dc_time;
     
-    // Apply drift compensation based on drift-mode:
-    //   0 = simple: (app_period - app_phase) % app_period
-    //   1 = manual: use pll-drift pin value
-    //   other = same as 1 (manual)
-    int32_t drift = 0;
-    int32_t mode = *(hal_data->drift_mode);
-    if (master->sync_to_ref_clock) {
-      if (mode == 0) {
-        // Mode 0: simple - (app_period - app_phase) % app_period
-        int32_t calc_val = (app_period - current_app_phase) % app_period;
-        if (calc_val < 0) calc_val += app_period;
+    // Apply drift compensation based on auto-drift-mode:
+    //   0 = manual: use pll-drift pin value
+    //   1 = phase_diff based: (sync0shift - phase_diff + period/2) % period
+    //   2 = simple: (period - phase_diff) % period
+    //   other = same as 0 (manual)
+    int32_t drift = *(hal_data->pll_drift);
+    int32_t mode = *(hal_data->auto_drift_mode);
+    int32_t phase_d = *(hal_data->phase_diff);
+    int32_t period = (int32_t)master->app_time_period;
+    
+    // Calculate auto-drift value for mode 1: (sync0shift - phase_diff + period/2) % period
+    int32_t calc_val = (master->sync0_shift - phase_d + period / 2) % period;
+    if (calc_val < 0) calc_val += period;
+    *(hal_data->auto_drift_calc) = calc_val;
+    
+    if (mode == 1) {
+      // Mode 1: sync0shift based - wait for delay cycles before applying
+      if (hal_data->auto_drift_delay > 0) {
+        hal_data->auto_drift_delay--;
+      } else {
         drift = calc_val;
       }
+    } else if (mode == 2) {
+      // Mode 2: simple - (period - phase_diff) % period
+      int32_t calc_val2 = (period - phase_d) % period;
+      if (calc_val2 < 0) calc_val2 += period;
+      if (hal_data->auto_drift_delay > 0) {
+        hal_data->auto_drift_delay--;
+      } else {
+        drift = calc_val2;
+      }
     }
-    // Mode 1 or other: use manual pll-drift value
+    // Mode 0 or other: use manual pll-drift value
     
+    *(hal_data->auto_drift_val) = drift;
     *(hal_data->pll_err) = raw_offset + drift;
     
-    // PLL is considered phased if error is within 10% of period
+    // PLL is considered locked if error is within 10% of period
     int32_t lock_threshold = master->app_time_period / 10;
     if (abs(*(hal_data->pll_err)) < lock_threshold) {
-      *(hal_data->dc_phased) = 1;
+      *(hal_data->pll_locked) = 1;
     }
     
     // Only run automatic PLL adjustment when sync_to_ref_clock is enabled
@@ -1389,28 +1351,21 @@ void lcec_write_master(void *arg, long period) {
         dc_time_valid = 0;
         // increment reset counter to document this event
         (*(hal_data->pll_reset_cnt))++;
-      } else {
-        if (*(hal_data->dc_phased)) {
-          *(hal_data->pll_out) = 0;
-        } else {
-          *(hal_data->pll_out) = (*(hal_data->pll_err) < 0) ? -(hal_data->pll_step) : (hal_data->pll_step);
+        // Reset auto-drift delay on resync
+        if (*(hal_data->auto_drift_mode) == 1 || *(hal_data->auto_drift_mode) == 2) {
+          hal_data->auto_drift_delay = 100;
         }
+      } else {
+        *(hal_data->pll_out) = (*(hal_data->pll_err) < 0) ? -(hal_data->pll_step) : (hal_data->pll_step);
       }
     }
-    // Note: When sync_to_ref_clock = false, pll_out is set in the phase calibration code above
+    // When sync_to_ref_clock = false: pll_out stays 0, but pll_err is still calculated for monitoring
+    // Manual pll_correction_offset can still be used for debugging
   }
 
   // Apply PLL correction with debug offset
-  // pll_out is set by PLL controller (both sync_to_ref_clock modes now use PLL)
-  // pll_drift is user-provided offset for debugging
-  // Once phased, stop adjusting to maintain stability
-  int32_t pll_correction;
-  if (*(hal_data->dc_phased)) {
-    pll_correction = *(hal_data->pll_drift);  // Stop adjusting once phased
-  } else {
-    pll_correction = *(hal_data->pll_out) + *(hal_data->pll_drift);
-  }
-  *(hal_data->pll_final) = pll_correction;
+  int32_t pll_correction = *(hal_data->pll_out) + *(hal_data->pll_correction_offset);
+  *(hal_data->pll_correction_final) = pll_correction;
   rtapi_task_pll_set_correction(pll_correction);
   
   master->app_time_last = (uint32_t)app_time;
@@ -1424,8 +1379,8 @@ void lcec_write_master(void *arg, long period) {
 
 // Print a stack backtrace.  This presumably won't work in kernel
 // mode.  It doesn't work *quite* right, in that it doesn't pick up
-// symbols from lcec.so, but the offsets are enough to debug many
-// problems.  Use `objdump --syms /usr/lib/linuxcnc/modules/lcec.so |
+// symbols from ecat.so, but the offsets are enough to debug many
+// problems.  Use `objdump --syms /usr/lib/linuxcnc/modules/ecat.so |
 // sort | less` to extract a sorted list of symbols if needed.
 static void sigsegv_handler(int sig) {
   struct sigaction act;

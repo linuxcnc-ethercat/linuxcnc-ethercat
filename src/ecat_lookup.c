@@ -18,7 +18,7 @@
 
 #include <strings.h>
 
-#include "lcec.h"
+#include "ecat.h"
 
 /// @file
 /// @brief Code for implementing string lookup tables.
@@ -38,7 +38,7 @@
 /// @param key The string to look for.
 /// @param default_value The value to return if the lookup fails.
 /// @return The value that matches the key, or default if it is not found.
-int lcec_lookupint(const lcec_lookuptable_int_t *table, const char *key, int default_value) {
+int ecat_lookupint(const ecat_lookuptable_int_t *table, const char *key, int default_value) {
   while (table && table->key) {
     if (!strcmp(table->key, key)) {
       return table->value;
@@ -62,7 +62,7 @@ int lcec_lookupint(const lcec_lookuptable_int_t *table, const char *key, int def
 /// @param key The string to look for.
 /// @param default_value The value to return if the lookup fails.
 /// @return The value that matches the key, or default if it is not found.
-int lcec_lookupint_i(const lcec_lookuptable_int_t *table, const char *key, int default_value) {
+int ecat_lookupint_i(const ecat_lookuptable_int_t *table, const char *key, int default_value) {
   while (table && table->key) {
     if (!strcasecmp(table->key, key)) {
       return table->value;
@@ -84,7 +84,7 @@ int lcec_lookupint_i(const lcec_lookuptable_int_t *table, const char *key, int d
 /// @param key The string to look for.
 /// @param default_value The value to return if the lookup fails.
 /// @return The value that matches the key, or default if it is not found.
-double lcec_lookupdouble(const lcec_lookuptable_double_t *table, const char *key, double default_value) {
+double ecat_lookupdouble(const ecat_lookuptable_double_t *table, const char *key, double default_value) {
   while (table && table->key) {
     if (!strcmp(table->key, key)) {
       return table->value;
@@ -108,7 +108,7 @@ double lcec_lookupdouble(const lcec_lookuptable_double_t *table, const char *key
 /// @param key The string to look for.
 /// @param default_value The value to return if the lookup fails.
 /// @return The value that matches the key, or default if it is not found.
-double lcec_lookupdouble_i(const lcec_lookuptable_double_t *table, const char *key, double default_value) {
+double ecat_lookupdouble_i(const ecat_lookuptable_double_t *table, const char *key, double default_value) {
   while (table && table->key) {
     if (!strcasecmp(table->key, key)) {
       return table->value;

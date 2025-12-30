@@ -24,30 +24,30 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "lcec_conf.h"
-#include "lcec_conf_priv.h"
+#include "ecat_xml.h"
+#include "ecat_xml_priv.h"
 
-const char *modname = "lcec_conf";
+const char *modname = "ecat_xml";
 
 static void xml_start_handler(void *data, const char *el, const char **attr);
 static void xml_end_handler(void *data, const char *el);
 
-void initOutputBuffer(LCEC_CONF_OUTBUF_T *buf) {
+void initOutputBuffer(ECAT_CONF_OUTBUF_T *buf) {
   buf->head = NULL;
   buf->tail = NULL;
   buf->len = 0;
 }
 
-void *addOutputBuffer(LCEC_CONF_OUTBUF_T *buf, size_t len) {
-  LCEC_CONF_OUTBUF_T *p = (LCEC_CONF_OUTBUF_T *)calloc(1, sizeof(LCEC_CONF_OUTBUF_ITEM_T) + len);
+void *addOutputBuffer(ECAT_CONF_OUTBUF_T *buf, size_t len) {
+  ECAT_CONF_OUTBUF_T *p = (ECAT_CONF_OUTBUF_T *)calloc(1, sizeof(ECAT_CONF_OUTBUF_ITEM_T) + len);
   if (p == NULL) {
     fprintf(stderr, "%s: ERROR: Couldn't allocate memory for config token\n", modname);
     return NULL;
   }
 
   // setup header
-  LCEC_CONF_OUTBUF_ITEM_T *header = (LCEC_CONF_OUTBUF_ITEM_T *)p;
-  p = (LCEC_CONF_OUTBUF_T *)((char *)p + sizeof(LCEC_CONF_OUTBUF_ITEM_T));
+  ECAT_CONF_OUTBUF_ITEM_T *header = (ECAT_CONF_OUTBUF_ITEM_T *)p;
+  p = (ECAT_CONF_OUTBUF_T *)((char *)p + sizeof(ECAT_CONF_OUTBUF_ITEM_T));
   header->len = len;
   buf->len += len;
 
@@ -63,13 +63,13 @@ void *addOutputBuffer(LCEC_CONF_OUTBUF_T *buf, size_t len) {
   return p;
 }
 
-void copyFreeOutputBuffer(LCEC_CONF_OUTBUF_T *buf, char *dest) {
+void copyFreeOutputBuffer(ECAT_CONF_OUTBUF_T *buf, char *dest) {
   char *p;
 
   while (buf->head != NULL) {
     p = (char *)buf->head;
     if (dest != NULL) {
-      memcpy(dest, p + sizeof(LCEC_CONF_OUTBUF_ITEM_T), buf->head->len);
+      memcpy(dest, p + sizeof(ECAT_CONF_OUTBUF_ITEM_T), buf->head->len);
       dest += buf->head->len;
     }
     buf->head = buf->head->next;
@@ -77,7 +77,7 @@ void copyFreeOutputBuffer(LCEC_CONF_OUTBUF_T *buf, char *dest) {
   }
 }
 
-int initXmlInst(LCEC_CONF_XML_INST_T *inst, const LCEC_CONF_XML_HANLDER_T *states) {
+int initXmlInst(ECAT_CONF_XML_INST_T *inst, const ECAT_CONF_XML_HANLDER_T *states) {
   // create xml parser
   inst->parser = XML_ParserCreate(NULL);
   if (inst->parser == NULL) {
@@ -96,8 +96,8 @@ int initXmlInst(LCEC_CONF_XML_INST_T *inst, const LCEC_CONF_XML_HANLDER_T *state
 }
 
 static void xml_start_handler(void *data, const char *el, const char **attr) {
-  LCEC_CONF_XML_INST_T *inst = (LCEC_CONF_XML_INST_T *)data;
-  const LCEC_CONF_XML_HANLDER_T *state;
+  ECAT_CONF_XML_INST_T *inst = (ECAT_CONF_XML_INST_T *)data;
+  const ECAT_CONF_XML_HANLDER_T *state;
 
   for (state = inst->states; state->el != NULL; state++) {
     if (inst->state == state->state_from && (strcmp(el, state->el) == 0)) {
@@ -114,8 +114,8 @@ static void xml_start_handler(void *data, const char *el, const char **attr) {
 }
 
 static void xml_end_handler(void *data, const char *el) {
-  LCEC_CONF_XML_INST_T *inst = (LCEC_CONF_XML_INST_T *)data;
-  const LCEC_CONF_XML_HANLDER_T *state;
+  ECAT_CONF_XML_INST_T *inst = (ECAT_CONF_XML_INST_T *)data;
+  const ECAT_CONF_XML_HANLDER_T *state;
 
   for (state = inst->states; state->el != NULL; state++) {
     if (inst->state == state->state_to && (strcmp(el, state->el) == 0)) {
