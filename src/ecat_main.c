@@ -1319,15 +1319,8 @@ void ecat_write_master(void *arg, long period) {
       // Negative error (app_phase < target) means we need to slow down to increase app_phase
       int32_t phase_error = current_app_phase - hal_data->phase_target;
       
-      // Handle wrap-around: if error > app_period/2, adjust
-      if (phase_error > app_period / 2) {
-        phase_error -= app_period;
-      } else if (phase_error < -app_period / 2) {
-        phase_error += app_period;
-      }
-      
       // Set pll_err for monitoring
-      *(hal_data->pll_err) = raw_offset + drift;
+      //*(hal_data->pll_err) = raw_offset + drift;
       
       // Check if locked (within 10% of jitter or 1% of app_period, whichever is larger)
       int32_t lock_threshold = 0;//hal_data->phase_jitter;
@@ -1336,6 +1329,8 @@ void ecat_write_master(void *arg, long period) {
       }
       if (abs(phase_error) < abs(hal_data->pll_step) * 3 ) {
         *(hal_data->dc_phased) = 1;
+      } else if (abs(phase_error) > abs(hal_data->pll_step) * 20 ) {
+        *(hal_data->dc_phased) = 0;
       }
       
       // BANG-BANG control: small steps to move towards target
