@@ -52,8 +52,8 @@ static const lcec_pindesc_t master_pins[] = {
     {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_err), "%s.pll-err"},
     {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_out), "%s.pll-out"},
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, pll_reset_cnt), "%s.pll-reset-count"},
-    {HAL_BIT, HAL_OUT, offsetof(lcec_master_data_t, dc_phased), "%s.dc-phased"},
     {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, app_phase), "%s.app-phase"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_master_data_t, dc_phased), "%s.dc-phased"},
     {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, phase_jitter_out), "%s.phase-jitter"},
     {HAL_S32, HAL_IN, offsetof(lcec_master_data_t, drift_mode), "%s.drift-mode"},
     {HAL_S32, HAL_IN, offsetof(lcec_master_data_t, pll_drift), "%s.pll-drift"},
@@ -284,6 +284,12 @@ int rtapi_app_main(void) {
     master->hal_data->pll_step = master->app_time_period / 1000;
     // set default PLL_MAX_ERR: one period
     master->hal_data->pll_max_err = master->app_time_period;
+    // Initialize auto-drift delay counter (wait 100 cycles before applying)
+    master->hal_data->auto_drift_delay = 100;
+    // Initialize sync0_shift if not set
+    if (master->sync0_shift == 0) {
+      master->sync0_shift = 0;  // Will use 0 if no DC slave found
+    }
 #endif
 
     // Activate master
@@ -1236,7 +1242,7 @@ void lcec_write_master(void *arg, long period) {
   *(hal_data->pll_err) = 0;
   *(hal_data->pll_out) = 0;
   *(hal_data->dc_phased) = 0;
-
+  
   // Calculate app_phase: our execution position in local cycle
   // This is relative to dc_ref_time (the time we set at activation)
   // app_phase = (app_time - dc_ref_time) % period
@@ -1309,29 +1315,18 @@ void lcec_write_master(void *arg, long period) {
       // Negative error (app_phase < target) means we need to slow down to increase app_phase
       int32_t phase_error = current_app_phase - hal_data->phase_target;
       
-      // Handle wrap-around: if error > app_period/2, adjust
-      if (phase_error > app_period / 2) {
-        phase_error -= app_period;
-      } else if (phase_error < -app_period / 2) {
-        phase_error += app_period;
-      }
-      
       // Set pll_err for monitoring
-      int32_t pll_err = raw_offset + drift;
-      if (pll_err > app_period / 2) {
-        pll_err -= app_period;
-      } else if (pll_err < -app_period / 2) {
-        pll_err += app_period;
-      }
-      *(hal_data->pll_err) = pll_err;
+      //*(hal_data->pll_err) = raw_offset + drift;
       
-      // Check if phased (within 10% of jitter or 1% of app_period, whichever is larger)
-      int32_t lock_threshold = hal_data->phase_jitter;
+      // Check if locked (within 10% of jitter or 1% of app_period, whichever is larger)
+      int32_t lock_threshold = 0;//hal_data->phase_jitter;
       if (lock_threshold < app_period / 100) {
         lock_threshold = app_period / 100;
       }
-      if (abs(phase_error) < lock_threshold) {
+      if (abs(phase_error) < abs(hal_data->pll_step) * 3 ) {
         *(hal_data->dc_phased) = 1;
+      } else if (abs(phase_error) > abs(hal_data->pll_step) * 20 ) {
+        *(hal_data->dc_phased) = 0;
       }
       
       // BANG-BANG control: small steps to move towards target
@@ -1370,7 +1365,11 @@ void lcec_write_master(void *arg, long period) {
         // Mode 0: simple - (app_period - app_phase) % app_period
         int32_t calc_val = (app_period - current_app_phase) % app_period;
         if (calc_val < 0) calc_val += app_period;
-        drift = calc_val;
+        if (hal_data->auto_drift_delay > 0) {
+          hal_data->auto_drift_delay--;
+        } else {
+          drift = calc_val;
+        }
       }
     }
     // Mode 1 or other: use manual pll-drift value

@@ -186,12 +186,13 @@ typedef struct lcec_master_data {
   hal_u32_t pll_max_err;
   hal_u32_t *pll_reset_cnt;
   hal_u32_t dc_phase_max_err;
-  hal_bit_t *dc_phased;            // DC phase synchronization status
   hal_s32_t *app_phase;            // Our execution phase in local cycle (ns, real-time)
+  hal_bit_t *dc_phased;           // PLL lock status indicator
   hal_s32_t *phase_jitter_out;     // Output: measured app_phase jitter amplitude (ns)
   hal_s32_t *drift_mode;            // Input: 0=simple, 1=manual
   hal_s32_t *pll_drift;            // Input: debug offset added to PLL correction (ns)
   hal_s32_t *pll_final;            // Output: final PLL correction value sent to rtapi (ns)
+  int32_t auto_drift_delay;        // Internal: auto-drift delay counter
 #endif
   // Phase calibration for sync_to_ref_clock=false mode
   int32_t phase_measure_cnt;       // Internal: measurement cycle counter
