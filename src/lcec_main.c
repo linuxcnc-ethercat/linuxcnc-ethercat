@@ -1317,7 +1317,13 @@ void lcec_write_master(void *arg, long period) {
       }
       
       // Set pll_err for monitoring
-      *(hal_data->pll_err) = phase_error;
+      int32_t pll_err = raw_offset + drift;
+      if (pll_err > app_period / 2) {
+        pll_err -= app_period;
+      } else if (pll_err < -app_period / 2) {
+        pll_err += app_period;
+      }
+      *(hal_data->pll_err) = pll_err;
       
       // Check if phased (within 10% of jitter or 1% of app_period, whichever is larger)
       int32_t lock_threshold = hal_data->phase_jitter;
@@ -1389,12 +1395,12 @@ void lcec_write_master(void *arg, long period) {
         dc_time_valid = 0;
         // increment reset counter to document this event
         (*(hal_data->pll_reset_cnt))++;
-      } else {
-        if (*(hal_data->dc_phased)) {
-          *(hal_data->pll_out) = 0;
-        } else {
-          *(hal_data->pll_out) = (*(hal_data->pll_err) < 0) ? -(hal_data->pll_step) : (hal_data->pll_step);
+        // Reset auto-drift delay on resync
+        if (*(hal_data->drift_mode) == 0) {
+          hal_data->auto_drift_delay = 100;
         }
+      } else {
+          *(hal_data->pll_out) = (*(hal_data->pll_err) < 0) ? -(hal_data->pll_step) : (hal_data->pll_step);
       }
     }
     // Note: When sync_to_ref_clock = false, pll_out is set in the phase calibration code above
@@ -1405,11 +1411,18 @@ void lcec_write_master(void *arg, long period) {
   // pll_drift is user-provided offset for debugging
   // Once phased, stop adjusting to maintain stability
   int32_t pll_correction;
-  if (*(hal_data->dc_phased)) {
-    pll_correction = *(hal_data->pll_drift);  // Stop adjusting once phased
-  } else {
+  if (master->sync_to_ref_clock) {
+    // sync_to_ref_clock = true: always use PLL output for continuous sync
     pll_correction = *(hal_data->pll_out) + *(hal_data->pll_drift);
+  } else {
+    // sync_to_ref_clock = false: stop adjusting once locked
+    if (*(hal_data->dc_phased)) {
+      pll_correction = *(hal_data->pll_drift);
+    } else {
+      pll_correction = *(hal_data->pll_out) + *(hal_data->pll_drift);
+    }
   }
+  
   *(hal_data->pll_final) = pll_correction;
   rtapi_task_pll_set_correction(pll_correction);
   
