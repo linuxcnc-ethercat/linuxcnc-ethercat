@@ -53,7 +53,7 @@ static const ecat_pindesc_t master_pins[] = {
     {HAL_S32, HAL_OUT, offsetof(ecat_master_data_t, pll_out), "%s.pll-out"},
     {HAL_U32, HAL_OUT, offsetof(ecat_master_data_t, pll_reset_cnt), "%s.pll-reset-count"},
     {HAL_S32, HAL_OUT, offsetof(ecat_master_data_t, app_phase), "%s.app-phase"},
-    {HAL_BIT, HAL_OUT, offsetof(ecat_master_data_t, pll_locked), "%s.pll-locked"},
+    {HAL_BIT, HAL_OUT, offsetof(ecat_master_data_t, dc_phased), "%s.dc-phased"},
     {HAL_S32, HAL_OUT, offsetof(ecat_master_data_t, phase_jitter_out), "%s.phase-jitter"},
     {HAL_S32, HAL_IN, offsetof(ecat_master_data_t, drift_mode), "%s.drift-mode"},
     {HAL_S32, HAL_IN, offsetof(ecat_master_data_t, pll_drift), "%s.pll-drift"},
@@ -1245,7 +1245,7 @@ void ecat_write_master(void *arg, long period) {
   hal_data = master->hal_data;
   *(hal_data->pll_err) = 0;
   *(hal_data->pll_out) = 0;
-  *(hal_data->pll_locked) = 0;
+  *(hal_data->dc_phased) = 0;
   
   // Calculate app_phase: our execution position in local cycle
   // This is relative to dc_ref_time (the time we set at activation)
@@ -1327,27 +1327,21 @@ void ecat_write_master(void *arg, long period) {
       }
       
       // Set pll_err for monitoring
-      int32_t pll_err = raw_offset + drift;
-      if (pll_err > app_period / 2) {
-        pll_err -= app_period;
-      } else if (pll_err < -app_period / 2) {
-        pll_err += app_period;
-      }
-      *(hal_data->pll_err) = pll_err;
+      *(hal_data->pll_err) = raw_offset + drift;
       
       // Check if locked (within 10% of jitter or 1% of app_period, whichever is larger)
-      int32_t lock_threshold = hal_data->phase_jitter;
+      int32_t lock_threshold = 0;//hal_data->phase_jitter;
       if (lock_threshold < app_period / 100) {
         lock_threshold = app_period / 100;
       }
-      if (abs(phase_error) < lock_threshold) {
-        *(hal_data->pll_locked) = 1;
+      if (abs(phase_error) < abs(hal_data->pll_step) * 3 ) {
+        *(hal_data->dc_phased) = 1;
       }
       
       // BANG-BANG control: small steps to move towards target
       // Positive pll_out = slow down = app_phase increases
       // Negative pll_out = speed up = app_phase decreases
-      if (*(hal_data->pll_locked)) {
+      if (*(hal_data->dc_phased)) {
         *(hal_data->pll_out) = 0;
       }else{
         if (phase_error > 0) {
@@ -1394,7 +1388,7 @@ void ecat_write_master(void *arg, long period) {
     // PLL is considered locked if error is within 10% of period
     int32_t lock_threshold = master->app_time_period / 10;
     if (abs(*(hal_data->pll_err)) < lock_threshold) {
-      *(hal_data->pll_locked) = 1;
+      *(hal_data->dc_phased) = 1;
     }
     
     // Only run automatic PLL adjustment when sync_to_ref_clock is enabled
@@ -1430,7 +1424,7 @@ void ecat_write_master(void *arg, long period) {
     pll_correction = *(hal_data->pll_out) + *(hal_data->pll_drift);
   } else {
     // sync_to_ref_clock = false: stop adjusting once locked
-    if (*(hal_data->pll_locked)) {
+    if (*(hal_data->dc_phased)) {
       pll_correction = *(hal_data->pll_drift);
     } else {
       pll_correction = *(hal_data->pll_out) + *(hal_data->pll_drift);

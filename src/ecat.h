@@ -189,7 +189,7 @@ typedef struct ecat_master_data {
   hal_u32_t pll_max_err;
   hal_u32_t *pll_reset_cnt;
   hal_s32_t *app_phase;            // Our execution phase in local cycle (ns, real-time)
-  hal_bit_t *pll_locked;           // PLL lock status indicator
+  hal_bit_t *dc_phased;           // PLL lock status indicator
   hal_s32_t *phase_jitter_out;     // Output: measured app_phase jitter amplitude (ns)
   hal_s32_t *drift_mode;            // Input: 0=simple, 1=manual
   hal_s32_t *pll_drift;            // Input: debug offset added to PLL correction (ns)
