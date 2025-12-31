@@ -1327,7 +1327,13 @@ void ecat_write_master(void *arg, long period) {
       }
       
       // Set pll_err for monitoring
-      *(hal_data->pll_err) = phase_error;
+      int32_t pll_err = raw_offset + drift;
+      if (pll_err > app_period / 2) {
+        pll_err -= app_period;
+      } else if (pll_err < -app_period / 2) {
+        pll_err += app_period;
+      }
+      *(hal_data->pll_err) = pll_err;
       
       // Check if locked (within 10% of jitter or 1% of app_period, whichever is larger)
       int32_t lock_threshold = hal_data->phase_jitter;
