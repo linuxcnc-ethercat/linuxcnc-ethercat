@@ -1425,11 +1425,18 @@ void ecat_write_master(void *arg, long period) {
   // pll_drift is user-provided offset for debugging
   // Once locked, stop adjusting to maintain stability
   int32_t pll_correction;
-  if (!master->sync_to_ref_clock && *(hal_data->pll_locked)) {
-    pll_correction = *(hal_data->pll_drift);  // Stop adjusting once locked
-  } else {
+  if (master->sync_to_ref_clock) {
+    // sync_to_ref_clock = true: always use PLL output for continuous sync
     pll_correction = *(hal_data->pll_out) + *(hal_data->pll_drift);
+  } else {
+    // sync_to_ref_clock = false: stop adjusting once locked
+    if (*(hal_data->pll_locked)) {
+      pll_correction = *(hal_data->pll_drift);
+    } else {
+      pll_correction = *(hal_data->pll_out) + *(hal_data->pll_drift);
+    }
   }
+  
   *(hal_data->pll_final) = pll_correction;
   rtapi_task_pll_set_correction(pll_correction);
   
