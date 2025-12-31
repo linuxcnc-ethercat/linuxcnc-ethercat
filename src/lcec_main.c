@@ -286,10 +286,6 @@ int rtapi_app_main(void) {
     master->hal_data->pll_max_err = master->app_time_period;
     // Initialize auto-drift delay counter (wait 100 cycles before applying)
     master->hal_data->auto_drift_delay = 100;
-    // Initialize sync0_shift if not set
-    if (master->sync0_shift == 0) {
-      master->sync0_shift = 0;  // Will use 0 if no DC slave found
-    }
 #endif
 
     // Activate master
