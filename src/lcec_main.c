@@ -1068,13 +1068,18 @@ static int lcec_activate_master(lcec_master_t *master) {
   master->dc_time_valid_last = 0;
   master->dc_ref = 0;
   if (!master->sync_to_ref_clock) {
-    master->app_time_base -= rtapi_get_time();
+    long long rtapi_now = rtapi_get_time();
+    master->app_time_base -= rtapi_now;
+    // Calculate initial app_time (same formula as in cyclic write)
+    initial_app_time = master->app_time_base + rtapi_now;
+  } else {
+    // sync_to_ref_clock = true: don't add rtapi offset
+    initial_app_time = master->app_time_base;
   }
-  // Calculate initial app_time (same formula as in cyclic write)
-  initial_app_time = master->app_time_base + (master->sync_to_ref_clock ? 0 : rtapi_get_time());
 #else
-  master->app_time_base -= rtapi_get_time();
-  initial_app_time = master->app_time_base + rtapi_get_time();
+  long long rtapi_now = rtapi_get_time();
+  master->app_time_base -= rtapi_now;
+  initial_app_time = master->app_time_base + rtapi_now;
   if (master->sync_to_ref_clock) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "unable to sync master %s cycle to reference clock, RTAPI_TASK_PLL_SUPPORT not present\n",
         master->name);
