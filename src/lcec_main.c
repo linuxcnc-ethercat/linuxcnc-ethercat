@@ -52,7 +52,12 @@ static const lcec_pindesc_t master_pins[] = {
     {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_err), "%s.pll-err"},
     {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_out), "%s.pll-out"},
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, pll_reset_cnt), "%s.pll-reset-count"},
+    {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, app_phase), "%s.app-phase"},
     {HAL_BIT, HAL_OUT, offsetof(lcec_master_data_t, dc_phased), "%s.dc-phased"},
+    {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, phase_jitter_out), "%s.phase-jitter"},
+    {HAL_S32, HAL_IN, offsetof(lcec_master_data_t, drift_mode), "%s.drift-mode"},
+    {HAL_S32, HAL_IN, offsetof(lcec_master_data_t, pll_drift), "%s.pll-drift"},
+    {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_final), "%s.pll-final"},
 #endif
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
@@ -62,7 +67,6 @@ static const lcec_paramdesc_t master_params[] = {
 #ifdef RTAPI_TASK_PLL_SUPPORT
     {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, pll_step), "%s.pll-step"},
     {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, pll_max_err), "%s.pll-max-err"},
-    {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, dc_phase_max_err), "%s.dc-phase-max-err"},
 #endif
     {HAL_TYPE_UNSPECIFIED},
 };
@@ -102,6 +106,7 @@ void lcec_read_all(void *arg, long period);
 void lcec_write_all(void *arg, long period);
 void lcec_read_master(void *arg, long period);
 void lcec_write_master(void *arg, long period);
+static int lcec_activate_master(lcec_master_t *master);
 
 static void sigsegv_handler(int sig);
 
@@ -113,7 +118,6 @@ int rtapi_app_main(void) {
   char name[HAL_NAME_LEN + 1];
   lcec_slave_sdoconf_t *sdo_config;
   lcec_slave_idnconf_t *idn_config;
-  struct timeval tv;
   int pdo_entry_count = 0;
 
 #ifndef __KERNEL
@@ -268,11 +272,6 @@ int rtapi_app_main(void) {
       goto fail2;
     }
 
-    // Mark master as not yet activated (will be activated on first read/write call)
-    master->activated = 0;
-    master->process_data = NULL;
-    master->process_data_len = 0;
-
     // init hal data
     rtapi_snprintf(name, HAL_NAME_LEN, "%s.%s", LCEC_MODULE_NAME, master->name);
     if ((master->hal_data = lcec_init_master_hal(name, 0)) == NULL) {
@@ -285,9 +284,14 @@ int rtapi_app_main(void) {
     master->hal_data->pll_step = master->app_time_period / 1000;
     // set default PLL_MAX_ERR: one period
     master->hal_data->pll_max_err = master->app_time_period;
-    // set default DC_PHASE_MAX_ERR: 10% of period
-    master->hal_data->dc_phase_max_err = master->app_time_period / 10;
+    // Initialize auto-drift delay counter (wait 100 cycles before applying)
+    master->hal_data->auto_drift_delay = 100;
 #endif
+
+    // Activate master
+    if (lcec_activate_master(master) != 0) {
+      goto fail2;
+    }
 
     // export read function
     rtapi_snprintf(name, HAL_NAME_LEN, "%s.%s.read", LCEC_MODULE_NAME, master->name);
@@ -1062,14 +1066,20 @@ static int lcec_activate_master(lcec_master_t *master) {
   
 #ifdef RTAPI_TASK_PLL_SUPPORT
   master->dc_time_valid_last = 0;
-#endif
-
-  // Always use simple wall-clock time formula
-  master->app_time_base -= rtapi_get_time();
-  initial_app_time = master->app_time_base + rtapi_get_time();
-
-#ifdef RTAPI_TASK_PLL_SUPPORT
+  master->dc_ref = 0;
+  if (!master->sync_to_ref_clock) {
+    long long rtapi_now = rtapi_get_time();
+    master->app_time_base -= rtapi_now;
+    // Calculate initial app_time (same formula as in cyclic write)
+    initial_app_time = master->app_time_base + rtapi_now;
+  } else {
+    // sync_to_ref_clock = true: don't add rtapi offset
+    initial_app_time = master->app_time_base;
+  }
 #else
+  long long rtapi_now = rtapi_get_time();
+  master->app_time_base -= rtapi_now;
+  initial_app_time = master->app_time_base + rtapi_now;
   if (master->sync_to_ref_clock) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "unable to sync master %s cycle to reference clock, RTAPI_TASK_PLL_SUPPORT not present\n",
         master->name);
@@ -1105,15 +1115,6 @@ void lcec_read_master(void *arg, long period) {
   lcec_master_t *master = (lcec_master_t *)arg;
   lcec_slave_t *slave;
   int check_states;
-
-  // Delayed activation: activate master on first read call
-  // Per EtherCAT standard, the cycle starts with receive, so activate here
-  // First receive will be empty (no frame sent yet), but that's safe
-  if (!master->activated) {
-    if (lcec_activate_master(master) != 0) {
-      return;  // Activation failed, skip this cycle
-    }
-  }
 
   // check period
   if (period != master->period_last) {
@@ -1176,8 +1177,7 @@ void lcec_write_master(void *arg, long period) {
   uint64_t app_time;
   long long now;
 #ifdef RTAPI_TASK_PLL_SUPPORT
-  uint32_t dc_time;
-  int dc_time_valid;
+  long long ref;
   lcec_master_data_t *hal_data;
 #endif
 
@@ -1193,6 +1193,11 @@ void lcec_write_master(void *arg, long period) {
     }
   }
 
+#ifdef RTAPI_TASK_PLL_SUPPORT
+  // get reference time
+  ref = rtapi_task_pll_get_reference();
+#endif
+
   // send process data
   rtapi_mutex_get(&master->mutex);
   ecrt_domain_queue(master->domain);
@@ -1200,9 +1205,15 @@ void lcec_write_master(void *arg, long period) {
   // update application time
   now = rtapi_get_time();
 #ifdef RTAPI_TASK_PLL_SUPPORT
-  // Use simple wall-clock time for app_time in both modes
-  // Phase synchronization is handled by PLL corrections to servo thread timing
-  app_time = master->app_time_base + now;
+  if (!master->sync_to_ref_clock) {
+    app_time = master->app_time_base + now;
+  } else {
+    // Note: dc_ref is incremented AFTER calculating app_time
+    // so first call gives app_time = app_time_base + 0 + (now - ref)
+    // which is consistent with initial_app_time set at activation
+    app_time = master->app_time_base + master->dc_ref + (now - ref);
+    master->dc_ref += period;
+  }
 #else
   app_time = master->app_time_base + now;
 #endif
@@ -1218,12 +1229,6 @@ void lcec_write_master(void *arg, long period) {
     master->sync_ref_cnt--;
   }
 
-#ifdef RTAPI_TASK_PLL_SUPPORT
-  // Get reference clock time (always needed for DC phase checking, regardless of sync_to_ref_clock mode)
-  dc_time = 0;
-  dc_time_valid = (ecrt_master_reference_clock_time(master->master, &dc_time) == 0);
-#endif
-
   // sync slaves to ref clock
   ecrt_master_sync_slave_clocks(master->master);
 
@@ -1238,24 +1243,143 @@ void lcec_write_master(void *arg, long period) {
   *(hal_data->pll_err) = 0;
   *(hal_data->pll_out) = 0;
   *(hal_data->dc_phased) = 0;
+  
+  // Calculate app_phase: our execution position in local cycle
+  // This is relative to dc_ref_time (the time we set at activation)
+  // app_phase = (app_time - dc_ref_time) % period
+  // This represents where we are within the current cycle since activation
+  int32_t current_app_phase = (int32_t)((app_time - master->dc_ref_time) % master->app_time_period);
+  *(hal_data->app_phase) = current_app_phase;
+  int32_t app_period = (int32_t)master->app_time_period;
+  
+  // When sync_to_ref_clock = false: adjust app_phase to a stable position using PLL
+  // This is needed because app_phase is random at startup
+  if (!master->sync_to_ref_clock) {
+    #define PHASE_MEASURE_CYCLES 100
+    
+    if (!hal_data->phase_calibrated) {
+      // Phase 1: Measure app_phase jitter over PHASE_MEASURE_CYCLES cycles
+      if (hal_data->phase_measure_cnt == 0) {
+        // First measurement - initialize
+        hal_data->phase_min = current_app_phase;
+        hal_data->phase_max = current_app_phase;
+        hal_data->phase_last = current_app_phase;
+        hal_data->phase_measure_cnt = 1;
+      } else if (hal_data->phase_measure_cnt < PHASE_MEASURE_CYCLES) {
+        // Detect boundary crossing: if difference > app_period/2, phase wrapped around
+        int32_t diff = current_app_phase - hal_data->phase_last;
+        int32_t adjusted_phase = current_app_phase;
+        
+        // Unwrap: if phase jumped by more than half period, adjust for continuity
+        if (diff > app_period / 2) {
+          // Jumped from low to high (e.g., 10000 -> 990000), adjust down
+          adjusted_phase = current_app_phase - app_period;
+        } else if (diff < -app_period / 2) {
+          // Jumped from high to low (e.g., 990000 -> 10000), adjust up
+          adjusted_phase = current_app_phase + app_period;
+        }
+        
+        // Update min/max with adjusted phase
+        if (adjusted_phase < hal_data->phase_min) {
+          hal_data->phase_min = adjusted_phase;
+        }
+        if (adjusted_phase > hal_data->phase_max) {
+          hal_data->phase_max = adjusted_phase;
+        }
+        
+        hal_data->phase_last = current_app_phase;
+        hal_data->phase_measure_cnt++;
+      } else {
+        // Phase 2: Calculate jitter and target position
+        hal_data->phase_jitter = hal_data->phase_max - hal_data->phase_min;
+        *(hal_data->phase_jitter_out) = hal_data->phase_jitter;  // Output jitter for debugging
+        
+        // Target position: jitter + jitter/2 = jitter * 1.5
+        int32_t target = hal_data->phase_jitter + hal_data->phase_jitter / 2;
+        
+        // Limit target to app_period/8
+        int32_t max_target = app_period / 8;
+        if (target > max_target) {
+          target = max_target;
+        }
+        
+        hal_data->phase_target = target;
+        hal_data->phase_calibrated = 1;
+        
+        rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "Phase calibration complete: jitter=%d target=%d\n",
+            hal_data->phase_jitter, hal_data->phase_target);
+      }
+    } else {
+      // Phase 3: Use PLL to move app_phase towards target
+      // Calculate error: how far are we from target?
+      // Positive error (app_phase > target) means we need to speed up to reduce app_phase
+      // Negative error (app_phase < target) means we need to slow down to increase app_phase
+      int32_t phase_error = current_app_phase - hal_data->phase_target;
+      
+      // Set pll_err for monitoring
+      //*(hal_data->pll_err) = raw_offset + drift;
+      
+      // Check if locked (within 10% of jitter or 1% of app_period, whichever is larger)
+      int32_t lock_threshold = 0;//hal_data->phase_jitter;
+      if (lock_threshold < app_period / 100) {
+        lock_threshold = app_period / 100;
+      }
+      if (abs(phase_error) < abs(hal_data->pll_step) * 3 ) {
+        *(hal_data->dc_phased) = 1;
+      } else if (abs(phase_error) > abs(hal_data->pll_step) * 20 ) {
+        *(hal_data->dc_phased) = 0;
+      }
+      
+      // BANG-BANG control: small steps to move towards target
+      // Positive pll_out = slow down = app_phase increases
+      // Negative pll_out = speed up = app_phase decreases
+      if (*(hal_data->dc_phased)) {
+        *(hal_data->pll_out) = 0;
+      } else {
+        if (phase_error > 0) {
+          *(hal_data->pll_out) = -(hal_data->pll_step);  // Speed up to reduce app_phase
+        } else if (phase_error < 0) {
+          *(hal_data->pll_out) = hal_data->pll_step;  // Slow down to increase app_phase
+        }
+      }
 
+    }
+  }
+  
+  // Read DC reference clock time (local variable)
+  uint32_t dc_time = 0;
+  int dc_time_valid = (ecrt_master_reference_clock_time(master->master, &dc_time) == 0);
+  
   // the first read dc_time value seems to be invalid, so wait for two successive successful reads
   if (dc_time_valid && master->dc_time_valid_last) {
     // Raw offset between app_time and dc_time (this is what varies at each startup)
     int32_t raw_offset = master->app_time_last - dc_time;
-
-    // Apply automatic drift compensation: (period - app_phase) % period
-    // Calculate app_phase: our execution position in local cycle relative to dc_ref_time
-    int32_t period = (int32_t)master->app_time_period;
-    int32_t app_phase = (int32_t)((app_time - master->dc_ref_time) % master->app_time_period);
-    int32_t drift = (period - app_phase) % period;
-    if (drift < 0) drift += period;
-
+    
+    // Apply drift compensation based on drift-mode:
+    //   0 = simple: (app_period - app_phase) % app_period
+    //   1 = manual: use pll-drift pin value
+    //   other = same as 1 (manual)
+    int32_t drift = 0;
+    int32_t mode = *(hal_data->drift_mode);
+    if (master->sync_to_ref_clock) {
+      if (mode == 0) {
+        // Mode 0: simple - (app_period - app_phase) % app_period
+        int32_t calc_val = (app_period - current_app_phase) % app_period;
+        if (calc_val < 0) calc_val += app_period;
+        if (hal_data->auto_drift_delay > 0) {
+          hal_data->auto_drift_delay--;
+        } else {
+          drift = calc_val;
+        }
+      }
+    }
+    // Mode 1 or other: use manual pll-drift value
+    
     *(hal_data->pll_err) = raw_offset + drift;
-
-    // DC is considered phased if error is within dc_phase_max_err tolerance
-    // This works regardless of sync_to_ref_clock mode
-    if (abs(*(hal_data->pll_err)) < hal_data->dc_phase_max_err) {
+    
+    // PLL is considered phased if error is within 10% of period
+    int32_t lock_threshold = master->app_time_period / 10;
+    if (abs(*(hal_data->pll_err)) < lock_threshold) {
       *(hal_data->dc_phased) = 1;
     }
     
@@ -1265,18 +1389,43 @@ void lcec_write_master(void *arg, long period) {
     if (master->sync_to_ref_clock) {
       // check for invalid error values
       if (abs(*(hal_data->pll_err)) > hal_data->pll_max_err) {
-        // Error too large - skip next control cycle to allow resync
+        // force resync of master time
+        master->dc_ref -= *(hal_data->pll_err);
+        // skip next control cycle to allow resync
         dc_time_valid = 0;
         // increment reset counter to document this event
         (*(hal_data->pll_reset_cnt))++;
+        // Reset auto-drift delay on resync
+        if (*(hal_data->drift_mode) == 0) {
+          hal_data->auto_drift_delay = 100;
+        }
       } else {
-        *(hal_data->pll_out) = (*(hal_data->pll_err) < 0) ? -(hal_data->pll_step) : (hal_data->pll_step);
+          *(hal_data->pll_out) = (*(hal_data->pll_err) < 0) ? -(hal_data->pll_step) : (hal_data->pll_step);
       }
     }
-    // When sync_to_ref_clock = false: pll_out stays 0, but pll_err is still calculated for monitoring
+    // Note: When sync_to_ref_clock = false, pll_out is set in the phase calibration code above
   }
 
-  rtapi_task_pll_set_correction(*(hal_data->pll_out));
+  // Apply PLL correction with debug offset
+  // pll_out is set by PLL controller (both sync_to_ref_clock modes now use PLL)
+  // pll_drift is user-provided offset for debugging
+  // Once phased, stop adjusting to maintain stability
+  int32_t pll_correction;
+  if (master->sync_to_ref_clock) {
+    // sync_to_ref_clock = true: always use PLL output for continuous sync
+    pll_correction = *(hal_data->pll_out) + *(hal_data->pll_drift);
+  } else {
+    // sync_to_ref_clock = false: stop adjusting once locked
+    if (*(hal_data->dc_phased)) {
+      pll_correction = *(hal_data->pll_drift);
+    } else {
+      pll_correction = *(hal_data->pll_out) + *(hal_data->pll_drift);
+    }
+  }
+  
+  *(hal_data->pll_final) = pll_correction;
+  rtapi_task_pll_set_correction(pll_correction);
+  
   master->app_time_last = (uint32_t)app_time;
   master->dc_time_valid_last = dc_time_valid;
 #endif
