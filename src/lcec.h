@@ -281,6 +281,7 @@ typedef struct lcec_slave {
   lcec_master_t *master;                     ///< Master for this slave
   int index;                                 ///< Index of this slave.
   char name[LCEC_CONF_STR_MAXLEN];           ///< Slave name.
+  char type_name[LCEC_CONF_STR_MAXLEN];      ///< Slave type name.
   uint32_t vid;                              ///< Slave's vendor ID
   uint32_t pid;                              ///< Slave's EtherCAT PID/device ID.
   ec_sync_info_t *sync_info;                 ///< Sync Manager configuration.

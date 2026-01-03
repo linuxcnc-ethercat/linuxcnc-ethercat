@@ -495,6 +495,8 @@ int lcec_parse_config(void) {
         slave->index = slave_conf->index;
         strncpy(slave->name, slave_conf->name, LCEC_CONF_STR_MAXLEN);
         slave->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
+        strncpy(slave->type_name, slave_conf->type_name, LCEC_CONF_STR_MAXLEN);
+        slave->type_name[LCEC_CONF_STR_MAXLEN - 1] = 0;
         slave->master = master;
 
         // add slave to list
