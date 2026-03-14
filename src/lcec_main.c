@@ -1346,10 +1346,11 @@ void lcec_write_master(void *arg, long period) {
     }
   }
   
-  // Read DC reference clock time (local variable)
+  // Read DC reference clock time (ignore return code, check data instead)
   uint32_t dc_time = 0;
-  int dc_time_valid = (ecrt_master_reference_clock_time(master->master, &dc_time) == 0);
-  
+  ecrt_master_reference_clock_time(master->master, &dc_time);
+  int dc_time_valid = (dc_time != 0);
+
   // the first read dc_time value seems to be invalid, so wait for two successive successful reads
   if (dc_time_valid && master->dc_time_valid_last) {
     // Raw offset between app_time and dc_time (this is what varies at each startup)
