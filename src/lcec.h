@@ -119,6 +119,14 @@ extern "C" {
 typedef struct lcec_master lcec_master_t;
 typedef struct lcec_slave lcec_slave_t;
 
+typedef void (*lcec_dcsync_callback_t)(struct lcec_master *master);
+
+typedef struct {
+  lcec_dcsync_callback_t cycle_start;
+  lcec_dcsync_callback_t pre_send;
+  lcec_dcsync_callback_t post_send;
+} lcec_dcsync_callbacks_t;
+
 typedef int (*lcec_slave_preinit_t)(lcec_slave_t *slave);
 typedef int (*lcec_slave_init_t)(int comp_id, lcec_slave_t *slave);
 typedef void (*lcec_slave_cleanup_t)(lcec_slave_t *slave);
@@ -182,26 +190,8 @@ typedef struct lcec_master_data {
 #ifdef RTAPI_TASK_PLL_SUPPORT
   hal_s32_t *pll_err;
   hal_s32_t *pll_out;
-  hal_u32_t pll_step;
-  hal_u32_t pll_max_err;
   hal_u32_t *pll_reset_cnt;
-  hal_u32_t dc_phase_max_err;
-  hal_s32_t *app_phase;            // Our execution phase in local cycle (ns, real-time)
-  hal_bit_t *dc_phased;           // PLL lock status indicator
-  hal_s32_t *phase_jitter_out;     // Output: measured app_phase jitter amplitude (ns)
-  hal_s32_t *drift_mode;            // Input: 0=simple, 1=manual
-  hal_s32_t *pll_drift;            // Input: debug offset added to PLL correction (ns)
-  hal_s32_t *pll_final;            // Output: final PLL correction value sent to rtapi (ns)
-  int32_t auto_drift_delay;        // Internal: auto-drift delay counter
 #endif
-  // Phase calibration for sync_to_ref_clock=false mode
-  int32_t phase_measure_cnt;       // Internal: measurement cycle counter
-  int32_t phase_min;               // Internal: minimum app_phase during measurement
-  int32_t phase_max;               // Internal: maximum app_phase during measurement
-  int32_t phase_last;              // Internal: last app_phase value (for boundary detection)
-  int32_t phase_jitter;            // Internal: calculated jitter amplitude
-  int32_t phase_target;            // Internal: target app_phase position
-  int32_t phase_calibrated;        // Internal: 0=measuring, 1=calibrated
 } lcec_master_data_t;
 
 typedef struct lcec_slave_state {
@@ -214,12 +204,12 @@ typedef struct lcec_slave_state {
 } lcec_slave_state_t;
 
 typedef struct lcec_master {
-  lcec_master_t *prev;              ///< Next master.
-  lcec_master_t *next;              ///< Previous master.
-  int index;                        ///< Index of this mater.
-  char name[LCEC_CONF_STR_MAXLEN];  ///< Name of master.
-  ec_master_t *master;              ///< EtherCAT master structure.
-  unsigned long mutex;              ///< Mutex for locking operations.
+  lcec_master_t *prev;
+  lcec_master_t *next;
+  int index;
+  char name[LCEC_CONF_STR_MAXLEN];
+  ec_master_t *master;
+  unsigned long mutex;
   ec_pdo_entry_reg_t *pdo_entry_regs;
   ec_domain_t *domain;
   uint8_t *process_data;
@@ -227,20 +217,23 @@ typedef struct lcec_master {
   lcec_slave_t *first_slave;
   lcec_slave_t *last_slave;
   lcec_master_data_t *hal_data;
-  uint64_t app_time_base;
   uint32_t app_time_period;
   long period_last;
-  int sync_ref_cnt;
-  int sync_ref_cycles;
-  int sync_to_ref_clock;
+  int ref_clock_sync_cycles;
   long long state_update_timer;
   ec_master_state_t ms;
-  int activated;                    // Flag: master has been activated (0=not yet, 1=activated)
+  int activated;
+  lcec_dcsync_callbacks_t dcsync_callbacks;
+  int ref_clock_sync_counter;
+  uint64_t app_time_ns;
+  uint64_t ref_time_ns;
 #ifdef RTAPI_TASK_PLL_SUPPORT
-  uint64_t dc_ref;
-  uint64_t dc_ref_time;          // DC reference time (epoch) - set on first app_time call
-  uint32_t app_time_last;
-  int dc_time_valid_last;         // Previous cycle's dc_time_valid (for detecting consecutive valid reads)
+  uint64_t dc_time_ns;
+  int dc_started;
+  int64_t dc_diff_ns;
+  double dc_kp;
+  double dc_ki;
+  double dc_integrator;
 #endif
 } lcec_master_t;
 
