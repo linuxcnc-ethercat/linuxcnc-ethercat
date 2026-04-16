@@ -33,6 +33,13 @@ jobs:
 
             - name: Checkout
               uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Set version from git
+              run: |
+                  VERSION=$(git describe --tags --always | sed 's/^v//')
+                  dch --newversion "${VERSION}" --distribution stable "CI build ${VERSION}"
 
             - name: Build deb package
               run: |

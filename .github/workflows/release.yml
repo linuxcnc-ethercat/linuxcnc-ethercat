@@ -30,6 +30,13 @@ jobs:
 
             - name: Checkout
               uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Set version from git tag
+              run: |
+                  VERSION="${GITHUB_REF_NAME#v}"
+                  dch --newversion "${VERSION}" --distribution stable "Release ${VERSION}"
 
             - name: Build deb package
               run: |
