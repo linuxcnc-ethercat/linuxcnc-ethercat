@@ -295,6 +295,27 @@ int rtapi_app_main(void) {
 #endif
     }
 
+    // select DC reference clock slave (if configured)
+    if (master->ref_clock_slave_idx >= 0) {
+      lcec_slave_t *ref_slave = lcec_slave_by_index(master, master->ref_clock_slave_idx);
+      if (ref_slave == NULL) {
+        rtapi_print_msg(RTAPI_MSG_ERR,
+            LCEC_MSG_PFX "master %s: refClockSlaveIdx %d not found\n",
+            master->name, master->ref_clock_slave_idx);
+        goto fail2;
+      }
+      if (ref_slave->config == NULL) {
+        rtapi_print_msg(RTAPI_MSG_ERR,
+            LCEC_MSG_PFX "master %s: refClockSlaveIdx %d has no EtherCAT config\n",
+            master->name, master->ref_clock_slave_idx);
+        goto fail2;
+      }
+      ecrt_master_select_reference_clock(master->master, ref_slave->config);
+      rtapi_print_msg(RTAPI_MSG_INFO,
+          LCEC_MSG_PFX "master %s: selected slave %d (%s) as DC reference clock\n",
+          master->name, master->ref_clock_slave_idx, ref_slave->name);
+    }
+
     // Activate master
     if (lcec_activate_master(master) != 0) {
       goto fail2;
@@ -462,6 +483,7 @@ int lcec_parse_config(void) {
         master->ref_clock_sync_cycles = master_conf->syncToRefClock
             ? -(int)master_conf->refClockSyncCycles
             : (int)master_conf->refClockSyncCycles;
+        master->ref_clock_slave_idx = master_conf->refClockSlaveIdx;
 
         // add master to list
         LCEC_LIST_APPEND(first_master, last_master, master);

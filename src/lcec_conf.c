@@ -253,6 +253,7 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
   }
 
   p->confType = lcecConfTypeMaster;
+  p->refClockSlaveIdx = -1;
   while (*attr) {
     const char *name = *(attr++);
     const char *val = *(attr++);
@@ -279,6 +280,12 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
     // parse refClockSyncCycles
     if (strcmp(name, "refClockSyncCycles") == 0) {
       p->refClockSyncCycles = atoll(val);
+      continue;
+    }
+
+    // parse refClockSlaveIdx
+    if (strcmp(name, "refClockSlaveIdx") == 0) {
+      p->refClockSlaveIdx = atoi(val);
       continue;
     }
 

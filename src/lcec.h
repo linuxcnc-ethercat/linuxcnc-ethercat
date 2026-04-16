@@ -220,6 +220,7 @@ typedef struct lcec_master {
   uint32_t app_time_period;
   long period_last;
   int ref_clock_sync_cycles;
+  int ref_clock_slave_idx;
   long long state_update_timer;
   ec_master_state_t ms;
   int activated;
