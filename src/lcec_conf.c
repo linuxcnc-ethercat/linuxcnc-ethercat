@@ -301,14 +301,56 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
     return;
   }
 
-  // Backwards compatibility with negative refClockSyncCycles meaning activate DC-servoThread sync
-  if (p->syncToRefClock == 0) { // Option not given
-    p->syncToRefClock = (p->refClockSyncCycles < 0) ? 1 : 0;
-    p->refClockSyncCycles = abs(p->refClockSyncCycles); // Always use absolute value
-  } else { // option syncToRefClock takes precedent over sign of refClockSyncCycles
-    p->syncToRefClock = (p->syncToRefClock == -1) ? 0 : 1; // Restore normal true/false (FIX: was == instead of =)
-    p->refClockSyncCycles = abs(p->refClockSyncCycles);
-    fprintf(stderr, "%s: INFO: %s servo-thread with DC reference clock\n", modname, p->syncToRefClock ? "Synchronising" : "Not synchronising");
+  // Validate refClockSyncCycles + syncToRefClock combinations.
+  // syncToRefClock at this point: 0=not given, 1=true, -1=false
+  //
+  // Canonical output: refClockSyncCycles >= 0, syncToRefClock = 0 or 1
+  //   syncToRefClock=1 = M2R (servo thread syncs to DC reference clock)
+  //   syncToRefClock=0, refClockSyncCycles>0 = R2M (DC reference syncs to master)
+  //   syncToRefClock=0, refClockSyncCycles=0 = free running (no DC sync)
+
+  int given_sync = p->syncToRefClock;  // 0=not given, 1=true, -1=false
+  int given_cycles = p->refClockSyncCycles;
+
+  if (given_cycles < -1) {
+    fprintf(stderr, "%s: ERROR: refClockSyncCycles=%d invalid, only -1, 0, or positive values allowed\n",
+        modname, given_cycles);
+    XML_StopParser(inst->parser, 0);
+    return;
+  }
+
+  if (given_sync == 0) {
+    // syncToRefClock not given, infer from refClockSyncCycles sign
+    p->syncToRefClock = (given_cycles < 0) ? 1 : 0;
+    p->refClockSyncCycles = abs(given_cycles);
+  } else if (given_sync == 1) {
+    // syncToRefClock="true"
+    if (given_cycles < 0) {
+      fprintf(stderr, "%s: WARNING: syncToRefClock=\"true\" with refClockSyncCycles=%d is redundant, just use refClockSyncCycles=\"-1\"\n",
+          modname, given_cycles);
+    } else if (given_cycles > 0) {
+      fprintf(stderr, "%s: ERROR: syncToRefClock=\"true\" conflicts with refClockSyncCycles=%d (positive = R2M mode)\n",
+          modname, given_cycles);
+      XML_StopParser(inst->parser, 0);
+      return;
+    }
+    // syncToRefClock="true" with cycles=0 or -1 = M2R mode
+    p->syncToRefClock = 1;
+    p->refClockSyncCycles = (given_cycles == 0) ? 1 : abs(given_cycles);
+  } else {
+    // syncToRefClock="false"
+    if (given_cycles < 0) {
+      fprintf(stderr, "%s: ERROR: syncToRefClock=\"false\" conflicts with refClockSyncCycles=%d (negative = M2R mode)\n",
+          modname, given_cycles);
+      XML_StopParser(inst->parser, 0);
+      return;
+    }
+    if (given_cycles > 0) {
+      fprintf(stderr, "%s: WARNING: syncToRefClock=\"false\" with refClockSyncCycles=%d is redundant, positive already means R2M\n",
+          modname, given_cycles);
+    }
+    p->syncToRefClock = 0;
+    // refClockSyncCycles already >= 0, keep as-is
   }
   
   // set default name

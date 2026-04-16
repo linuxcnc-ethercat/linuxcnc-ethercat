@@ -1161,7 +1161,7 @@ void lcec_read_master(void *arg, long period) {
 
 /// @brief Write all output pins on a master and its slaves.
 // NOTE: ecrt_master_application_time() is called from dcsync callbacks only.
-// Do not call it here — the callbacks handle both R2M and M2R modes.
+// Do not call it here, the callbacks handle both R2M and M2R modes.
 void lcec_write_master(void *arg, long period) {
   lcec_master_t *master = (lcec_master_t *)arg;
   lcec_slave_t *slave;
