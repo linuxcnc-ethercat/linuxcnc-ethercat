@@ -19,8 +19,18 @@ jobs:
                   apt-get update
                   apt-get install -y --no-install-recommends \
                       git build-essential devscripts debhelper \
-                      linuxcnc-uspace-dev etherlabmaster-dev \
-                      golang-go yapps2
+                      linuxcnc-uspace-dev \
+                      golang-go yapps2 \
+                      autoconf automake libtool pkg-config
+
+            - name: Build and install EtherCAT master headers
+              run: |
+                  git clone --depth 1 --branch stable-1.6 https://gitlab.com/etherlab.org/ethercat.git /tmp/ethercat
+                  cd /tmp/ethercat
+                  ./bootstrap
+                  ./configure --prefix=/usr --disable-kernel --disable-eoe
+                  make -j$(nproc)
+                  make install
 
             - name: Checkout
               uses: actions/checkout@v4
