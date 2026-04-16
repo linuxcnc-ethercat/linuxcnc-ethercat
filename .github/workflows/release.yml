@@ -35,6 +35,9 @@ jobs:
               run: |
                   touch TODO
                   dpkg-buildpackage -d -us -uc -b
+                  mkdir -p dist
+                  cp ../*.deb dist/
+                  rm -f dist/*-dbgsym*.deb
 
             - name: Run tests
               run: |
@@ -44,7 +47,5 @@ jobs:
             - name: Create GitHub Release
               uses: softprops/action-gh-release@v2
               with:
-                  files: |
-                      ../*.deb
-                      !../*-dbgsym*.deb
+                  files: dist/*.deb
                   generate_release_notes: true
