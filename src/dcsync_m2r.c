@@ -59,16 +59,18 @@ static void pre_send(struct lcec_master *master) {
 
   // read reference slave clock (unwrap 32-bit to 64-bit)
   ecrt_master_reference_clock_time(master->master, &ref_time_ns);
-  if (master->ref_time_ns > 0 || ref_time_ns != 0) {
-    if (master->ref_time_ns == 0) {
-      master->ref_time_ns = master->app_time_ns & 0xffffffff00000000LL;
-    }
 
-    // detect 32-bit wrap
-    if (ref_time_ns < (uint32_t) master->ref_time_ns) {
+  // Discard the first nonzero read: it is the slave's pre-epoch SystemTime from
+  // before it received our app_time. Seeding the unwrap state with it would
+  // make the next cycle's wrap detect fire spuriously, snapping app_time by ~2^32 ns.
+  if (!master->ref_seeded) {
+    if (ref_time_ns != 0) master->ref_seeded = 1;
+  } else if (master->ref_time_ns == 0) {
+    master->ref_time_ns = (master->app_time_ns & 0xffffffff00000000LL) | ref_time_ns;
+  } else {
+    if (ref_time_ns < (uint32_t)master->ref_time_ns) {
       master->ref_time_ns += (1LL << 32);
     }
-
     master->ref_time_ns = (master->ref_time_ns & 0xffffffff00000000LL) | ref_time_ns;
   }
 
@@ -132,6 +134,7 @@ void lcec_dc_init_m2r(struct lcec_master *master) {
   master->ref_time_ns = 0;
   master->dc_time_ns = 0;
   master->dc_started = 0;
+  master->ref_seeded = 0;
   master->dc_diff_ns = 0;
 
   double T = (double)master->app_time_period * 1.0e-9;
