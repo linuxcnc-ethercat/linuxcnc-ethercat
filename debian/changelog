@@ -1,3 +1,10 @@
+linuxcnc-ethercat (1.41.0~pre2-initf1) unstable; urgency=low
+
+  * Loosen libethercat shlib dep via debian/shlibs.local: accept
+    etherlabmaster | libethercat | ethercat-master (>= 1.6).
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Tue, 21 Apr 2026 12:00:00 +0200
+
 linuxcnc-ethercat (0.9.5-1) unstable; urgency=low
 
   * Current HEAD: 0c872dd
