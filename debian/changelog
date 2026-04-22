@@ -1,11 +1,18 @@
-linuxcnc-ethercat (1.41.0~pre3-initf1) unstable; urgency=low
+linuxcnc-ethercat (1.41.0~pre4-1) unstable; urgency=low
+
+  * Revert "fix(dcsync-m2r): discard slave's pre-epoch SystemTime on
+    first read" (0fe4200): did not help OP transition speed.
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Wed, 22 Apr 2026 14:00:00 +0200
+
+linuxcnc-ethercat (1.41.0~pre3-1) unstable; urgency=low
 
   * Restore pre-activation ecrt_master_application_time() seed in
     lcec_activate_master(). Speeds up OP state transition.
 
  -- Luca Toniolo <toniolo.luca@gmail.com>  Wed, 22 Apr 2026 12:00:00 +0200
 
-linuxcnc-ethercat (1.41.0~pre2-initf1) unstable; urgency=low
+linuxcnc-ethercat (1.41.0~pre2-1) unstable; urgency=low
 
   * Loosen libethercat shlib dep via debian/shlibs.local: accept
     etherlabmaster | libethercat | ethercat-master (>= 1.5.2).
