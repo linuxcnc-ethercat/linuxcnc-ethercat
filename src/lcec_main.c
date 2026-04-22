@@ -1082,6 +1082,10 @@ static int lcec_activate_master(lcec_master_t *master) {
 
   rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "Activating master %s\n", master->name);
 
+  // Seed application time before activation so reference clock starts near
+  // wall time. Speeds up OP state transition.
+  ecrt_master_application_time(master->master, dc_time_offset + rtapi_get_time());
+
   if (ecrt_master_activate(master->master)) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to activate master %s\n", master->name);
     return -1;
@@ -1160,8 +1164,8 @@ void lcec_read_master(void *arg, long period) {
 }
 
 /// @brief Write all output pins on a master and its slaves.
-// NOTE: ecrt_master_application_time() is called from dcsync callbacks only.
-// Do not call it here, the callbacks handle both R2M and M2R modes.
+// NOTE: ecrt_master_application_time() is seeded once before activation in
+// lcec_activate_master(), then called per-cycle from dcsync callbacks.
 void lcec_write_master(void *arg, long period) {
   lcec_master_t *master = (lcec_master_t *)arg;
   lcec_slave_t *slave;
