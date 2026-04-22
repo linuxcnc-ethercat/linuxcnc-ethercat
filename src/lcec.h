@@ -231,7 +231,6 @@ typedef struct lcec_master {
 #ifdef RTAPI_TASK_PLL_SUPPORT
   uint64_t dc_time_ns;
   int dc_started;
-  int ref_seeded;
   int64_t dc_diff_ns;
   double dc_kp;
   double dc_ki;
