@@ -16,7 +16,7 @@ EXTRA_CFLAGS += -Wall # Increase debugging level
 
 ## targets
 lcec-common-objs := lcec_devicelist.o lcec_ethercat.o lcec_pins.o lcec_lookup.o lcec_modparam.o lcec_malloc.o
-lcec-objs := lcec_main.o $(lcec-common-objs)
+lcec-objs := lcec_main.o dcsync_r2m.o dcsync_m2r.o $(lcec-common-objs)
 lcec-conf-srcs := $(wildcard lcec_conf*.c)
 lcec-conf-objs = $(subst .c,.o,$(lcec-conf-srcs))
 device-srcs := $(wildcard devices/*.c)
@@ -95,13 +95,13 @@ install-realtime: realtime
 	mkdir -p $(DESTDIR)$(RTLIBDIR)/
 	cp lcec.so $(DESTDIR)$(RTLIBDIR)/
 
-lcec.so: lcec_main.o $(lcec-common-objs) liblcecdevices.a
+lcec.so: lcec_main.o dcsync_r2m.o dcsync_m2r.o $(lcec-common-objs) liblcecdevices.a
 	$(ECHO) Linking $@
-	ld -d -r -o $@.tmp lcec_main.o $(lcec-common-objs)
+	ld -d -r -o $@.tmp lcec_main.o dcsync_r2m.o dcsync_m2r.o $(lcec-common-objs)
 	objcopy -j .rtapi_export -O binary $@.tmp $@.sym
 	(echo '{ global : '; tr -s '\0' < $@.sym | xargs -r0 printf '%s;\n' | grep .; echo 'local : * ; };') > $@.ver
 #$(CC) -shared -Bsymbolic $(RTLDFLAGS) -Wl,--version-script,$@.ver -o $@ lcec_main.o $(lcec-comon-objs) -lm
-	$(CC) -shared -Bsymbolic $(RTLDFLAGS) -Wl,--version-script,$@.ver -o $@ lcec_main.o $(lcec-common-objs) -lm $(RTEXTRA_LDFLAGS)
+	$(CC) -shared -Bsymbolic $(RTLDFLAGS) -Wl,--version-script,$@.ver -o $@ lcec_main.o dcsync_r2m.o dcsync_m2r.o $(lcec-common-objs) -lm $(RTEXTRA_LDFLAGS)
 	chmod -x $@
 
 lcec_conf: $(lcec-conf-objs) $(lcec-common-objs) liblcecdevices.a
