@@ -1,3 +1,11 @@
+linuxcnc-ethercat-bb (1.41.0~pre5-bb1) unstable; urgency=low
+
+  * Rename source/binary package to linuxcnc-ethercat-bb to ship in
+    parallel with linuxcnc-ethercat-pi flavor (Sittner PI controller).
+    Conflicts/Provides/Replaces linuxcnc-ethercat for clean upgrade.
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Mon, 27 Apr 2026 10:00:00 +0200
+
 linuxcnc-ethercat (1.41.0~pre5-1) unstable; urgency=low
 
   * Revert "Adopt Sittner's DC sync callback architecture with PI
