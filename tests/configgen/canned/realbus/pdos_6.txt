@@ -1,0 +1,21 @@
+SM0: PhysAddr 0x1000, DefaultSize  124, ControlRegister 0x26, Enable 1
+SM1: PhysAddr 0x1100, DefaultSize  124, ControlRegister 0x22, Enable 1
+SM2: PhysAddr 0x1200, DefaultSize    0, ControlRegister 0x64, Enable 1
+  RxPDO 0x1600 ""
+    PDO entry 0x6040:00, 16 bit, ""
+    PDO entry 0x6060:00,  8 bit, ""
+    PDO entry 0x607a:00, 32 bit, ""
+    PDO entry 0x60ff:00, 32 bit, ""
+  RxPDO 0x1601 ""
+    PDO entry 0x60c5:00, 32 bit, ""
+    PDO entry 0x60c6:00, 32 bit, ""
+    PDO entry 0x6080:00, 32 bit, ""
+SM3: PhysAddr 0x1400, DefaultSize    0, ControlRegister 0x20, Enable 1
+  TxPDO 0x1a00 ""
+    PDO entry 0x6041:00, 16 bit, ""
+    PDO entry 0x606c:00, 32 bit, ""
+    PDO entry 0x6064:00, 32 bit, ""
+    PDO entry 0x603f:00, 16 bit, ""
+    PDO entry 0x6077:00, 16 bit, ""
+    PDO entry 0x60f4:00, 32 bit, ""
+    PDO entry 0x60fd:00, 32 bit, ""

@@ -110,15 +110,8 @@ lcec_conf: $(lcec-conf-objs) $(lcec-common-objs) liblcecdevices.a
 lcec_devices: lcec_devices.o $(lcec-common-objs) liblcecdevices.a
 	$(CC) -o $@ lcec_devices.o $(lcec-common-objs) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm
 
-lcec_configgen: configgen/*.go configgen/*/*.go
-	(cd configgen ; go build lcec_configgen.go)
-	cp configgen/lcec_configgen .
-
-configgen/devicelist: configgen/devicelist.go
-	(cd configgen ; go build devicelist.go)
-
-configgen/drivers/drivers.go: configgen/devicelist lcec_devices
-	(cd configgen ; go generate)
+lcec_configgen: lcec_configgen.o $(lcec-common-objs) liblcecdevices.a
+	$(CC) -o $@ lcec_configgen.o $(lcec-common-objs) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm
 
 # Rule for compiling tests/*.bin files.  We're naming test excutables *.bin so we can use wildcards in .gitignore and `make clean` to match them.
 tests/%.bin: tests/%.o $(lcec-common-objs) liblcecdevices.a

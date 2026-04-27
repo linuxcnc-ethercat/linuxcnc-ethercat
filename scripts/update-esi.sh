@@ -70,8 +70,4 @@ set +e
 (cd $xmldir ; rar e -o- $zipdir/leadshine3.rar )
 set -e
 
-cd esidecoder
-go build esidecoder.go
-cd ..
-
-./esidecoder/esidecoder --esi_directory=tmpesi --output=esi.yml
+./esidecoder.py --esi_directory=tmpesi --output=esi.yml

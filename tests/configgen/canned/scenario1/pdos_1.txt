@@ -1,0 +1,1 @@
+SM0: PhysAddr 0x1000, DefaultSize    0, ControlRegister 0x26, Enable 1

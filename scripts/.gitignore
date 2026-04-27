@@ -1,5 +1,4 @@
 *.zip
 tmpesi/
-esidecoder/esidecoder
-devicelist/devicelist
-devicetable/devicetable
+zips/
+__pycache__/

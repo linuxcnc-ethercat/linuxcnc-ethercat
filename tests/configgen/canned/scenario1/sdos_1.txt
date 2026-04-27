@@ -1,0 +1,4 @@
+SDO 0x1000, "Device type"
+  0x1000:00, r-r-r-, uint32, "Device type"
+SDO 0x1018, "Identity"
+  0x1018:00, r-r-r-, uint8, "Subindex 000"
