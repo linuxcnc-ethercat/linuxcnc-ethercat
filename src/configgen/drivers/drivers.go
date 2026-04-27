@@ -1071,6 +1071,22 @@ var Drivers=[]EthercatDriver{
   },
   EthercatDriver{
     VendorID: "0x00000002",
+    ProductID: "0x09da3052",
+    Type: "EL2522",
+    ModParams: []string{
+      "<!-- Operating mode: FrequencyModulation|PulseDirection|IncrementalEncoder --> ",
+      "<modParam name=\"ch0OperatingMode\" value=\"FrequencyModulation\"/> ",
+      "<!-- Maximum output frequency in Hz --> ",
+      "<modParam name=\"ch0FrequencyLimit\" value=\"50000\"/> ",
+      "<!-- Operating mode: FrequencyModulation|PulseDirection|IncrementalEncoder --> ",
+      "<modParam name=\"ch1OperatingMode\" value=\"FrequencyModulation\"/> ",
+      "<!-- Maximum output frequency in Hz --> ",
+      "<modParam name=\"ch1FrequencyLimit\" value=\"50000\"/> ",
+      "",
+    },
+  },
+  EthercatDriver{
+    VendorID: "0x00000002",
     ProductID: "0x0a343052",
     Type: "EL2612",
     ModParams: []string{
