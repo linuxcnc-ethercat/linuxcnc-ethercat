@@ -56,3 +56,4 @@ jobs:
               with:
                   files: dist/*.deb
                   generate_release_notes: true
+                  prerelease: ${{ contains(github.ref_name, '~pre') || contains(github.ref_name, '-pre') }}
