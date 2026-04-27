@@ -1,37 +1,58 @@
 ---
-name: Release process
+name: Release
 
-on:  # yamllint disable-line rule:truthy
-    pull_request:
-        branches: ['**']
-        types: [closed]
-    merge_group:
-    workflow_dispatch:  # Allow to be triggered manually for now.
+on:
+    push:
+        tags: ['v*']
 
 permissions:
-    contents: read  # to fetch code (actions/checkout)
+    contents: write
 
 jobs:
-    # Create new releases of linuxcnc-ethercat using a version of the Semantic Release
-    # method.  This draws release notes from properly-formatted commit messages.
-    release:
-        env:
-            CHANGELOG_AUTHOR_NAME: "Scott Laird"
-            CHANGELOG_AUTHOR_EMAIL: "scott@sigkill.org"
+    build-and-release:
         runs-on: ubuntu-latest
-        permissions:
-            contents: write
+        container:
+            image: debian:trixie
         steps:
-            - name: Checkout code
+            - name: Install build dependencies
+              run: |
+                  apt-get update
+                  apt-get install -y --no-install-recommends ca-certificates curl gpg
+                  curl -fsSL https://download.opensuse.org/repositories/science:/EtherLab/Debian_Testing/Release.key \
+                      | gpg --dearmor -o /usr/share/keyrings/etherlab.gpg
+                  echo "deb [signed-by=/usr/share/keyrings/etherlab.gpg] https://download.opensuse.org/repositories/science:/EtherLab/Debian_Testing/ ./" \
+                      > /etc/apt/sources.list.d/etherlab.list
+                  apt-get update
+                  apt-get install -y --no-install-recommends \
+                      git build-essential devscripts debhelper \
+                      linuxcnc-uspace-dev libethercat-dev \
+                      golang-go yapps2
+
+            - name: Checkout
               uses: actions/checkout@v4
-
-            - name: Setup Go
-              uses: actions/setup-go@v3
               with:
-                  go-version: 1.19
+                  fetch-depth: 0
 
-            - name: Release code
-              uses: go-semantic-release/action@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Set version from git tag
+              run: |
+                  VERSION="${GITHUB_REF_NAME#v}"
+                  dch --newversion "${VERSION}" --distribution stable "Release ${VERSION}"
 
+            - name: Build deb package
+              run: |
+                  touch TODO
+                  dpkg-buildpackage -d -us -uc -b
+                  mkdir -p dist
+                  cp ../*.deb dist/
+                  rm -f dist/*-dbgsym*.deb
+
+            - name: Run tests
+              run: |
+                  cd src
+                  make test
+
+            - name: Create GitHub Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: dist/*.deb
+                  generate_release_notes: true

@@ -40,5 +40,6 @@ void *lcec_malloc(size_t size, const char *file, const char *func, int line) {
     fprintf(stderr, LCEC_MSG_PFX "MEMORY ALLOCATION FAILURE, hal_malloc() returned NULL in function %s at %s:%d\n", func, file, line);
     exit(1);
   }
+  memset(result, 0, size);
   return result;
 }
