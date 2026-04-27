@@ -188,7 +188,6 @@ Description | Driver | EtherCAT VID:PID | Device Type | Testing Status | Notes
 [Beckhoff EL7031 1Ch. Stepper motor output stage (24V, 1.5A)](http://www.beckhoff.com/EL7031) | [el70x1](../src/devices/lcec_el70x1.c) | 0x2:0x1b773052 | Stepper Drive |  | 
 [Beckhoff EL7041 1Ch. Stepper motor output stage (50V, 5A)](http://www.beckhoff.com/EL7041) | [el70x1](../src/devices/lcec_el70x1.c) | 0x2:0x1b813052 | Stepper Drive |  | 
 [Beckhoff EL7041 1Ch. Stepper motor output stage (50V, 5A)](http://www.beckhoff.com/EL7041) | [el7041](../src/devices/lcec_el7041.c) | 0x2:0x1b813052 | Stepper Drive |  | 
-[Beckhoff EL7041 1Ch. Stepper motor output stage (50V, 5A)](http://www.beckhoff.com/EL7041) | [el7041](../src/devices/lcec_el7041.c) | 0x2:0x1b813052 | Stepper Drive |  | 
 [Beckhoff EL7201 1Ch. MDP742 Servo motor output stage (50V, 4A)](http://www.beckhoff.com/EL7201) | [el7211](../src/devices/lcec_el7211.c) | 0x2:0x1c213052 | Servo Drive |  | 
 [Beckhoff EL7211 1Ch. MDP742 Servo motor output stage (50V, 4.5A RMS)](http://www.beckhoff.com/EL7211) | [el7211](../src/devices/lcec_el7211.c) | 0x2:0x1c2b3052 | Servo Drive |  | 
 [Beckhoff EL7221 1Ch. MDP742 Servo motor output stage (50V, 8A RMS)](http://www.beckhoff.com/EL7211) | [el7211](../src/devices/lcec_el7211.c) | 0x2:0x1c353052 | Servo Drive |  | 
