@@ -1,11 +1,17 @@
-Source: linuxcnc-ethercat
+Source: linuxcnc-ethercat-pi
 Section: unknown
 Priority: extra
 Maintainer: Bjarne von Horn <vh@igh.de>
 Build-Depends: debhelper (>= 8.0.0), libexpat1-dev, linuxcnc-dev | linuxcnc-sim-dev | linuxcnc-uspace-dev | machinekit-dev, etherlabmaster-dev | libethercat-dev, golang-go
 Standards-Version: 3.9.3
 
-Package: linuxcnc-ethercat
+Package: linuxcnc-ethercat-pi
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, linuxcnc | linuxcnc-sim | linuxcnc-uspace | machinekit, etherlabmaster | ethercat-master
-Description: LinuxCNC EtherCAT HAL driver
+Conflicts: linuxcnc-ethercat, linuxcnc-ethercat-bb
+Provides: linuxcnc-ethercat
+Replaces: linuxcnc-ethercat
+Description: LinuxCNC EtherCAT HAL driver (Sittner PI DC sync)
+ Sittner-style callback DC sync with PI controller flavor of
+ linuxcnc-ethercat. Conflicts with linuxcnc-ethercat-bb (bang-bang
+ flavor).

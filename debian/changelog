@@ -1,3 +1,13 @@
+linuxcnc-ethercat-pi (1.41.0~pre5-pi1) unstable; urgency=low
+
+  * Reapply Sittner's DC sync callback architecture with PI controller
+    (7a89bf3). dcsync_r2m.c / dcsync_m2r.c modular split.
+  * Rename source/binary package to linuxcnc-ethercat-pi to ship in
+    parallel with linuxcnc-ethercat-bb (bang-bang flavor).
+    Conflicts/Provides/Replaces linuxcnc-ethercat for clean upgrade.
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Mon, 27 Apr 2026 10:00:00 +0200
+
 linuxcnc-ethercat (1.41.0~pre5-1) unstable; urgency=low
 
   * Revert "Adopt Sittner's DC sync callback architecture with PI
