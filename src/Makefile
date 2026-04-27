@@ -17,7 +17,7 @@ EXTRA_CFLAGS += -Wall # Increase debugging level
 ## targets
 lcec-common-objs := lcec_devicelist.o lcec_ethercat.o lcec_pins.o lcec_lookup.o lcec_modparam.o lcec_malloc.o
 lcec-objs := lcec_main.o $(lcec-common-objs)
-lcec-conf-srcs := $(wildcard lcec_conf*.c)
+lcec-conf-srcs := lcec_conf.c $(wildcard lcec_conf_*.c)
 lcec-conf-objs = $(subst .c,.o,$(lcec-conf-srcs))
 device-srcs := $(wildcard devices/*.c)
 device-objs := $(subst .c,.o,$(device-srcs))
