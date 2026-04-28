@@ -1,0 +1,4 @@
+SM0: PhysAddr 0x1000, DefaultSize    0, ControlRegister 0x26, Enable 1
+SM1: PhysAddr 0x1400, DefaultSize    0, ControlRegister 0x22, Enable 1
+SM2: PhysAddr 0x1800, DefaultSize    0, ControlRegister 0x24, Enable 1
+SM3: PhysAddr 0x1c00, DefaultSize    0, ControlRegister 0x20, Enable 1

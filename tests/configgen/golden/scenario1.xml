@@ -1,0 +1,85 @@
+<masters>
+  <master idx="0">
+    <slave idx="0" type="EL2008" name="D1"/>
+    <slave idx="1" type="EL3204" name="D2">
+      <!-- Sensor type, Pt100|Ni100|Pt1000|Pt500|Pt200|Ni1000|Ni1000-TK5000|Ohm/16|Ohm/64 -->
+      <modParam name="ch0Sensor" value="Pt100"/>
+      
+      <!-- Sensor resolution, Standard or High.  High reduces the range in some cases. -->
+      <modParam name="ch0Resolution" value="Standard"/>
+      
+      <!-- Number of wires used for sensor connection.  2, 3, or 4 -->
+      <modParam name="ch0Wires" value="2"/>
+      
+      <!-- Sensor type, Pt100|Ni100|Pt1000|Pt500|Pt200|Ni1000|Ni1000-TK5000|Ohm/16|Ohm/64 -->
+      <modParam name="ch1Sensor" value="Pt100"/>
+      
+      <!-- Sensor resolution, Standard or High.  High reduces the range in some cases. -->
+      <modParam name="ch1Resolution" value="Standard"/>
+      
+      <!-- Number of wires used for sensor connection.  2, 3, or 4 -->
+      <modParam name="ch1Wires" value="2"/>
+      
+      <!-- Sensor type, Pt100|Ni100|Pt1000|Pt500|Pt200|Ni1000|Ni1000-TK5000|Ohm/16|Ohm/64 -->
+      <modParam name="ch2Sensor" value="Pt100"/>
+      
+      <!-- Sensor resolution, Standard or High.  High reduces the range in some cases. -->
+      <modParam name="ch2Resolution" value="Standard"/>
+      
+      <!-- Number of wires used for sensor connection.  2, 3, or 4 -->
+      <modParam name="ch2Wires" value="2"/>
+      
+      <!-- Sensor type, Pt100|Ni100|Pt1000|Pt500|Pt200|Ni1000|Ni1000-TK5000|Ohm/16|Ohm/64 -->
+      <modParam name="ch3Sensor" value="Pt100"/>
+      
+      <!-- Sensor resolution, Standard or High.  High reduces the range in some cases. -->
+      <modParam name="ch3Resolution" value="Standard"/>
+      
+      <!-- Number of wires used for sensor connection.  2, 3, or 4 -->
+      <modParam name="ch3Wires" value="2"/>
+      
+      <!-- Sensor type, Pt100|Ni100|Pt1000|Pt500|Pt200|Ni1000|Ni1000-TK5000|Ohm/16|Ohm/64 -->
+      <modParam name="ch4Sensor" value="Pt100"/>
+      
+      <!-- Sensor resolution, Standard or High.  High reduces the range in some cases. -->
+      <modParam name="ch4Resolution" value="Standard"/>
+      
+      <!-- Number of wires used for sensor connection.  2, 3, or 4 -->
+      <modParam name="ch4Wires" value="2"/>
+      
+    </slave>
+    <slave idx="2" type="basic_cia402" vid="0x000000ab" pid="0x00000123" name="D3">
+      <!--GenericServo X1-->
+      <modParam name="ciaRxPDOEntryLimit" value="10"/>
+      <modParam name="ciaTxPDOEntryLimit" value="9"/>
+      <modParam name="enablePP" value="true"/>
+      <modParam name="enablePV" value="true"/>
+      <modParam name="enableHM" value="true"/>
+      <modParam name="enableCSP" value="true"/>
+      <modParam name="enableCSV" value="true"/>
+      <modParam name="enableCST" value="true"/>
+      <modParam name="enableActualTorque" value="true"/>
+      <modParam name="enableDigitalInput" value="true"/>
+      <modParam name="digitalInChannels" value="16"/>
+      <modParam name="digitalOutChannels" value="16"/>
+    </slave>
+    <slave idx="3" type="generic" vid="0x000000cd" pid="0x00000456" name="D4">
+      <!--UnknownPDO Module-->
+      <syncManager idx="0" dir="in"/>
+      <syncManager idx="1" dir="out"/>
+      <syncManager idx="2" dir="out">
+        <pdo idx="1600">
+          <!--Outputs-->
+          <pdoEntry idx="7000" subIdx="01" bitLen="1" halPin="control" halType="bit"/>
+        </pdo>
+      </syncManager>
+      <syncManager idx="3" dir="in">
+        <pdo idx="1a00">
+          <!--Inputs-->
+          <pdoEntry idx="6000" subIdx="01" bitLen="1" halPin="status" halType="bit"/>
+          <pdoEntry idx="6000" subIdx="11" bitLen="16" halPin="value" halType="s32"/>
+        </pdo>
+      </syncManager>
+    </slave>
+  </master>
+</masters>

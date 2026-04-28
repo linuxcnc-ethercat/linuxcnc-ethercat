@@ -1,0 +1,48 @@
+#!/bin/bash
+# Fake `ethercat` CLI shim for lcec_configgen testing.
+# Reads canned text from $CANNED_DIR.
+set -e
+CANNED="${CANNED_DIR:?CANNED_DIR not set}"
+
+# Parse args. Real CLI: ethercat [-v] [-m M] <cmd> [-p N] [args...]
+verbose=0
+master=0
+slave=
+cmd=
+args=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -v) verbose=1; shift ;;
+    -m) master="$2"; shift 2 ;;
+    -p) slave="$2"; shift 2 ;;
+    slaves|sdos|pdos|upload) cmd="$1"; shift ;;
+    *) args+=("$1"); shift ;;
+  esac
+done
+
+case "$cmd" in
+  slaves)
+    cat "$CANNED/slaves.txt"
+    ;;
+  sdos)
+    cat "$CANNED/sdos_${slave}.txt"
+    ;;
+  pdos)
+    cat "$CANNED/pdos_${slave}.txt"
+    ;;
+  upload)
+    # args = (idx subidx). Look up in upload_<slave>_<idx>_<subidx>.txt
+    idx="${args[0]}"
+    sub="${args[1]}"
+    f="$CANNED/upload_${slave}_${idx}_${sub}.txt"
+    if [[ -f "$f" ]]; then
+      cat "$f"
+    else
+      echo "0x00000000 0" # default: no abilities
+    fi
+    ;;
+  *)
+    echo "shim: unknown cmd '$cmd'" >&2
+    exit 1
+    ;;
+esac

@@ -1,0 +1,24 @@
+=== Master 0, Slave 0 ===
+  State: PREOP
+  Vendor Id: 0x00000002
+  Product code: 0x07d83052
+  Revision number: 0x00120000
+  Device name: EL2008 8Ch. Dig. Output 24V, 0.5A
+=== Master 0, Slave 1 ===
+  State: PREOP
+  Vendor Id: 0x00000002
+  Product code: 0x0c843052
+  Revision number: 0x00100000
+  Device name: EL3204 4Ch. Ana. Input PT100 (RTD)
+=== Master 0, Slave 2 ===
+  State: PREOP
+  Vendor Id: 0x000000ab
+  Product code: 0x00000123
+  Revision number: 0x00010000
+  Device name: GenericServo X1
+=== Master 0, Slave 3 ===
+  State: PREOP
+  Vendor Id: 0x000000cd
+  Product code: 0x00000456
+  Revision number: 0x00010000
+  Device name: UnknownPDO Module

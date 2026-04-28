@@ -1,0 +1,760 @@
+=== Master 0, Slave 0 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00004321
+  Product code:    0x000000b4
+  Revision number: 0x00000001
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 0 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes             -   1993580271           0           0
+   1  MII   up    open    yes             1   1993604632       24361         620
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x1000/124, TX: 0x1100/128
+  Standard  RX: 0x1000/124, TX: 0x1100/124
+  Supported protocols: CoE, FoE
+General:
+  Group: Servo Drive
+  Image name: 
+  Order number: L7EC-1000S/C
+  Device name: L7EC-1000S/C(COE)
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: no
+    Enable PDO Assign: yes
+    Enable PDO Configuration: yes
+    Enable Upload at startup: no
+    Enable SDO complete access: no
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 1 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00004321
+  Product code:    0x000000b4
+  Revision number: 0x00000001
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 620 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes             0   1560828206           0         620
+   1  MII   up    open    yes             2   1560851326       23120         599
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x1000/124, TX: 0x1100/128
+  Standard  RX: 0x1000/124, TX: 0x1100/124
+  Supported protocols: CoE, FoE
+General:
+  Group: Servo Drive
+  Image name: 
+  Order number: L7EC-1000S/C
+  Device name: L7EC-1000S/C(COE)
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: no
+    Enable PDO Assign: yes
+    Enable PDO Configuration: yes
+    Enable Upload at startup: no
+    Enable SDO complete access: no
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 2 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00004321
+  Product code:    0x000000b4
+  Revision number: 0x00000001
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 1219 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes             1   1498125965           0         599
+   1  MII   up    open    yes             3   1498147886       21921         600
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x1000/124, TX: 0x1100/128
+  Standard  RX: 0x1000/124, TX: 0x1100/124
+  Supported protocols: CoE, FoE
+General:
+  Group: Servo Drive
+  Image name: 
+  Order number: L7EC-1000S/C
+  Device name: L7EC-1000S/C(COE)
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: no
+    Enable PDO Assign: yes
+    Enable PDO Configuration: yes
+    Enable Upload at startup: no
+    Enable SDO complete access: no
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 3 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00004321
+  Product code:    0x000000b4
+  Revision number: 0x00000001
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 1819 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes             2   1451634376           0         600
+   1  MII   up    open    yes             4   1451655096       20720         600
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x1000/124, TX: 0x1100/128
+  Standard  RX: 0x1000/124, TX: 0x1100/124
+  Supported protocols: CoE, FoE
+General:
+  Group: Servo Drive
+  Image name: 
+  Order number: L7EC-1000S/C
+  Device name: L7EC-1000S/C(COE)
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: no
+    Enable PDO Assign: yes
+    Enable PDO Configuration: yes
+    Enable Upload at startup: no
+    Enable SDO complete access: no
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 4 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00004321
+  Product code:    0x000000b4
+  Revision number: 0x00000001
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 2419 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes             3   1157688657           0         600
+   1  MII   up    open    yes             5   1157708177       19520         599
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x1000/124, TX: 0x1100/128
+  Standard  RX: 0x1000/124, TX: 0x1100/124
+  Supported protocols: CoE, FoE
+General:
+  Group: Servo Drive
+  Image name: 
+  Order number: L7EC-1000S/C
+  Device name: L7EC-1000S/C(COE)
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: no
+    Enable PDO Assign: yes
+    Enable PDO Configuration: yes
+    Enable Upload at startup: no
+    Enable SDO complete access: no
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 5 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00004321
+  Product code:    0x000000b3
+  Revision number: 0x00000001
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 3018 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes             4   2558982555           0         599
+   1  MII   up    open    yes             6   2559000876       18321         601
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x1000/124, TX: 0x1100/128
+  Standard  RX: 0x1000/124, TX: 0x1100/124
+  Supported protocols: CoE, FoE
+General:
+  Group: Servo Drive
+  Image name: 
+  Order number: L7EC- 750S/C
+  Device name: L7EC- 750S/C(COE)
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: no
+    Enable PDO Assign: yes
+    Enable PDO Configuration: yes
+    Enable Upload at startup: no
+    Enable SDO complete access: no
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 6 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00004321
+  Product code:    0x000000b3
+  Revision number: 0x00000001
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 3619 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes             5   2479113234           0         601
+   1  MII   up    open    yes             7   2479130353       17119         600
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x1000/124, TX: 0x1100/128
+  Standard  RX: 0x1000/124, TX: 0x1100/124
+  Supported protocols: CoE, FoE
+General:
+  Group: Servo Drive
+  Image name: 
+  Order number: L7EC- 750S/C
+  Device name: L7EC- 750S/C(COE)
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: no
+    Enable PDO Assign: yes
+    Enable PDO Configuration: yes
+    Enable Upload at startup: no
+    Enable SDO complete access: no
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 7 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00004321
+  Product code:    0x000000b4
+  Revision number: 0x00000001
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 4219 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes             6   2040598608           0         600
+   1  MII   up    open    yes             8   2040614527       15919         619
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x1000/124, TX: 0x1100/128
+  Standard  RX: 0x1000/124, TX: 0x1100/124
+  Supported protocols: CoE, FoE
+General:
+  Group: Servo Drive
+  Image name: 
+  Order number: L7EC-1000S/C
+  Device name: L7EC-1000S/C(COE)
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: no
+    Enable PDO Assign: yes
+    Enable PDO Configuration: yes
+    Enable Upload at startup: no
+    Enable SDO complete access: no
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 8 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00004321
+  Product code:    0x000000b4
+  Revision number: 0x00000001
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 4838 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes             7   2463432483           0         619
+   1  MII   up    open    yes             9   2463447163       14680         620
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x1000/124, TX: 0x1100/128
+  Standard  RX: 0x1000/124, TX: 0x1100/124
+  Supported protocols: CoE, FoE
+General:
+  Group: Servo Drive
+  Image name: 
+  Order number: L7EC-1000S/C
+  Device name: L7EC-1000S/C(COE)
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: no
+    Enable PDO Assign: yes
+    Enable PDO Configuration: yes
+    Enable Upload at startup: no
+    Enable SDO complete access: no
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 9 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00100000
+  Product code:    0x00000339
+  Revision number: 0x00010001
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 5458 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes             8   2480903151           0         620
+   1  MII   up    open    yes            10   2480916591       13440         660
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x0000/0, TX: 0x0000/0
+  Standard  RX: 0x1000/256, TX: 0x1400/256
+  Supported protocols: EoE, CoE
+General:
+  Group: FrequencyInverter
+  Image name: 
+  Order number: InoMD500N
+  Device name: MD500_1Axis_V1.07
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: no
+    Enable PDO Assign: yes
+    Enable PDO Configuration: yes
+    Enable Upload at startup: no
+    Enable SDO complete access: no
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 10 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00000111
+  Product code:    0x00000798
+  Revision number: 0x00000000
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 6118 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes             9   1384980041           0         660
+   1  MII   up    open    yes            11   1384992160       12119         679
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x0000/0, TX: 0x0000/0
+  Standard  RX: 0x1000/128, TX: 0x1080/128
+  Supported protocols: CoE
+General:
+  Group: Infineon slave
+  Image name: 
+  Order number: CAT-IN16
+  Device name: CAT-IN16
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: yes
+    Enable PDO Assign: no
+    Enable PDO Configuration: no
+    Enable Upload at startup: no
+    Enable SDO complete access: yes
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 11 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00000111
+  Product code:    0x00000798
+  Revision number: 0x00000000
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 6797 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes            10   1186021379           0         679
+   1  MII   up    open    yes            12   1186032139       10760         660
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x0000/0, TX: 0x0000/0
+  Standard  RX: 0x1000/128, TX: 0x1080/128
+  Supported protocols: CoE
+General:
+  Group: Infineon slave
+  Image name: 
+  Order number: CAT-IN16
+  Device name: CAT-IN16
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: yes
+    Enable PDO Assign: no
+    Enable PDO Configuration: no
+    Enable Upload at startup: no
+    Enable SDO complete access: yes
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 12 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00000111
+  Product code:    0x00000798
+  Revision number: 0x00000000
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 7457 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes            11    766276373           0         660
+   1  MII   up    open    yes            13    766285813        9440         680
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x0000/0, TX: 0x0000/0
+  Standard  RX: 0x1000/128, TX: 0x1080/128
+  Supported protocols: CoE
+General:
+  Group: Infineon slave
+  Image name: 
+  Order number: CAT-IN16
+  Device name: CAT-IN16
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: yes
+    Enable PDO Assign: no
+    Enable PDO Configuration: no
+    Enable Upload at startup: no
+    Enable SDO complete access: yes
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 13 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00000112
+  Product code:    0x00000798
+  Revision number: 0x00000000
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 8137 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes            12   1597940113           0         680
+   1  MII   up    open    yes            14   1597948193        8080         660
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x0000/0, TX: 0x0000/0
+  Standard  RX: 0x1000/128, TX: 0x1080/128
+  Supported protocols: CoE
+General:
+  Group: Infineon slave
+  Image name: 
+  Order number: CAT-OUT16
+  Device name: CAT-OUT16
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: yes
+    Enable PDO Assign: no
+    Enable PDO Configuration: no
+    Enable Upload at startup: no
+    Enable SDO complete access: yes
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 14 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00000112
+  Product code:    0x00000798
+  Revision number: 0x00000000
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 8797 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes            13   1894510167           0         660
+   1  MII   up    open    yes            15   1894516927        6760         659
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x0000/0, TX: 0x0000/0
+  Standard  RX: 0x1000/128, TX: 0x1080/128
+  Supported protocols: CoE
+General:
+  Group: Infineon slave
+  Image name: 
+  Order number: CAT-OUT16
+  Device name: CAT-OUT16
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: yes
+    Enable PDO Assign: no
+    Enable PDO Configuration: no
+    Enable Upload at startup: no
+    Enable SDO complete access: yes
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 15 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00000112
+  Product code:    0x00000798
+  Revision number: 0x00000000
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 9456 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes            14   1441981569           0         659
+   1  MII   up    open    yes            16   1441987010        5441         680
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x0000/0, TX: 0x0000/0
+  Standard  RX: 0x1000/128, TX: 0x1080/128
+  Supported protocols: CoE
+General:
+  Group: Infineon slave
+  Image name: 
+  Order number: CAT-OUT16
+  Device name: CAT-OUT16
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: yes
+    Enable PDO Assign: no
+    Enable PDO Configuration: no
+    Enable Upload at startup: no
+    Enable SDO complete access: yes
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 16 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00000111
+  Product code:    0x00000798
+  Revision number: 0x00000000
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 10136 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes            15   1266119791           0         680
+   1  MII   up    open    yes            17   1266123871        4080         700
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x0000/0, TX: 0x0000/0
+  Standard  RX: 0x1000/128, TX: 0x1080/128
+  Supported protocols: CoE
+General:
+  Group: Infineon slave
+  Image name: 
+  Order number: CAT-IN16
+  Device name: CAT-IN16
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: yes
+    Enable PDO Assign: no
+    Enable PDO Configuration: no
+    Enable Upload at startup: no
+    Enable SDO complete access: yes
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 17 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00000111
+  Product code:    0x00000798
+  Revision number: 0x00000000
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 10836 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes            16   1429233895           0         700
+   1  MII   up    open    yes            18   1429236575        2680         660
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x0000/0, TX: 0x0000/0
+  Standard  RX: 0x1000/128, TX: 0x1080/128
+  Supported protocols: CoE
+General:
+  Group: Infineon slave
+  Image name: 
+  Order number: CAT-IN16
+  Device name: CAT-IN16
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: yes
+    Enable PDO Assign: no
+    Enable PDO Configuration: no
+    Enable Upload at startup: no
+    Enable SDO complete access: yes
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 18 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00000111
+  Product code:    0x00000798
+  Revision number: 0x00000000
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 11496 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes            17   1249074595           0         660
+   1  MII   up    open    yes            19   1249075955        1360         680
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x0000/0, TX: 0x0000/0
+  Standard  RX: 0x1000/128, TX: 0x1080/128
+  Supported protocols: CoE
+General:
+  Group: Infineon slave
+  Image name: 
+  Order number: CAT-IN16
+  Device name: CAT-IN16
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: yes
+    Enable PDO Assign: no
+    Enable PDO Configuration: no
+    Enable Upload at startup: no
+    Enable SDO complete access: yes
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA
+=== Master 0, Slave 19 ===
+Device: Main
+State: PREOP
+Flag: +
+Identity:
+  Vendor Id:       0x00000112
+  Product code:    0x00000798
+  Revision number: 0x00000000
+  Serial number:   0x00000000
+DL information:
+  FMMU bit operation: no
+  Distributed clocks: yes, 64 bit
+  DC system time transmission delay: 12176 ns
+Port  Type  Link  Loop    Signal  NextSlave  RxTime [ns]  Diff [ns]   NextDc [ns]
+   0* MII   up    open    yes            18   1767871265           0         680
+   1  MII   down  closed  no              -            -           -           -
+   2  N/A   down  closed  no              -            -           -           -
+   3  N/A   down  closed  no              -            -           -           -
+Mailboxes:
+  Bootstrap RX: 0x0000/0, TX: 0x0000/0
+  Standard  RX: 0x1000/128, TX: 0x1080/128
+  Supported protocols: CoE
+General:
+  Group: Infineon slave
+  Image name: 
+  Order number: CAT-OUT16
+  Device name: CAT-OUT16
+  CoE details:
+    Enable SDO: yes
+    Enable SDO Info: yes
+    Enable PDO Assign: no
+    Enable PDO Configuration: no
+    Enable Upload at startup: no
+    Enable SDO complete access: yes
+  Flags:
+    Enable SafeOp: no
+    Enable notLRW: no
+  Current consumption: 0 mA

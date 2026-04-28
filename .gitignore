@@ -23,8 +23,6 @@ src/lcec_conf
 src/lcec_devices
 src/lcec_configgen
 src/Module.symvers
-src/configgen/devicelist
-src/configgen/lcec_configgen
 
 # Test files
 src/tests/*.bin
@@ -36,11 +34,10 @@ debian/*.log
 debian/*.substvars
 debian/linuxcnc-ethercat/
 
-# Binaries
-scripts/devicetable/devicetable
-scripts/devicelist/devicelist
-scripts/deviceequivs/deviceequivs
+# Maintainer-script downloads
 scripts/zips
+scripts/tmpesi
+__pycache__/
 
 # Generated documentation
 documentation/doxygen

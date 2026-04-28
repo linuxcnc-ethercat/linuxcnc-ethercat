@@ -17,7 +17,7 @@ EXTRA_CFLAGS += -Wall # Increase debugging level
 ## targets
 lcec-common-objs := lcec_devicelist.o lcec_ethercat.o lcec_pins.o lcec_lookup.o lcec_modparam.o lcec_malloc.o
 lcec-objs := lcec_main.o dcsync_r2m.o dcsync_m2r.o $(lcec-common-objs)
-lcec-conf-srcs := $(wildcard lcec_conf*.c)
+lcec-conf-srcs := lcec_conf.c $(wildcard lcec_conf_*.c)
 lcec-conf-objs = $(subst .c,.o,$(lcec-conf-srcs))
 device-srcs := $(wildcard devices/*.c)
 device-objs := $(subst .c,.o,$(device-srcs))
@@ -110,15 +110,8 @@ lcec_conf: $(lcec-conf-objs) $(lcec-common-objs) liblcecdevices.a
 lcec_devices: lcec_devices.o $(lcec-common-objs) liblcecdevices.a
 	$(CC) -o $@ lcec_devices.o $(lcec-common-objs) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm
 
-lcec_configgen: configgen/*.go configgen/*/*.go
-	(cd configgen ; go build lcec_configgen.go)
-	cp configgen/lcec_configgen .
-
-configgen/devicelist: configgen/devicelist.go
-	(cd configgen ; go build devicelist.go)
-
-configgen/drivers/drivers.go: configgen/devicelist lcec_devices
-	(cd configgen ; go generate)
+lcec_configgen: lcec_configgen.o $(lcec-common-objs) liblcecdevices.a
+	$(CC) -o $@ lcec_configgen.o $(lcec-common-objs) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm
 
 # Rule for compiling tests/*.bin files.  We're naming test excutables *.bin so we can use wildcards in .gitignore and `make clean` to match them.
 tests/%.bin: tests/%.o $(lcec-common-objs) liblcecdevices.a

@@ -29,7 +29,7 @@ jobs:
                   apt-get install -y --no-install-recommends \
                       git build-essential devscripts debhelper \
                       linuxcnc-uspace-dev libethercat-dev \
-                      golang-go yapps2
+                      yapps2
 
             - name: Checkout
               uses: actions/checkout@v4

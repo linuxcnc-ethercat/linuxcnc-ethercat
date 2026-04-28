@@ -2,16 +2,14 @@
 
 set -e
 
-cd devicetable/
+cd "$(dirname "$0")"
 
-DEVICEDIR=../../documentation/devices
-DEVICESMD=../../documentation/DEVICES.md
+DEVICEDIR=../documentation/devices
+DEVICESMD=../documentation/DEVICES.md
 DEVICESNEW=$DEVICESMD-new
 
-go build devicetable.go
-if ./devicetable --path=$DEVICEDIR > $DEVICESNEW; then
-    mv $DEVICESNEW $DEVICESMD
+if ./devicetable.py --path="$DEVICEDIR" > "$DEVICESNEW"; then
+    mv "$DEVICESNEW" "$DEVICESMD"
 else
-    rm $DEVICESNEW
+    rm -f "$DEVICESNEW"
 fi
-
