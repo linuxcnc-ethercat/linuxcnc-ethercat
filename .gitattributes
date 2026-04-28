@@ -1,2 +1,10 @@
 documentation/DEVICES.md linguist-generated
 documentation/doxygen/* linguist-generated
+
+# Branch-flavor sticky files: when merging master -> master-pi, always keep
+# master-pi's version of these so the -pi debian identity is not clobbered
+# by the -bb naming on master. Requires one-time per-clone setup:
+#   git config merge.keep-ours.driver true
+# (See scripts/setup-merge-drivers.sh.)
+debian/control     merge=keep-ours
+debian/changelog   merge=keep-ours
