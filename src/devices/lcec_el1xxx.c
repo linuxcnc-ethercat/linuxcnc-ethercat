@@ -48,6 +48,7 @@ static lcec_typelist_t types[] = {
     {"EL1819", LCEC_BECKHOFF_VID, 0x071B3052, 0, NULL, lcec_el1xxx_init, NULL, 16},
     {"EP1008", LCEC_BECKHOFF_VID, 0x03f04052, 0, NULL, lcec_el1xxx_init, NULL, 8},
     {"EP1018", LCEC_BECKHOFF_VID, 0x03fa4052, 0, NULL, lcec_el1xxx_init, NULL, 8},
+    {"EP1809", LCEC_BECKHOFF_VID, 0x07114052, 0, NULL, lcec_el1xxx_init, NULL, 16},
     {"EP1819", LCEC_BECKHOFF_VID, 0x071b4052, 0, NULL, lcec_el1xxx_init, NULL, 16},
     {NULL},
 };
