@@ -372,7 +372,8 @@ lcec_ratio lcec_cia402_decode_ratio_modparam(const char *value, int max_denomina
 #define CIA402_MP_EGEAR_RATIO          0x1230
 #define CIA402_MP_VL_ACCEL             0x1260
 #define CIA402_MP_VL_DECEL             0x1270
-// next is 0x1280
+#define CIA402_MP_HOME_METHOD          0x1280  // 0x6098:00 "homing method" S8
+// next is 0x1290
 
 // "enable" modParams
 #define CIA402_MP_ENABLE_actual_current            0x22d0
