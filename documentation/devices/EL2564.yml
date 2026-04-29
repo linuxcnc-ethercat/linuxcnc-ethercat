@@ -1,0 +1,11 @@
+---
+Device: EL2564
+VendorID: "0x00000002"
+VendorName: Beckhoff Automation GmbH & Co. KG
+PID: "0x0a043052"
+Description: EL2564 | EtherCAT-Klemme, 4-Kanal-LED-Ausgang, 5…48 V DC, 4 A, RGBW, Common Anode
+DocumentationURL: http://www.beckhoff.com/EL2564
+DeviceType: Digital Output Terminals
+Notes: ""
+SrcFile: src/devices/lcec_el2564.c
+TestingStatus: "Tested and working @mintracer and @medikusDKFZ"
