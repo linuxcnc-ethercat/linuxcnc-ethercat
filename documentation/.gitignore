@@ -1,0 +1,4 @@
+# Copied at build time by .github/workflows/pages.yml so the Jekyll
+# site can render them. Don't commit local copies.
+README.md
+CONTRIBUTING.md
