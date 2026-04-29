@@ -22,33 +22,44 @@
 #include "../lcec.h"
 #include "lcec_class_din.h"
 
+// Channel-count is stored in the low 8 bits of slave->flags. Higher
+// bits encode device-layout variants - e.g. legacy EL1014 (revision
+// 0x00000000) packs all 4 inputs into one PDO at 0x3101:01..0x3101:04
+// instead of the modern 0x6000/0x6010/0x6020/0x6030 layout.
+#define EL1XXX_F_CHANNELS(n)  ((n) & 0xff)
+#define EL1XXX_F_LEGACY_3101  0x100
+
 static int lcec_el1xxx_init(int comp_id, lcec_slave_t *slave);
 
 static lcec_typelist_t types[] = {
-    {"EL1002", LCEC_BECKHOFF_VID, 0x03EA3052, 0, NULL, lcec_el1xxx_init, NULL, 2},
-    {"EL1004", LCEC_BECKHOFF_VID, 0x03EC3052, 0, NULL, lcec_el1xxx_init, NULL, 4},
-    {"EL1008", LCEC_BECKHOFF_VID, 0x03F03052, 0, NULL, lcec_el1xxx_init, NULL, 8},
-    {"EL1012", LCEC_BECKHOFF_VID, 0x03F43052, 0, NULL, lcec_el1xxx_init, NULL, 2},
-    {"EL1014", LCEC_BECKHOFF_VID, 0x03F63052, 0, NULL, lcec_el1xxx_init, NULL, 4},
-    {"EL1018", LCEC_BECKHOFF_VID, 0x03FA3052, 0, NULL, lcec_el1xxx_init, NULL, 8},
-    {"EL1024", LCEC_BECKHOFF_VID, 0x04003052, 0, NULL, lcec_el1xxx_init, NULL, 4},
-    {"EL1034", LCEC_BECKHOFF_VID, 0x040A3052, 0, NULL, lcec_el1xxx_init, NULL, 4},
-    {"EL1084", LCEC_BECKHOFF_VID, 0x043C3052, 0, NULL, lcec_el1xxx_init, NULL, 4},
-    {"EL1088", LCEC_BECKHOFF_VID, 0x04403052, 0, NULL, lcec_el1xxx_init, NULL, 8},
-    {"EL1094", LCEC_BECKHOFF_VID, 0x04463052, 0, NULL, lcec_el1xxx_init, NULL, 4},
-    {"EL1098", LCEC_BECKHOFF_VID, 0x044A3052, 0, NULL, lcec_el1xxx_init, NULL, 8},
-    {"EL1104", LCEC_BECKHOFF_VID, 0x04503052, 0, NULL, lcec_el1xxx_init, NULL, 4},
-    {"EL1114", LCEC_BECKHOFF_VID, 0x045A3052, 0, NULL, lcec_el1xxx_init, NULL, 4},
-    {"EL1124", LCEC_BECKHOFF_VID, 0x04643052, 0, NULL, lcec_el1xxx_init, NULL, 4},
-    {"EL1134", LCEC_BECKHOFF_VID, 0x046E3052, 0, NULL, lcec_el1xxx_init, NULL, 4},
-    {"EL1144", LCEC_BECKHOFF_VID, 0x04783052, 0, NULL, lcec_el1xxx_init, NULL, 4},
-    {"EL1804", LCEC_BECKHOFF_VID, 0x070C3052, 0, NULL, lcec_el1xxx_init, NULL, 4},
-    {"EL1808", LCEC_BECKHOFF_VID, 0x07103052, 0, NULL, lcec_el1xxx_init, NULL, 8},
-    {"EL1809", LCEC_BECKHOFF_VID, 0x07113052, 0, NULL, lcec_el1xxx_init, NULL, 16},
-    {"EL1819", LCEC_BECKHOFF_VID, 0x071B3052, 0, NULL, lcec_el1xxx_init, NULL, 16},
-    {"EP1008", LCEC_BECKHOFF_VID, 0x03f04052, 0, NULL, lcec_el1xxx_init, NULL, 8},
-    {"EP1018", LCEC_BECKHOFF_VID, 0x03fa4052, 0, NULL, lcec_el1xxx_init, NULL, 8},
-    {"EP1819", LCEC_BECKHOFF_VID, 0x071b4052, 0, NULL, lcec_el1xxx_init, NULL, 16},
+    {"EL1002", LCEC_BECKHOFF_VID, 0x03EA3052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(2)},
+    {"EL1004", LCEC_BECKHOFF_VID, 0x03EC3052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(4)},
+    {"EL1008", LCEC_BECKHOFF_VID, 0x03F03052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(8)},
+    {"EL1012", LCEC_BECKHOFF_VID, 0x03F43052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(2)},
+    {"EL1014", LCEC_BECKHOFF_VID, 0x03F63052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(4)},
+    // Legacy EL1014 revision 0x00000000 (a.k.a. EL1014-0010 from forum
+    // reports). Same VID/PID, packs all 4 inputs into one PDO at 0x3101.
+    // See issue #457.
+    {"EL1014-legacy", LCEC_BECKHOFF_VID, 0x03F63052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(4) | EL1XXX_F_LEGACY_3101},
+    {"EL1018", LCEC_BECKHOFF_VID, 0x03FA3052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(8)},
+    {"EL1024", LCEC_BECKHOFF_VID, 0x04003052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(4)},
+    {"EL1034", LCEC_BECKHOFF_VID, 0x040A3052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(4)},
+    {"EL1084", LCEC_BECKHOFF_VID, 0x043C3052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(4)},
+    {"EL1088", LCEC_BECKHOFF_VID, 0x04403052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(8)},
+    {"EL1094", LCEC_BECKHOFF_VID, 0x04463052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(4)},
+    {"EL1098", LCEC_BECKHOFF_VID, 0x044A3052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(8)},
+    {"EL1104", LCEC_BECKHOFF_VID, 0x04503052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(4)},
+    {"EL1114", LCEC_BECKHOFF_VID, 0x045A3052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(4)},
+    {"EL1124", LCEC_BECKHOFF_VID, 0x04643052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(4)},
+    {"EL1134", LCEC_BECKHOFF_VID, 0x046E3052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(4)},
+    {"EL1144", LCEC_BECKHOFF_VID, 0x04783052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(4)},
+    {"EL1804", LCEC_BECKHOFF_VID, 0x070C3052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(4)},
+    {"EL1808", LCEC_BECKHOFF_VID, 0x07103052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(8)},
+    {"EL1809", LCEC_BECKHOFF_VID, 0x07113052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(16)},
+    {"EL1819", LCEC_BECKHOFF_VID, 0x071B3052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(16)},
+    {"EP1008", LCEC_BECKHOFF_VID, 0x03f04052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(8)},
+    {"EP1018", LCEC_BECKHOFF_VID, 0x03fa4052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(8)},
+    {"EP1819", LCEC_BECKHOFF_VID, 0x071b4052, 0, NULL, lcec_el1xxx_init, NULL, EL1XXX_F_CHANNELS(16)},
     {NULL},
 };
 
@@ -58,20 +69,26 @@ static void lcec_el1xxx_read(lcec_slave_t *slave, long period);
 
 static int lcec_el1xxx_init(int comp_id, lcec_slave_t *slave) {
   lcec_class_din_channels_t *hal_data;
+  unsigned int channels = slave->flags & 0xff;
+  int legacy = (slave->flags & EL1XXX_F_LEGACY_3101) != 0;
   unsigned int i;
 
   // initialize callbacks
   slave->proc_read = lcec_el1xxx_read;
 
-  hal_data = lcec_din_allocate_channels(slave->flags);
+  hal_data = lcec_din_allocate_channels(channels);
   if (hal_data == NULL) {
     return -EIO;
   }
   slave->hal_data = hal_data;
 
   // initialize channels
-  for (i = 0; i < slave->flags; i++) {
-    hal_data->channels[i] = lcec_din_register_channel(slave, i, 0x6000 + (i << 4), 0x01);
+  for (i = 0; i < channels; i++) {
+    if (legacy) {
+      hal_data->channels[i] = lcec_din_register_channel(slave, i, 0x3101, i + 1);
+    } else {
+      hal_data->channels[i] = lcec_din_register_channel(slave, i, 0x6000 + (i << 4), 0x01);
+    }
 
     if (hal_data->channels[i] == NULL) {
       return -EIO;

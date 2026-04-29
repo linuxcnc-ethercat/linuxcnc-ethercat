@@ -33,6 +33,19 @@ jobs:
               uses: mattnotmitt/doxygen-action@1.9.5
               with:
                   doxyfile-path: ./.doxyfile
+            - name: Stage repo-root pages
+              # Copy README.md and CONTRIBUTING.md into the Jekyll source
+              # so they render as part of the site instead of bouncing the
+              # reader back to GitHub. Jekyll won't process .md files
+              # without YAML frontmatter, so prepend a stub. README's
+              # internal links to documentation/foo.md also need their
+              # prefix stripped because the copy ends up inside
+              # documentation/ already.
+              run: |
+                  for f in README.md CONTRIBUTING.md; do
+                    { printf -- '---\nlayout: default\n---\n'; cat "$f"; } > "documentation/$f"
+                  done
+                  sed -i 's|documentation/\([^)]*\.md\)|\1|g' documentation/README.md
             - name: Setup Pages
               uses: actions/configure-pages@v4
             - name: Build with Jekyll

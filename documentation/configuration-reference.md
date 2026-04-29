@@ -23,7 +23,7 @@ The basic structure of `ethercat.xml` looks like this:
 
 ```xml
 <masters>
-  <master idx="0" appTimePeriod="2000000" refClockSyncCycles="1000" syncToRefClock="true">
+  <master idx="0" appTimePeriod="1000000" refClockSyncCycles="-1">
     <slave .../>
 	...
   </master>
@@ -56,20 +56,31 @@ and some of which are required:
   to 1,000,000 (without commas), giving a 1 ms cycle time.  If this
   does not match the servo thread time, then an error will be
   reported, eventually.
-- `refClockSyncCycles="<time>"`: (required) how frequently LinuxCNC-Ethercat
-  resyncs distributed clocks across EtherCAT slaves.  
-- `syncToRefClock="true|false"`: (optional) enables or disables synchronization
-  of LinuxCNC's servo thread to the DC reference clock. When set to "true", 
-  the two clocks are kept synchronized, "false" disables the feature. 
-  If the option is not specified, a negative `refClockSyncCycles` value 
-  enables this feature for backward compatibility.
-  Enabling this feature is normally desirable when at least one slave is using
-  DC synchronization.
+- `refClockSyncCycles="<n>"`: (required) selects the distributed-clock
+  sync mode. The sign picks the direction; the magnitude is the
+  number of servo cycles between syncs.
 
-Generally, for "normal" systems, this will look like 
+  | Value | Mode | Behavior |
+  |---|---|---|
+  | `0` | none | no DC sync |
+  | positive (e.g. `1000`) | **R2M** | every `n` cycles, master pushes its `app_time` into the DC reference slave (master is authoritative) |
+  | `-1` | **M2R** | LinuxCNC's servo thread is pulled toward the DC reference clock by a bang-bang PLL (DC is authoritative). `-1` is the only valid negative value; the parser rejects anything else negative. |
+
+  Most systems with at least one DC-sync'd slave (servo / stepper)
+  want **M2R** — set `refClockSyncCycles="-1"`. See
+  [Distributed Clocks](distributed-clocks.md) for which mode to pick
+  and how to tune the PLL.
+
+- `syncToRefClock="true|false"`: (optional, alternate spelling of the
+  sign of `refClockSyncCycles`). `"true"` ↔ negative cycles (M2R),
+  `"false"` ↔ positive cycles (R2M). Kept for back-compat — prefer
+  the sign-based form. If you specify both they must agree, otherwise
+  the parser errors out. (See [#471](https://github.com/linuxcnc-ethercat/linuxcnc-ethercat/issues/471) for a redesign discussion.)
+
+Generally, for "normal" systems with DC-sync'd drives, this will look like
 
 ```xml
-  <master idx="0" appTimePeriod="1000000" refClockSyncCycles="1000" syncToRefClock="true">
+  <master idx="0" appTimePeriod="1000000" refClockSyncCycles="-1">
 ```
 
 ## Slave Configuration

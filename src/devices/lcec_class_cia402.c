@@ -573,6 +573,7 @@ static const lcec_modparam_desc_t per_channel_modparams[] = {
     {"swPositionLimitMin", CIA402_MP_SWPOSLIMIT_MIN, MODPARAM_TYPE_S32},
     {"swPositionLimitMax", CIA402_MP_SWPOSLIMIT_MIN, MODPARAM_TYPE_S32},
     {"homeOffset", CIA402_MP_HOME_OFFSET, MODPARAM_TYPE_S32},
+    {"homeMethod", CIA402_MP_HOME_METHOD, MODPARAM_TYPE_S32},
     {"quickDecel", CIA402_MP_QUICKDECEL, MODPARAM_TYPE_U32},
     {"quickStopOptionCode", CIA402_MP_OPTCODE_QUICKSTOP, MODPARAM_TYPE_S32},
     {"positioningOptionCode", CIA402_MP_OPTCODE_POSITIONING, MODPARAM_TYPE_S32},
@@ -748,6 +749,7 @@ int lcec_cia402_handle_modparam(lcec_slave_t *slave, const lcec_slave_modparam_t
     CASE_MP_S32(CIA402_MP_SWPOSLIMIT_MIN, base + 0x7d, 1);
     CASE_MP_S32(CIA402_MP_SWPOSLIMIT_MAX, base + 0x7d, 2);
     CASE_MP_S32(CIA402_MP_HOME_OFFSET, base + 0x7c, 0);
+    CASE_MP_S8(CIA402_MP_HOME_METHOD, base + 0x98, 0);
     CASE_MP_U32(CIA402_MP_QUICKDECEL, base + 0x85, 0);
     CASE_MP_S16(CIA402_MP_OPTCODE_QUICKSTOP, base + 0x5a, 0);
     CASE_MP_S16(CIA402_MP_OPTCODE_SHUTDOWN, base + 0x5b, 0);

@@ -1,6 +1,6 @@
 # LinuxCNC-Ethercat Documentation
 
-- [Main README](https://github.com/linuxcnc-ethercat/linuxcnc-ethercat/blob/master/README.md)
+- [Main README](README.md)
 - [Supported Device List](DEVICES.md)
 - [Breaking Changes](changes.md)
 
@@ -11,7 +11,7 @@
 
 ## Development Documentation
 
-- [Contributing](https://github.com/linuxcnc-ethercat/linuxcnc-ethercat/blob/master/CONTRIBUTING.md)
+- [Contributing](CONTRIBUTING.md)
   -- how to contribute to this project.
 - [Adding new drivers](adding-drivers.md) -- how to write new drivers.
 - [PDOs and Syncs](pdos-and-syncs.md) -- A discussion of the various
