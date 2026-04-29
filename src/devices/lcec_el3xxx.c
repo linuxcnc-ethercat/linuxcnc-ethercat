@@ -67,7 +67,6 @@ static const lcec_modparam_desc_t modparams_temperature4[] = {
     MP_TEMP_CH(1),
     MP_TEMP_CH(2),
     MP_TEMP_CH(3),
-    MP_TEMP_CH(4),
     {NULL},
 };
 
