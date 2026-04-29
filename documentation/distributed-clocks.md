@@ -47,23 +47,40 @@ This only affects drives that use distributed clock synchronization.
 
 ## Master settings
 
-The `syncToRefClock` option controls synchronization of LinuxCNC's
-servo thread time to the distributed clock time.
+DC sync is configured on the `<master>` tag with `refClockSyncCycles`.
+The sign selects the mode, the magnitude is the cycle count.
 
 ```xml
- <master idx="0" appTimePeriod="2000000" refClockSyncCycles="1000" syncToRefClock="true">
+ <master idx="0" appTimePeriod="1000000" refClockSyncCycles="-1">
   ....
  </master>
-
 ```
 
-### `syncToRefClock`
+### `refClockSyncCycles`
 
-This option enables or disables synchronization of LinuxCNC's servo thread
-to the DC reference clock. If this option is set to "true", the two clocks
-are kept synchronized, "false" disables the feature. If the option is not
-specified, a negative `refClockSyncCycles` value enables this feature for
-backward compatibility.
+| Value | Mode | Meaning |
+|---|---|---|
+| `0` | none | DC sync disabled |
+| positive (e.g. `1000`) | **R2M** | every `n` servo cycles, the master pushes its `app_time` into the DC reference slave. The master is the authoritative clock. |
+| `-1` | **M2R** | LinuxCNC's servo thread is pulled toward the DC reference clock by a bang-bang PLL. The DC reference is authoritative. |
+
+For systems with DC-sync'd drives (most servo / stepper drives,
+including all Leadshine and RTelligent drives I've tested), use **M2R** -
+set `refClockSyncCycles="-1"`. `-1` is the only valid negative value;
+the parser rejects anything else negative.
+
+In M2R mode the cycle count carries no information beyond "M2R" - the
+master-to-reference push is not performed at all. Inter-slave clock
+distribution runs every cycle unconditionally via
+`ecrt_master_sync_slave_clocks()` and is not configurable here.
+
+### `syncToRefClock` (alternate spelling)
+
+`syncToRefClock="true|false"` is an older equivalent of the sign of
+`refClockSyncCycles` - `"true"` ↔ negative (M2R), `"false"` ↔
+positive (R2M). Kept for back-compat. Prefer the sign-based form;
+if both are given they must agree or the parser will refuse the
+config. See [#471](https://github.com/linuxcnc-ethercat/linuxcnc-ethercat/issues/471) for a redesign discussion.
 
 Synchronization is done with a bang-bang controller. Two hal parameters
 and three hal pins are available.
