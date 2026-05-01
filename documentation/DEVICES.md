@@ -188,6 +188,7 @@ Description | Driver | EtherCAT VID:PID | Device Type | Testing Status | Notes
 [Beckhoff EL7031 1Ch. Stepper motor output stage (24V, 1.5A)](http://www.beckhoff.com/EL7031) | [el70x1](../src/devices/lcec_el70x1.c) | 0x2:0x1b773052 | Stepper Drive |  | 
 [Beckhoff EL7041 1Ch. Stepper motor output stage (50V, 5A)](http://www.beckhoff.com/EL7041) | [el70x1](../src/devices/lcec_el70x1.c) | 0x2:0x1b813052 | Stepper Drive |  | 
 [Beckhoff EL7041 1Ch. Stepper motor output stage (50V, 5A)](http://www.beckhoff.com/EL7041) | [el7041](../src/devices/lcec_el7041.c) | 0x2:0x1b813052 | Stepper Drive |  | 
+[Beckhoff EL7041 1Ch. Stepper motor output stage (50V, 5A)](http://www.beckhoff.com/EL7041) | [el7041](../src/devices/lcec_el7041.c) | 0x2:0x1b813052 | Stepper Drive |  | 
 [Beckhoff EL7201 1Ch. MDP742 Servo motor output stage (50V, 4A)](http://www.beckhoff.com/EL7201) | [el7211](../src/devices/lcec_el7211.c) | 0x2:0x1c213052 | Servo Drive |  | 
 [Beckhoff EL7211 1Ch. MDP742 Servo motor output stage (50V, 4.5A RMS)](http://www.beckhoff.com/EL7211) | [el7211](../src/devices/lcec_el7211.c) | 0x2:0x1c2b3052 | Servo Drive |  | 
 [Beckhoff EL7221 1Ch. MDP742 Servo motor output stage (50V, 8A RMS)](http://www.beckhoff.com/EL7211) | [el7211](../src/devices/lcec_el7211.c) | 0x2:0x1c353052 | Servo Drive |  | 
@@ -242,6 +243,7 @@ Description | Driver | EtherCAT VID:PID | Device Type | Testing Status | Notes
 [SMC EX260-SEC4](https://www.smcpneumatics.com/EX260-SEC4.html) | [ex260](../src/devices/lcec_ex260.c) | 0x114:0x01000004 | Valve Controller | Merged 2023-12-31, untested | by @satiowadahc
 [AB&T EasyIO 16 din, 16 dout, 4 ain, 2 aout module](https://www.bausano.net/en/hardware/easyio.html) | [easyio](../devices/lcec_easyio.c) | 0x79a:0x0debacca | Analog/Digital Combo | COMPLETELY UNTESTED.  Written without hardware. | 
 [AB&T EpoCAT FR4000](https://www.bausano.net/en/hardware/epocat-fr-1000.html) | [epocat](../src/devices/lcec_epocat.c) | 0x79a:0x00decade | Stepper Drive | Merged 2023-12-31, untested | by @abausano
+Lichuan OL57E-4A 4-axis open-loop stepper drive | [lichuan](../src/devices/lcec_lichuan.c) | 0xa79:0x00006000 | Stepper Drive | Untested, awaiting bench validation by @rodw-au (issue #474) | 4 axes via CiA 402 multiaxis pattern (SDO offset 0x800, PDO index increment 0x10).
 [Omron MX2 VFD](https://www.ia.omron.com/data_pdf/cat/mx2-v1_i920-e1_14_16_csm1010813.pdf?id=3164) | [ommx2](../devices/lcec_ommx2.c) | 0x83:0x00000053 | VFD |  | 
 [Omron R88D-KN01H-ECT G5 Series ServoDrive/Motor](http://www.ia.omron.com/) | [omrg5](../src/devices/lcec_omrg5.c) | 0x83:0x00000005 | Servo Drive |  | 
 [Omron R88D-KN01L-ECT G5 Series ServoDrive/Motor](http://www.ia.omron.com/) | [omrg5](../src/devices/lcec_omrg5.c) | 0x83:0x00000002 | Servo Drive |  | 
@@ -269,6 +271,6 @@ Description | Driver | EtherCAT VID:PID | Device Type | Testing Status | Notes
 [Stoeber Posidrive MDS 5000](https://www.ethercat.org/en/products/CE4C65D2ED8B4F39A8166D6CEDB2C872.htm) | [stmds5k](../src/devices/lcec_stmds5k.c) | 0xb9:0x00001388 | Servo Drive |  | 
 Driver for generic CiA 402 hardware without a dedicated driver | [basic_cia402](../devices/lcec_basic_cia402.c) | 0xffffffff:0xffffffff | Motion Controller |  | 
 
-There are an additional 4 device(s) supported that do not have enough
+There are an additional 3 device(s) supported that do not have enough
 documentation to display here.  Please look at the `documentation/devices/` files
 and update them if you're able.

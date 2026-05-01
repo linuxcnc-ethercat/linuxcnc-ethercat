@@ -67,6 +67,7 @@ extern "C" {
 #define LCEC_DELTA_VID      0x000001dd
 #define LCEC_ABET_VID       0x0000079A
 #define LCEC_MODUSOFT_VID   0x00000907
+#define LCEC_LICHUAN_VID    0x00000a79
 #define LCEC_RTELLIGENT_VID 0x00000a88
 
 // State update period (ns)

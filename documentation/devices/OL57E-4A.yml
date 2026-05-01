@@ -1,0 +1,11 @@
+---
+Device: OL57E-4A
+VendorID: "0x00000a79"
+VendorName: "Lichuan"
+PID: "0x00006000"
+Description: Lichuan OL57E-4A 4-axis open-loop stepper drive
+DocumentationURL: ""
+DeviceType: "Stepper Drive"
+Notes: "4 axes via CiA 402 multiaxis pattern (SDO offset 0x800, PDO index increment 0x10)."
+SrcFile: src/devices/lcec_lichuan.c
+TestingStatus: "Untested, awaiting bench validation by @rodw-au (issue #474)"
