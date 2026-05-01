@@ -52,11 +52,6 @@ typedef struct {
   hal_u32_t frequency;
   hal_s32_t master_gain;
 
-  // Store last written values to detect changes
-  uint32_t last_frequency;
-  int16_t last_master_gain;
-  float last_gamma[LCEC_EL2564_CHANS];
-  float last_ramp_time[LCEC_EL2564_CHANS];
 } lcec_el2564_data_t;
 
 static const lcec_pindesc_t slave_pins[] = {
@@ -81,61 +76,6 @@ static const lcec_paramdesc_t slave_params_global[] = {
   { HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL }
 };
 
-// PDO entries for RxPDO (outputs to slave)
-static ec_pdo_entry_info_t lcec_el2564_out[] = {
-  {0x7000, 0x11, 16},  // PWM Ch.1
-  {0x7010, 0x11, 16},  // PWM Ch.2
-  {0x7020, 0x11, 16},  // PWM Ch.3
-  {0x7030, 0x11, 16}   // PWM Ch.4
-};
-
-// PDO entries for TxPDO (inputs from slave)
-// MUST include gaps and toggle bits - slave does not support PDO reconfiguration
-static ec_pdo_entry_info_t lcec_el2564_in[] = {
-  {0x0000, 0x00, 5},  // Gap Ch.1
-  {0x6000, 0x06, 1},  // Warning Ch.1
-  {0x6000, 0x07, 1},  // Error Ch.1
-  {0x0000, 0x00, 8},  // Gap
-  {0x6000, 0x10, 1},  // TxPDO Toggle Ch.1
-  {0x0000, 0x00, 5},  // Gap Ch.2
-  {0x6010, 0x06, 1},  // Warning Ch.2
-  {0x6010, 0x07, 1},  // Error Ch.2
-  {0x0000, 0x00, 8},  // Gap
-  {0x6010, 0x10, 1},  // TxPDO Toggle Ch.2
-  {0x0000, 0x00, 5},  // Gap Ch.3
-  {0x6020, 0x06, 1},  // Warning Ch.3
-  {0x6020, 0x07, 1},  // Error Ch.3
-  {0x0000, 0x00, 8},  // Gap
-  {0x6020, 0x10, 1},  // TxPDO Toggle Ch.3
-  {0x0000, 0x00, 5},  // Gap Ch.4
-  {0x6030, 0x06, 1},  // Warning Ch.4
-  {0x6030, 0x07, 1},  // Error Ch.4
-  {0x0000, 0x00, 8},  // Gap
-  {0x6030, 0x10, 1}   // TxPDO Toggle Ch.4
-};
-
-// PDO mapping
-static ec_pdo_info_t lcec_el2564_pdos_out[] = {
-  {0x1600, 1, &lcec_el2564_out[0]},  // Ch.1
-  {0x1601, 1, &lcec_el2564_out[1]},  // Ch.2
-  {0x1602, 1, &lcec_el2564_out[2]},  // Ch.3
-  {0x1603, 1, &lcec_el2564_out[3]}   // Ch.4
-};
-
-static ec_pdo_info_t lcec_el2564_pdos_in[] = {
-  {0x1a00, 5, &lcec_el2564_in[0]},   // Ch.1
-  {0x1a02, 5, &lcec_el2564_in[5]},   // Ch.2
-  {0x1a04, 5, &lcec_el2564_in[10]},  // Ch.3
-  {0x1a06, 5, &lcec_el2564_in[15]}   // Ch.4
-};
-
-// Sync manager configuration
-static ec_sync_info_t lcec_el2564_syncs[] = {
-  {2, EC_DIR_OUTPUT, 4, lcec_el2564_pdos_out, EC_WD_DEFAULT},
-  {3, EC_DIR_INPUT, 4, lcec_el2564_pdos_in, EC_WD_DEFAULT},
-  {0xff}
-};
-
 static void lcec_el2564_read(lcec_slave_t *slave, long period);
 static void lcec_el2564_write(lcec_slave_t *slave, long period);
 
@@ -156,7 +96,6 @@ static int lcec_el2564_init(int comp_id, lcec_slave_t *slave) {
 
   // EL2564 does not support PDO reconfiguration (CoE: Enable PDO Configuration: no)
   // We must use the default mapping that the slave provides
-  // slave->sync_info = lcec_el2564_syncs;
 
   // initialize all 4 channels
   for (i = 0; i < LCEC_EL2564_CHANS; i++) {
@@ -178,7 +117,7 @@ static int lcec_el2564_init(int comp_id, lcec_slave_t *slave) {
     }
 
     // initialize parameters
-    chan->scale = 100.0;   // Default: 0-100%
+    chan->scale = 0.5;   // Default: 0-100%
     chan->offset = 0.0;
     chan->gamma = 1.0;     // Default: linear (no gamma correction)
     chan->ramp_time = 0.0; // Default: no ramping
@@ -195,19 +134,15 @@ static int lcec_el2564_init(int comp_id, lcec_slave_t *slave) {
   // Read frequency (0xf819:11, uint32)
   if (lcec_read_sdo(slave, 0xf819, 0x11, sdo_buf, 4) == 0) {
     hal_data->frequency = EC_READ_U32(sdo_buf);
-    hal_data->last_frequency = hal_data->frequency;
   } else {
     hal_data->frequency = 5000;    // Default: 5kHz
-    hal_data->last_frequency = 5000;
   }
 
   // Read master gain (0xf819:12, int16)
   if (lcec_read_sdo(slave, 0xf819, 0x12, sdo_buf, 2) == 0) {
     hal_data->master_gain = EC_READ_S16(sdo_buf);
-    hal_data->last_master_gain = hal_data->master_gain;
   } else {
-    hal_data->master_gain = 10000; // Default: 100%
-    hal_data->last_master_gain = 10000;
+    hal_data->master_gain = 32767; // Default: 100%
   }
 
   // Read per-channel parameters
@@ -218,18 +153,11 @@ static int lcec_el2564_init(int comp_id, lcec_slave_t *slave) {
     // Read gamma (0x800x:24, float)
     if (lcec_read_sdo(slave, sdo_index, 0x24, sdo_buf, 4) == 0) {
       memcpy(&chan->gamma, sdo_buf, 4);
-      hal_data->last_gamma[i] = chan->gamma;
-    } else {
-      hal_data->last_gamma[i] = chan->gamma; // Keep default
-    }
-
+    } 
     // Read ramp time (0x800x:25, float)
     if (lcec_read_sdo(slave, sdo_index, 0x25, sdo_buf, 4) == 0) {
       memcpy(&chan->ramp_time, sdo_buf, 4);
-      hal_data->last_ramp_time[i] = chan->ramp_time;
-    } else {
-      hal_data->last_ramp_time[i] = chan->ramp_time; // Keep default
-    }
+      } 
   }
 
   return 0;
@@ -268,7 +196,7 @@ static void lcec_el2564_write(lcec_slave_t *slave, long period) {
   }
 
   // Check if master_gain changed and write via SDO
-  if (hal_data->master_gain != hal_data->last_master_gain) {
+  if (hal_data->master_gain != hal_data->master_gain) {
     // Clamp to valid range 0-32767
     int16_t gain = hal_data->master_gain;
     if (gain < 0) gain = 0;
@@ -277,7 +205,7 @@ static void lcec_el2564_write(lcec_slave_t *slave, long period) {
 
     EC_WRITE_S16(sdo_buf, gain);
     if (lcec_write_sdo(slave, 0xf819, 0x12, sdo_buf, 2) == 0) {
-      hal_data->last_master_gain = gain;
+      hal_data->master_gain = gain;
     }
   }
 
