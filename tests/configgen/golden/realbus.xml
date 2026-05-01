@@ -6,26 +6,26 @@
       <syncManager idx="1" dir="out"/>
       <syncManager idx="2" dir="out">
         <pdo idx="1600">
-          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="pin-6040-00" halType="u32"/>
-          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="pin-6060-00" halType="s32"/>
-          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="pin-607a-00" halType="s32"/>
-          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="pin-60ff-00" halType="s32"/>
+          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="controlword" halType="u32"/>
+          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="mode-of-operation" halType="s32"/>
+          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="target-position" halType="s32"/>
+          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="target-velocity" halType="s32"/>
         </pdo>
         <pdo idx="1601">
-          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="pin-60c5-00" halType="u32"/>
-          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="pin-60c6-00" halType="u32"/>
-          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="pin-6080-00" halType="u32"/>
+          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="max-acceleration" halType="u32"/>
+          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="max-deceleration" halType="u32"/>
+          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="max-motor-speed" halType="u32"/>
         </pdo>
       </syncManager>
       <syncManager idx="3" dir="in">
         <pdo idx="1a00">
-          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="pin-6041-00" halType="u32"/>
-          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="pin-606c-00" halType="s32"/>
-          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="pin-6064-00" halType="s32"/>
-          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="pin-603f-00" halType="u32"/>
-          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="pin-6077-00" halType="s32"/>
-          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="pin-60f4-00" halType="s32"/>
-          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="pin-60fd-00" halType="u32"/>
+          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="statusword" halType="u32"/>
+          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="velocity-actual" halType="s32"/>
+          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="position-actual" halType="s32"/>
+          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="error-code" halType="u32"/>
+          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="torque-actual" halType="s32"/>
+          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="following-error-actual" halType="s32"/>
+          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="digital-inputs" halType="u32"/>
         </pdo>
       </syncManager>
     </slave>
@@ -35,26 +35,26 @@
       <syncManager idx="1" dir="out"/>
       <syncManager idx="2" dir="out">
         <pdo idx="1600">
-          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="pin-6040-00" halType="u32"/>
-          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="pin-6060-00" halType="s32"/>
-          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="pin-607a-00" halType="s32"/>
-          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="pin-60ff-00" halType="s32"/>
+          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="controlword" halType="u32"/>
+          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="mode-of-operation" halType="s32"/>
+          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="target-position" halType="s32"/>
+          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="target-velocity" halType="s32"/>
         </pdo>
         <pdo idx="1601">
-          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="pin-60c5-00" halType="u32"/>
-          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="pin-60c6-00" halType="u32"/>
-          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="pin-6080-00" halType="u32"/>
+          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="max-acceleration" halType="u32"/>
+          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="max-deceleration" halType="u32"/>
+          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="max-motor-speed" halType="u32"/>
         </pdo>
       </syncManager>
       <syncManager idx="3" dir="in">
         <pdo idx="1a00">
-          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="pin-6041-00" halType="u32"/>
-          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="pin-606c-00" halType="s32"/>
-          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="pin-6064-00" halType="s32"/>
-          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="pin-603f-00" halType="u32"/>
-          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="pin-6077-00" halType="s32"/>
-          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="pin-60f4-00" halType="s32"/>
-          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="pin-60fd-00" halType="u32"/>
+          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="statusword" halType="u32"/>
+          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="velocity-actual" halType="s32"/>
+          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="position-actual" halType="s32"/>
+          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="error-code" halType="u32"/>
+          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="torque-actual" halType="s32"/>
+          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="following-error-actual" halType="s32"/>
+          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="digital-inputs" halType="u32"/>
         </pdo>
       </syncManager>
     </slave>
@@ -64,26 +64,26 @@
       <syncManager idx="1" dir="out"/>
       <syncManager idx="2" dir="out">
         <pdo idx="1600">
-          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="pin-6040-00" halType="u32"/>
-          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="pin-6060-00" halType="s32"/>
-          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="pin-607a-00" halType="s32"/>
-          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="pin-60ff-00" halType="s32"/>
+          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="controlword" halType="u32"/>
+          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="mode-of-operation" halType="s32"/>
+          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="target-position" halType="s32"/>
+          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="target-velocity" halType="s32"/>
         </pdo>
         <pdo idx="1601">
-          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="pin-60c5-00" halType="u32"/>
-          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="pin-60c6-00" halType="u32"/>
-          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="pin-6080-00" halType="u32"/>
+          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="max-acceleration" halType="u32"/>
+          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="max-deceleration" halType="u32"/>
+          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="max-motor-speed" halType="u32"/>
         </pdo>
       </syncManager>
       <syncManager idx="3" dir="in">
         <pdo idx="1a00">
-          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="pin-6041-00" halType="u32"/>
-          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="pin-606c-00" halType="s32"/>
-          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="pin-6064-00" halType="s32"/>
-          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="pin-603f-00" halType="u32"/>
-          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="pin-6077-00" halType="s32"/>
-          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="pin-60f4-00" halType="s32"/>
-          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="pin-60fd-00" halType="u32"/>
+          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="statusword" halType="u32"/>
+          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="velocity-actual" halType="s32"/>
+          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="position-actual" halType="s32"/>
+          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="error-code" halType="u32"/>
+          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="torque-actual" halType="s32"/>
+          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="following-error-actual" halType="s32"/>
+          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="digital-inputs" halType="u32"/>
         </pdo>
       </syncManager>
     </slave>
@@ -93,26 +93,26 @@
       <syncManager idx="1" dir="out"/>
       <syncManager idx="2" dir="out">
         <pdo idx="1600">
-          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="pin-6040-00" halType="u32"/>
-          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="pin-6060-00" halType="s32"/>
-          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="pin-607a-00" halType="s32"/>
-          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="pin-60ff-00" halType="s32"/>
+          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="controlword" halType="u32"/>
+          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="mode-of-operation" halType="s32"/>
+          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="target-position" halType="s32"/>
+          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="target-velocity" halType="s32"/>
         </pdo>
         <pdo idx="1601">
-          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="pin-60c5-00" halType="u32"/>
-          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="pin-60c6-00" halType="u32"/>
-          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="pin-6080-00" halType="u32"/>
+          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="max-acceleration" halType="u32"/>
+          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="max-deceleration" halType="u32"/>
+          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="max-motor-speed" halType="u32"/>
         </pdo>
       </syncManager>
       <syncManager idx="3" dir="in">
         <pdo idx="1a00">
-          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="pin-6041-00" halType="u32"/>
-          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="pin-606c-00" halType="s32"/>
-          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="pin-6064-00" halType="s32"/>
-          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="pin-603f-00" halType="u32"/>
-          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="pin-6077-00" halType="s32"/>
-          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="pin-60f4-00" halType="s32"/>
-          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="pin-60fd-00" halType="u32"/>
+          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="statusword" halType="u32"/>
+          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="velocity-actual" halType="s32"/>
+          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="position-actual" halType="s32"/>
+          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="error-code" halType="u32"/>
+          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="torque-actual" halType="s32"/>
+          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="following-error-actual" halType="s32"/>
+          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="digital-inputs" halType="u32"/>
         </pdo>
       </syncManager>
     </slave>
@@ -122,26 +122,26 @@
       <syncManager idx="1" dir="out"/>
       <syncManager idx="2" dir="out">
         <pdo idx="1600">
-          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="pin-6040-00" halType="u32"/>
-          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="pin-6060-00" halType="s32"/>
-          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="pin-607a-00" halType="s32"/>
-          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="pin-60ff-00" halType="s32"/>
+          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="controlword" halType="u32"/>
+          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="mode-of-operation" halType="s32"/>
+          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="target-position" halType="s32"/>
+          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="target-velocity" halType="s32"/>
         </pdo>
         <pdo idx="1601">
-          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="pin-60c5-00" halType="u32"/>
-          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="pin-60c6-00" halType="u32"/>
-          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="pin-6080-00" halType="u32"/>
+          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="max-acceleration" halType="u32"/>
+          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="max-deceleration" halType="u32"/>
+          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="max-motor-speed" halType="u32"/>
         </pdo>
       </syncManager>
       <syncManager idx="3" dir="in">
         <pdo idx="1a00">
-          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="pin-6041-00" halType="u32"/>
-          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="pin-606c-00" halType="s32"/>
-          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="pin-6064-00" halType="s32"/>
-          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="pin-603f-00" halType="u32"/>
-          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="pin-6077-00" halType="s32"/>
-          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="pin-60f4-00" halType="s32"/>
-          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="pin-60fd-00" halType="u32"/>
+          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="statusword" halType="u32"/>
+          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="velocity-actual" halType="s32"/>
+          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="position-actual" halType="s32"/>
+          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="error-code" halType="u32"/>
+          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="torque-actual" halType="s32"/>
+          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="following-error-actual" halType="s32"/>
+          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="digital-inputs" halType="u32"/>
         </pdo>
       </syncManager>
     </slave>
@@ -151,26 +151,26 @@
       <syncManager idx="1" dir="out"/>
       <syncManager idx="2" dir="out">
         <pdo idx="1600">
-          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="pin-6040-00" halType="u32"/>
-          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="pin-6060-00" halType="s32"/>
-          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="pin-607a-00" halType="s32"/>
-          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="pin-60ff-00" halType="s32"/>
+          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="controlword" halType="u32"/>
+          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="mode-of-operation" halType="s32"/>
+          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="target-position" halType="s32"/>
+          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="target-velocity" halType="s32"/>
         </pdo>
         <pdo idx="1601">
-          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="pin-60c5-00" halType="u32"/>
-          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="pin-60c6-00" halType="u32"/>
-          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="pin-6080-00" halType="u32"/>
+          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="max-acceleration" halType="u32"/>
+          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="max-deceleration" halType="u32"/>
+          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="max-motor-speed" halType="u32"/>
         </pdo>
       </syncManager>
       <syncManager idx="3" dir="in">
         <pdo idx="1a00">
-          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="pin-6041-00" halType="u32"/>
-          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="pin-606c-00" halType="s32"/>
-          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="pin-6064-00" halType="s32"/>
-          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="pin-603f-00" halType="u32"/>
-          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="pin-6077-00" halType="s32"/>
-          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="pin-60f4-00" halType="s32"/>
-          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="pin-60fd-00" halType="u32"/>
+          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="statusword" halType="u32"/>
+          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="velocity-actual" halType="s32"/>
+          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="position-actual" halType="s32"/>
+          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="error-code" halType="u32"/>
+          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="torque-actual" halType="s32"/>
+          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="following-error-actual" halType="s32"/>
+          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="digital-inputs" halType="u32"/>
         </pdo>
       </syncManager>
     </slave>
@@ -180,26 +180,26 @@
       <syncManager idx="1" dir="out"/>
       <syncManager idx="2" dir="out">
         <pdo idx="1600">
-          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="pin-6040-00" halType="u32"/>
-          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="pin-6060-00" halType="s32"/>
-          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="pin-607a-00" halType="s32"/>
-          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="pin-60ff-00" halType="s32"/>
+          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="controlword" halType="u32"/>
+          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="mode-of-operation" halType="s32"/>
+          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="target-position" halType="s32"/>
+          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="target-velocity" halType="s32"/>
         </pdo>
         <pdo idx="1601">
-          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="pin-60c5-00" halType="u32"/>
-          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="pin-60c6-00" halType="u32"/>
-          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="pin-6080-00" halType="u32"/>
+          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="max-acceleration" halType="u32"/>
+          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="max-deceleration" halType="u32"/>
+          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="max-motor-speed" halType="u32"/>
         </pdo>
       </syncManager>
       <syncManager idx="3" dir="in">
         <pdo idx="1a00">
-          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="pin-6041-00" halType="u32"/>
-          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="pin-606c-00" halType="s32"/>
-          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="pin-6064-00" halType="s32"/>
-          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="pin-603f-00" halType="u32"/>
-          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="pin-6077-00" halType="s32"/>
-          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="pin-60f4-00" halType="s32"/>
-          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="pin-60fd-00" halType="u32"/>
+          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="statusword" halType="u32"/>
+          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="velocity-actual" halType="s32"/>
+          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="position-actual" halType="s32"/>
+          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="error-code" halType="u32"/>
+          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="torque-actual" halType="s32"/>
+          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="following-error-actual" halType="s32"/>
+          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="digital-inputs" halType="u32"/>
         </pdo>
       </syncManager>
     </slave>
@@ -209,26 +209,26 @@
       <syncManager idx="1" dir="out"/>
       <syncManager idx="2" dir="out">
         <pdo idx="1600">
-          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="pin-6040-00" halType="u32"/>
-          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="pin-6060-00" halType="s32"/>
-          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="pin-607a-00" halType="s32"/>
-          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="pin-60ff-00" halType="s32"/>
+          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="controlword" halType="u32"/>
+          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="mode-of-operation" halType="s32"/>
+          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="target-position" halType="s32"/>
+          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="target-velocity" halType="s32"/>
         </pdo>
         <pdo idx="1601">
-          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="pin-60c5-00" halType="u32"/>
-          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="pin-60c6-00" halType="u32"/>
-          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="pin-6080-00" halType="u32"/>
+          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="max-acceleration" halType="u32"/>
+          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="max-deceleration" halType="u32"/>
+          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="max-motor-speed" halType="u32"/>
         </pdo>
       </syncManager>
       <syncManager idx="3" dir="in">
         <pdo idx="1a00">
-          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="pin-6041-00" halType="u32"/>
-          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="pin-606c-00" halType="s32"/>
-          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="pin-6064-00" halType="s32"/>
-          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="pin-603f-00" halType="u32"/>
-          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="pin-6077-00" halType="s32"/>
-          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="pin-60f4-00" halType="s32"/>
-          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="pin-60fd-00" halType="u32"/>
+          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="statusword" halType="u32"/>
+          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="velocity-actual" halType="s32"/>
+          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="position-actual" halType="s32"/>
+          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="error-code" halType="u32"/>
+          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="torque-actual" halType="s32"/>
+          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="following-error-actual" halType="s32"/>
+          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="digital-inputs" halType="u32"/>
         </pdo>
       </syncManager>
     </slave>
@@ -238,26 +238,26 @@
       <syncManager idx="1" dir="out"/>
       <syncManager idx="2" dir="out">
         <pdo idx="1600">
-          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="pin-6040-00" halType="u32"/>
-          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="pin-6060-00" halType="s32"/>
-          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="pin-607a-00" halType="s32"/>
-          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="pin-60ff-00" halType="s32"/>
+          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="controlword" halType="u32"/>
+          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="mode-of-operation" halType="s32"/>
+          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="target-position" halType="s32"/>
+          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="target-velocity" halType="s32"/>
         </pdo>
         <pdo idx="1601">
-          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="pin-60c5-00" halType="u32"/>
-          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="pin-60c6-00" halType="u32"/>
-          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="pin-6080-00" halType="u32"/>
+          <pdoEntry idx="60c5" subIdx="00" bitLen="32" halPin="max-acceleration" halType="u32"/>
+          <pdoEntry idx="60c6" subIdx="00" bitLen="32" halPin="max-deceleration" halType="u32"/>
+          <pdoEntry idx="6080" subIdx="00" bitLen="32" halPin="max-motor-speed" halType="u32"/>
         </pdo>
       </syncManager>
       <syncManager idx="3" dir="in">
         <pdo idx="1a00">
-          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="pin-6041-00" halType="u32"/>
-          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="pin-606c-00" halType="s32"/>
-          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="pin-6064-00" halType="s32"/>
-          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="pin-603f-00" halType="u32"/>
-          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="pin-6077-00" halType="s32"/>
-          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="pin-60f4-00" halType="s32"/>
-          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="pin-60fd-00" halType="u32"/>
+          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="statusword" halType="u32"/>
+          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="velocity-actual" halType="s32"/>
+          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="position-actual" halType="s32"/>
+          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="error-code" halType="u32"/>
+          <pdoEntry idx="6077" subIdx="00" bitLen="16" halPin="torque-actual" halType="s32"/>
+          <pdoEntry idx="60f4" subIdx="00" bitLen="32" halPin="following-error-actual" halType="s32"/>
+          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="digital-inputs" halType="u32"/>
         </pdo>
       </syncManager>
     </slave>
