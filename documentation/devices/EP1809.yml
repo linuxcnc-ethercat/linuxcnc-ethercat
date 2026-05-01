@@ -3,7 +3,7 @@ Device: EP1809
 VendorID: "0x00000002"
 VendorName: Beckhoff Automation GmbH & Co. KG
 PID: "0x07114052"
-Description: EP1809-0021 | EtherCAT Box, 16-Kanal-Digital-Eingang, 24 V DC, 3 ms, M8
+Description: EP1809-0021 | EtherCAT Box, 16-channel digital input, 24 V DC, 3 ms, M8
 DocumentationURL: https://www.beckhoff.com/EP1809
 DeviceType: Digital Input
 Notes: ""
