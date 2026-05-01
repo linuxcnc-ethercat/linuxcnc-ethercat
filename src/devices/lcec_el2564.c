@@ -14,7 +14,9 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program; if not, write to the Free Software
 //    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
-//
+//    
+//    First initiation by medikusDKFZ - https://github.com/medicusdkfz
+//    Optimized and commited by mintracer - miniwinis Bastelbude - https://github.com/mintracer
 
 /// @file
 /// @brief Driver for Beckhoff EL2564 4-channel PWM LED output
@@ -51,7 +53,7 @@ typedef struct {
 
   hal_u32_t frequency;
   hal_s32_t master_gain;
-
+  int32_t   master_gain_prev;  // <-- neu
 } lcec_el2564_data_t;
 
 static const lcec_pindesc_t slave_pins[] = {
@@ -117,10 +119,10 @@ static int lcec_el2564_init(int comp_id, lcec_slave_t *slave) {
     }
 
     // initialize parameters
-    chan->scale = 0.5;   // Default: 0-100%
+    chan->scale = 0.5;
     chan->offset = 0.0;
-    chan->gamma = 1.0;     // Default: linear (no gamma correction)
-    chan->ramp_time = 0.0; // Default: no ramping
+    chan->gamma = 1.0;     
+    chan->ramp_time = 0.0; 
   }
 
   // export global parameters
@@ -130,6 +132,8 @@ static int lcec_el2564_init(int comp_id, lcec_slave_t *slave) {
 
   // Read current values from SDOs
   uint8_t sdo_buf[4];
+  
+  
 
   // Read frequency (0xf819:11, uint32)
   if (lcec_read_sdo(slave, 0xf819, 0x11, sdo_buf, 4) == 0) {
@@ -144,7 +148,7 @@ static int lcec_el2564_init(int comp_id, lcec_slave_t *slave) {
   } else {
     hal_data->master_gain = 32767; // Default: 100%
   }
-
+  hal_data->master_gain_prev = hal_data->master_gain;
   // Read per-channel parameters
   for (i = 0; i < LCEC_EL2564_CHANS; i++) {
     chan = &hal_data->chans[i];
@@ -170,6 +174,11 @@ static void lcec_el2564_read(lcec_slave_t *slave, long period) {
   lcec_el2564_chan_t *chan;
   int i;
 
+  // wait for slave to be operational
+  if (!slave->state.operational) {
+    return;
+  }
+
   // read all channels
   for (i = 0; i < LCEC_EL2564_CHANS; i++) {
     chan = &hal_data->chans[i];
@@ -190,24 +199,18 @@ static void lcec_el2564_write(lcec_slave_t *slave, long period) {
   double duty;
   uint8_t sdo_buf[4];
 
-  // wait for slave to be operational
-  if (!slave->state.operational) {
-    return;
-  }
-
   // Check if master_gain changed and write via SDO
-  if (hal_data->master_gain != hal_data->master_gain) {
-    // Clamp to valid range 0-32767
+if (hal_data->master_gain != hal_data->master_gain_prev) {
     int16_t gain = hal_data->master_gain;
     if (gain < 0) gain = 0;
     if (gain > 32767) gain = 32767;
-    hal_data->master_gain = gain;
 
     EC_WRITE_S16(sdo_buf, gain);
     if (lcec_write_sdo(slave, 0xf819, 0x12, sdo_buf, 2) == 0) {
-      hal_data->master_gain = gain;
+        hal_data->master_gain_prev = gain;  // nur bei Erfolg merken
     }
-  }
+    hal_data->master_gain = gain;  // Clamp auch im HAL-Pin sichtbar machen
+}
 
   // write all channels
   for (i = 0; i < LCEC_EL2564_CHANS; i++) {
