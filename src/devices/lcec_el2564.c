@@ -154,14 +154,20 @@ static int lcec_el2564_init(int comp_id, lcec_slave_t *slave) {
     chan = &hal_data->chans[i];
     uint16_t sdo_index = 0x8000 + (i << 4);
 
-    // Read gamma (0x800x:24, float)
+    // Read gamma (0x800x:24, float). SDO is IEEE 32-bit; HAL pin is 64-bit
+    // double, so go through a float temporary instead of memcpy'ing 4 bytes
+    // into an 8-byte location.
     if (lcec_read_sdo(slave, sdo_index, 0x24, sdo_buf, 4) == 0) {
-      memcpy(&chan->gamma, sdo_buf, 4);
-    } 
+      float f;
+      memcpy(&f, sdo_buf, 4);
+      chan->gamma = f;
+    }
     // Read ramp time (0x800x:25, float)
     if (lcec_read_sdo(slave, sdo_index, 0x25, sdo_buf, 4) == 0) {
-      memcpy(&chan->ramp_time, sdo_buf, 4);
-      } 
+      float f;
+      memcpy(&f, sdo_buf, 4);
+      chan->ramp_time = f;
+    }
   }
 
   return 0;
