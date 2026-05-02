@@ -1106,10 +1106,16 @@ void lcec_read_master(void *arg, long period) {
   lcec_slave_t *slave;
   int check_states;
 
-  // check period
+  // check period. If the XML omitted appTimePeriod, master->app_time_period
+  // is 0 and the modulo at lcec_main.c:1258 would SIGFPE on the first cycle;
+  // adopt the actual HAL servo period so the XML attribute is optional.
   if (period != master->period_last) {
     master->period_last = period;
-    if (master->app_time_period != period) {
+    if (master->app_time_period == 0) {
+      rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "appTimePeriod not set for master %s, using HAL thread period %ld ns\n", master->name,
+          period);
+      master->app_time_period = period;
+    } else if (master->app_time_period != period) {
       rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Invalid appTimePeriod of %u for master %s (should be %ld).\n", master->app_time_period,
           master->name, period);
     }

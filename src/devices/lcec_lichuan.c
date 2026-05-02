@@ -86,8 +86,10 @@ static int lcec_lichuan_init(int comp_id, lcec_slave_t *slave) {
   }
 
   lcec_class_cia402_options_t *options = lcec_cia402_options();
-  options->rxpdolimit = 4;  // device exposes 0x1600/0x1610/0x1620/0x1630
-  options->txpdolimit = 4;  // device exposes 0x1a00/0x1a10/0x1a20/0x1a30
+  // OL57E-4A / CL57E-4A allow up to 12 entries per PDO (0x1600:01..12,
+  // 0x1A00:01..12 per the manual).
+  options->rxpdolimit = 12;
+  options->txpdolimit = 12;
 
   if (AXES(slave->flags) != 0) {
     options->channels = AXES(slave->flags);
@@ -101,6 +103,9 @@ static int lcec_lichuan_init(int comp_id, lcec_slave_t *slave) {
     options->pdo_increment = 1;
   }
 
+  // 0x6077 (actual torque) is NOT available on these open-loop steppers; do
+  // not enable enable_actual_torque. Each axis has 3 DI and 2 DO per the
+  // CL57E-4A manual.
   for (channel = 0; channel < options->channels; channel++) {
     options->channel[channel]->enable_csp = 1;
     options->channel[channel]->enable_csv = 1;
@@ -108,10 +113,11 @@ static int lcec_lichuan_init(int comp_id, lcec_slave_t *slave) {
     options->channel[channel]->enable_pv = 1;
     options->channel[channel]->enable_hm = 1;
     options->channel[channel]->enable_actual_following_error = 1;
-    options->channel[channel]->enable_actual_torque = 1;
     options->channel[channel]->enable_error_code = 1;
     options->channel[channel]->enable_digital_input = 1;
-    options->channel[channel]->digital_in_channels = 4;
+    options->channel[channel]->digital_in_channels = 3;
+    options->channel[channel]->enable_digital_output = 1;
+    options->channel[channel]->digital_out_channels = 2;
   }
 
   if (options->channels > 1) {

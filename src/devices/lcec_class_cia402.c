@@ -172,9 +172,10 @@ lcec_class_cia402_channel_options_t *lcec_cia402_channel_options(void) {
 /// multi-axis devices, where we have multiple `foo` pins, we need to
 /// use names like `srv-1-foo` instead.
 void lcec_cia402_rename_multiaxis_channels(lcec_class_cia402_options_t *opt) {
+  int offset = opt->zero_based_axis_names ? 0 : 1;
   for (int channel = 0; channel < opt->channels; channel++) {
     char *prefix = LCEC_HAL_ALLOCATE_STRING(16);
-    snprintf(prefix, 16, "srv-%d", channel + 1);
+    snprintf(prefix, 16, "srv-%d", channel + offset);
     opt->channel[channel]->name_prefix = prefix;
   }
 }
@@ -682,12 +683,19 @@ lcec_modparam_desc_t *lcec_cia402_channelized_modparams(lcec_modparam_desc_t con
 /// @param device_base_mps a `lcec_modparam_desc_t[]` containing device-specific `<modParam>` settings that should *not* be duplicated per
 /// channel.
 /// @param docs a `lcec_modparam_doc_t[]` that will override the settings of `default_value` and `comment` on existing MPs.
+// Slave-level (non per-channel) modparams shared by all CiA 402 drivers.
+static const lcec_modparam_desc_t cia402_base_modparams[] = {
+    {"zeroBasedAxisNames", CIA402_MP_ZERO_BASED_AXIS_NAMES, MODPARAM_TYPE_BIT},
+    {NULL},
+};
+
 lcec_modparam_desc_t *lcec_cia402_modparams(int channels, lcec_modparam_desc_t const *device_channelized_mps,
     lcec_modparam_desc_t const *device_base_mps, lcec_modparam_doc_t const *channelized_docs, lcec_modparam_doc_t const *base_docs) {
   const lcec_modparam_desc_t *pre_channelized_mps =
       lcec_modparam_desc_merge_docs(lcec_modparam_desc_concat(per_channel_modparams, device_channelized_mps), channelized_docs);
   const lcec_modparam_desc_t *channelized_mps = lcec_cia402_channelized_modparams(pre_channelized_mps, channels);
-  const lcec_modparam_desc_t *all_mps = lcec_modparam_desc_concat(channelized_mps, device_base_mps);
+  const lcec_modparam_desc_t *with_class_base = lcec_modparam_desc_concat(channelized_mps, cia402_base_modparams);
+  const lcec_modparam_desc_t *all_mps = lcec_modparam_desc_concat(with_class_base, device_base_mps);
 
   return lcec_modparam_desc_merge_docs(all_mps, base_docs);
 }
@@ -705,6 +713,14 @@ lcec_modparam_desc_t *lcec_cia402_modparams(int channels, lcec_modparam_desc_t c
 int lcec_cia402_handle_modparam(lcec_slave_t *slave, const lcec_slave_modparam_t *p, lcec_class_cia402_options_t *opt) {
   if (p->id < CIA402_MP_BASE) {
     return 0;
+  }
+
+  // Slave-level params (no per-channel suffix), handled before the
+  // channel/id split below.
+  switch (p->id) {
+    case CIA402_MP_ZERO_BASED_AXIS_NAMES:
+      opt->zero_based_axis_names = p->value.bit;
+      return 0;
   }
 
   // Each of these params is available in 9 forms:
