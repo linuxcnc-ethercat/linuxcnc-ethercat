@@ -254,6 +254,10 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
 
   p->confType = lcecConfTypeMaster;
   p->refClockSlaveIdx = -1;
+  // Default to 1 ms servo period if XML omits appTimePeriod. Prevents
+  // divide-by-zero in lcec_main when computing DC phase, and gives
+  // slaves a sensible sync0Cycle to copy from at proc_init time.
+  p->appTimePeriod = 1000000;
   while (*attr) {
     const char *name = *(attr++);
     const char *val = *(attr++);
