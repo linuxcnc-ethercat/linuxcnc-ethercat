@@ -53,7 +53,7 @@ typedef struct {
 
   hal_u32_t frequency;
   hal_s32_t master_gain;
-  int32_t   master_gain_prev;  // <-- neu
+  int32_t   master_gain_prev;
 } lcec_el2564_data_t;
 
 static const lcec_pindesc_t slave_pins[] = {
@@ -213,9 +213,9 @@ if (hal_data->master_gain != hal_data->master_gain_prev) {
 
     EC_WRITE_S16(sdo_buf, gain);
     if (lcec_write_sdo(slave, 0xf819, 0x12, sdo_buf, 2) == 0) {
-        hal_data->master_gain_prev = gain;  // nur bei Erfolg merken
+        hal_data->master_gain_prev = gain;  // only remember on success
     }
-    hal_data->master_gain = gain;  // Clamp auch im HAL-Pin sichtbar machen
+    hal_data->master_gain = gain;  // make the clamp visible on the HAL pin
 }
 
   // write all channels
