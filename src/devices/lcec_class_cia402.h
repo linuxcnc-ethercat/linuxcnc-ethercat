@@ -127,6 +127,7 @@ typedef struct {
   int pdo_autoflow;
   int pdo_limit;
   int pdo_entry_limit;
+  int zero_based_axis_names;  ///< If true, multiaxis rename uses srv-0..srv-N-1 instead of srv-1..srv-N. Default 0 (1-based, matches CiA 402 spec).
   lcec_class_cia402_channel_options_t *channel[CIA402_MAX_CHANNELS];  ///< Room for 8 channel options.
 } lcec_class_cia402_options_t;
 
@@ -434,3 +435,7 @@ lcec_ratio lcec_cia402_decode_ratio_modparam(const char *value, int max_denomina
 #define CIA402_MP_ENABLE_vl_maximum                0x2350
 #define CIA402_MP_ENABLE_vl_minimum                0x2340
 // next is 0x2520
+
+// Slave-level params (no per-channel suffix). Keep these in their own range
+// (>= 0x3000) so they're easy to spot.
+#define CIA402_MP_ZERO_BASED_AXIS_NAMES 0x3000
