@@ -89,7 +89,7 @@ test: $(all-tests)
 install-user: user
 	mkdir -p $(DESTDIR)$(EMC2_HOME)/bin
 	cp lcec_conf $(DESTDIR)$(EMC2_HOME)/bin/
-	cp lcec_configgen $(DESTDIR)/usr/bin/
+	cp lcec_configgen $(DESTDIR)$(EMC2_HOME)/bin/
 
 install-realtime: realtime
 	mkdir -p $(DESTDIR)$(RTLIBDIR)/
