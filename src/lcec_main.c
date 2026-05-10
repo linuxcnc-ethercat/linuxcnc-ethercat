@@ -1169,6 +1169,16 @@ void lcec_read_master(void *arg, long period) {
   lcec_slave_t *slave;
   int check_states;
 
+  // Standard .hal order is `addf lcec.<m>.read` before `addf lcec.<m>.write`,
+  // so on the forgot-initf path read fires before write's inline activation
+  // fallback can run. cycle_start() would then call
+  // ecrt_master_application_time() on a master where ecrt_master_activate()
+  // never ran -- SIGSEGV. Skip this cycle entirely and let write_master's
+  // fallback activate; the next cycle's read works normally.
+  if (!master->activated) {
+    return;
+  }
+
   // check period. If the XML omitted appTimePeriod, master->app_time_period
   // is 0 and the modulo at lcec_main.c:1258 would SIGFPE on the first cycle;
   // adopt the actual HAL servo period so the XML attribute is optional.
