@@ -34,6 +34,17 @@ MODULE_LICENSE("GPL")
 MODULE_AUTHOR("Sascha Ittner <sascha.ittner@modusoft.de>")
 MODULE_DESCRIPTION("Driver for EtherCAT devices")
 
+/* Weak ref to HAL's initf API: present when linked against linuxcnc that
+   ships hal_init_funct_to_thread, NULL otherwise. Lets a single lcec binary
+   work against both old and new linuxcnc, with automatic fallback to legacy
+   inline activation when the new API is missing. */
+#pragma weak hal_init_funct_to_thread
+extern int hal_init_funct_to_thread(const char *funct_name,
+    const char *thread_name, int position);
+
+/* Set in rtapi_app_main from the weak-symbol probe. */
+static int initf_supported = 0;
+
 /// @brief Global HAL Pins
 static const lcec_pindesc_t master_global_pins[] = {
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, slaves_responding), "%s.slaves-responding"},
@@ -107,6 +118,7 @@ void lcec_write_all(void *arg, long period);
 void lcec_read_master(void *arg, long period);
 void lcec_write_master(void *arg, long period);
 static int lcec_activate_master(lcec_master_t *master);
+static void lcec_activate(void *arg, long period);
 
 static void sigsegv_handler(int sig);
 
@@ -136,6 +148,17 @@ int rtapi_app_main(void) {
   if ((lcec_comp_id = hal_init(LCEC_MODULE_NAME)) < 0) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_init() failed\n");
     goto fail0;
+  }
+
+  /* Probe HAL initf support. New linuxcnc => deferred RT-context activation
+     via lcec.activate funct (clean DC phasing). Old linuxcnc => fall back to
+     legacy inline activation here in rtapi_app_main, with PLL trim covering
+     the dirty start. */
+  initf_supported = (&hal_init_funct_to_thread != NULL);
+  if (!initf_supported) {
+    rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX
+        "linuxcnc lacks initf support; using legacy inline activation. "
+        "DC phasing will trim via PLL. Upgrade linuxcnc for clean activation.\n");
   }
 
   // parse configuration
@@ -288,9 +311,12 @@ int rtapi_app_main(void) {
     master->hal_data->auto_drift_delay = 100;
 #endif
 
-    // Activate master
-    if (lcec_activate_master(master) != 0) {
-      goto fail2;
+    // Activate master (only when initf is unavailable; otherwise lcec.activate
+    // funct does it from RT context after the user's `initf lcec.activate <thread>`).
+    if (!initf_supported) {
+      if (lcec_activate_master(master) != 0) {
+        goto fail2;
+      }
     }
 
     // export read function
@@ -303,6 +329,16 @@ int rtapi_app_main(void) {
     rtapi_snprintf(name, HAL_NAME_LEN, "%s.%s.write", LCEC_MODULE_NAME, master->name);
     if (hal_export_funct(name, lcec_write_master, master, 0, 0, lcec_comp_id) != 0) {
       rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s write funct export failed\n", master->name);
+      goto fail2;
+    }
+  }
+
+  // export activate funct (initf path only): user is expected to register it
+  // with `initf <module>.activate <thread>` in their .hal file before `start`.
+  if (initf_supported) {
+    rtapi_snprintf(name, HAL_NAME_LEN, "%s.activate", LCEC_MODULE_NAME);
+    if (hal_export_funct(name, lcec_activate, NULL, 0, 0, lcec_comp_id) != 0) {
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "activate funct export failed\n");
       goto fail2;
     }
   }
@@ -1046,6 +1082,27 @@ void lcec_write_all(void *arg, long period) {
   }
 }
 
+/// @brief HAL init funct (registered via halcmd `initf`) that activates every
+/// master in RT context, before the cyclic funct list runs for the first time.
+/// Sets master->initf_activated so write_master knows app_phase was born stable
+/// and the BANG-BANG PLL trim can be safely skipped.
+static void lcec_activate(void *arg, long period) {
+  lcec_master_t *master;
+  (void)arg;
+  (void)period;
+
+  for (master = first_master; master != NULL; master = master->next) {
+    if (!master->activated) {
+      if (lcec_activate_master(master) == 0) {
+        master->initf_activated = 1;
+      }
+      // on activation failure, lcec_activate_master already logged; leaving
+      // initf_activated unset means the BANG-BANG safety net will run if a
+      // later retry inline-activates the master.
+    }
+  }
+}
+
 /// @brief Activate master on first call (delayed activation)
 /// This ensures activation happens inside the real-time thread,
 /// minimizing the delay between activation and cyclic communication.
@@ -1187,9 +1244,24 @@ void lcec_write_master(void *arg, long period) {
   lcec_master_data_t *hal_data;
 #endif
 
-  // Skip if master not yet activated (should have been activated in read)
+  // First cyclic tick observed master not yet activated. This means the user
+  // did not register `lcec.activate` via initf (forgot the line in their .hal).
+  // Fall back to inline activation so the machine still runs; warn loudly so
+  // the user fixes their config. initf_activated stays 0, so the BANG-BANG
+  // safety net below will trim the dirty app_phase over the next few hundred
+  // cycles, just like the legacy path.
   if (!master->activated) {
-    return;
+    if (!master->forgot_warned) {
+      master->forgot_warned = 1;
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX
+          "master '%s' not activated via initf. "
+          "Add `initf %s.activate <thread>` to your .hal file before `start`. "
+          "Falling back to inline activation; DC phasing will trim via PLL.\n",
+          master->name, LCEC_MODULE_NAME);
+    }
+    if (lcec_activate_master(master) != 0) {
+      return;  // activation failed, can't proceed this cycle
+    }
   }
 
   // process slaves
@@ -1322,8 +1394,12 @@ void lcec_write_master(void *arg, long period) {
         rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "Phase calibration complete: jitter=%d target=%d\n",
             hal_data->phase_jitter, hal_data->phase_target);
       }
-    } else {
-      // Phase 3: Use PLL to move app_phase towards target
+    } else if (!master->initf_activated) {
+      // Phase 3: Use PLL to move app_phase towards target.
+      // Only runs when activation was dirty (legacy load-time path or inline
+      // fallback after forgot-to-initf). With initf_activated=1 the master was
+      // activated cleanly in RT context, app_phase is born stable, and the
+      // BANG-BANG would only add noise -- skip it entirely.
       // Calculate error: how far are we from target?
       // Positive error (app_phase > target) means we need to speed up to reduce app_phase
       // Negative error (app_phase < target) means we need to slow down to increase app_phase
@@ -1356,6 +1432,13 @@ void lcec_write_master(void *arg, long period) {
         }
       }
 
+    } else {
+      // initf_activated: clean RT-context activation, app_phase is born stable.
+      // Force PLL outputs to safe values so rtapi_task_pll_get_reference does
+      // not see stale BANG-BANG state. Manual pll_drift pin still applies via
+      // pll_correction = pll_out + pll_drift further down.
+      *(hal_data->pll_out) = 0;
+      *(hal_data->dc_phased) = 1;
     }
   }
   
