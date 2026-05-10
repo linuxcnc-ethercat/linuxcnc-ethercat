@@ -225,6 +225,8 @@ typedef struct lcec_master {
   long long state_update_timer;
   ec_master_state_t ms;
   int activated;
+  int initf_activated;              // activation happened via initf (clean RT context). On master-pi this is informational only -- there is no BANG-BANG to gate; PI loop runs unconditionally.
+  int forgot_warned;                // one-shot guard for the "user forgot initf lcec.activate" warning in lcec_write_master
   lcec_dcsync_callbacks_t dcsync_callbacks;
   int ref_clock_sync_counter;
   uint64_t app_time_ns;

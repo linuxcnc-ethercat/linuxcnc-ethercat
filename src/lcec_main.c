@@ -34,6 +34,17 @@ MODULE_LICENSE("GPL")
 MODULE_AUTHOR("Sascha Ittner <sascha.ittner@modusoft.de>")
 MODULE_DESCRIPTION("Driver for EtherCAT devices")
 
+/* Weak ref to HAL's initf API: present when linked against linuxcnc that
+   ships hal_init_funct_to_thread, NULL otherwise. Lets a single lcec binary
+   work against both old and new linuxcnc, with automatic fallback to legacy
+   inline activation when the new API is missing. */
+#pragma weak hal_init_funct_to_thread
+extern int hal_init_funct_to_thread(const char *funct_name,
+    const char *thread_name, int position);
+
+/* Set in rtapi_app_main from the weak-symbol probe. */
+static int initf_supported = 0;
+
 /// @brief Global HAL Pins
 static const lcec_pindesc_t master_global_pins[] = {
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, slaves_responding), "%s.slaves-responding"},
@@ -104,6 +115,7 @@ void lcec_write_all(void *arg, long period);
 void lcec_read_master(void *arg, long period);
 void lcec_write_master(void *arg, long period);
 static int lcec_activate_master(lcec_master_t *master);
+static void lcec_activate(void *arg, long period);
 
 static void sigsegv_handler(int sig);
 
@@ -138,6 +150,17 @@ int rtapi_app_main(void) {
   if ((lcec_comp_id = hal_init(LCEC_MODULE_NAME)) < 0) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_init() failed\n");
     goto fail0;
+  }
+
+  /* Probe HAL initf support. New linuxcnc => deferred RT-context activation
+     via lcec.activate funct (clean DC phasing). Old linuxcnc => fall back to
+     legacy inline activation here in rtapi_app_main, with PLL trim covering
+     the dirty start. */
+  initf_supported = (&hal_init_funct_to_thread != NULL);
+  if (!initf_supported) {
+    rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX
+        "linuxcnc lacks initf support; using legacy inline activation. "
+        "DC phasing will trim via PLL. Upgrade linuxcnc for clean activation.\n");
   }
 
   // parse configuration
@@ -316,9 +339,12 @@ int rtapi_app_main(void) {
           master->name, master->ref_clock_slave_idx, ref_slave->name);
     }
 
-    // Activate master
-    if (lcec_activate_master(master) != 0) {
-      goto fail2;
+    // Activate master (only when initf is unavailable; otherwise lcec.activate
+    // funct does it from RT context after the user's `initf lcec.activate <thread>`).
+    if (!initf_supported) {
+      if (lcec_activate_master(master) != 0) {
+        goto fail2;
+      }
     }
 
     // export read function
@@ -331,6 +357,16 @@ int rtapi_app_main(void) {
     rtapi_snprintf(name, HAL_NAME_LEN, "%s.%s.write", LCEC_MODULE_NAME, master->name);
     if (hal_export_funct(name, lcec_write_master, master, 0, 0, lcec_comp_id) != 0) {
       rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s write funct export failed\n", master->name);
+      goto fail2;
+    }
+  }
+
+  // export activate funct (initf path only): user is expected to register it
+  // with `initf <module>.activate <thread>` in their .hal file before `start`.
+  if (initf_supported) {
+    rtapi_snprintf(name, HAL_NAME_LEN, "%s.activate", LCEC_MODULE_NAME);
+    if (hal_export_funct(name, lcec_activate, NULL, 0, 0, lcec_comp_id) != 0) {
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "activate funct export failed\n");
       goto fail2;
     }
   }
@@ -1075,6 +1111,24 @@ void lcec_write_all(void *arg, long period) {
   }
 }
 
+/// @brief HAL init funct (registered via halcmd `initf`) that activates every
+/// master in RT context, before the cyclic funct list runs for the first time.
+/// Sets master->initf_activated for downstream introspection. On master-pi the
+/// flag is informational; the Sittner PI loop runs unconditionally.
+static void lcec_activate(void *arg, long period) {
+  lcec_master_t *master;
+  (void)arg;
+  (void)period;
+
+  for (master = first_master; master != NULL; master = master->next) {
+    if (!master->activated) {
+      if (lcec_activate_master(master) == 0) {
+        master->initf_activated = 1;
+      }
+    }
+  }
+}
+
 static int lcec_activate_master(lcec_master_t *master) {
   if (master->activated) {
     return 0;
@@ -1176,9 +1230,24 @@ void lcec_write_master(void *arg, long period) {
   lcec_master_t *master = (lcec_master_t *)arg;
   lcec_slave_t *slave;
 
-  // Skip if master not yet activated
+  // First cyclic tick with an unactivated master means the user did not
+  // register `lcec.activate` via initf (line missing from .hal). Fall back to
+  // inline activation so the machine still runs; warn loudly so the user
+  // fixes their config. On master-pi, the inline path means activation
+  // happens mid-cycle rather than before the first PI tick -- the PI loop
+  // will need a few cycles to converge but recovers without intervention.
   if (!master->activated) {
-    return;
+    if (!master->forgot_warned) {
+      master->forgot_warned = 1;
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX
+          "master '%s' not activated via initf. "
+          "Add `initf %s.activate <thread>` to your .hal file before `start`. "
+          "Falling back to inline activation.\n",
+          master->name, LCEC_MODULE_NAME);
+    }
+    if (lcec_activate_master(master) != 0) {
+      return;  // activation failed, can't proceed this cycle
+    }
   }
 
   // process slaves
@@ -1201,7 +1270,6 @@ void lcec_write_master(void *arg, long period) {
   master->dcsync_callbacks.post_send(master);
 
   rtapi_mutex_give(&master->mutex);
-
 }
 
 
