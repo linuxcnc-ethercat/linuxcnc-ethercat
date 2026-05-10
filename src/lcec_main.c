@@ -114,7 +114,7 @@ void lcec_read_all(void *arg, long period);
 void lcec_write_all(void *arg, long period);
 void lcec_read_master(void *arg, long period);
 void lcec_write_master(void *arg, long period);
-static int lcec_activate_master(lcec_master_t *master);
+static int lcec_activate_master(lcec_master_t *master, uint64_t seed_app_time);
 static void lcec_activate(void *arg, long period);
 
 static void sigsegv_handler(int sig);
@@ -341,8 +341,10 @@ int rtapi_app_main(void) {
 
     // Activate master (only when initf is unavailable; otherwise lcec.activate
     // funct does it from RT context after the user's `initf lcec.activate <thread>`).
+    // Non-RT seed: rtapi_task_pll_get_reference() is invalid here (no task), so
+    // fall back to wall clock. Phase will jump on cycle 1 -- legacy behavior.
     if (!initf_supported) {
-      if (lcec_activate_master(master) != 0) {
+      if (lcec_activate_master(master, dc_time_offset + rtapi_get_time()) != 0) {
         goto fail2;
       }
     }
@@ -1113,8 +1115,12 @@ void lcec_write_all(void *arg, long period) {
 
 /// @brief HAL init funct (registered via halcmd `initf`) that activates every
 /// master in RT context, before the cyclic funct list runs for the first time.
-/// Sets master->initf_activated for downstream introspection. On master-pi the
-/// flag is informational; the Sittner PI loop runs unconditionally.
+/// Seeds application time from rtapi_task_pll_get_reference() so the master's
+/// internal clock anchor matches the time source the dcsync callbacks will use
+/// per-cycle (cycle_start in dcsync_r2m.c also reads pll_get_reference). This
+/// alignment removes the wall-clock-vs-RT-tick phase jump that the legacy seed
+/// in rtapi_app_main produced (the "random starts" the Sittner PI rule warned
+/// against). Sets master->initf_activated for downstream introspection.
 static void lcec_activate(void *arg, long period) {
   lcec_master_t *master;
   (void)arg;
@@ -1122,23 +1128,26 @@ static void lcec_activate(void *arg, long period) {
 
   for (master = first_master; master != NULL; master = master->next) {
     if (!master->activated) {
-      if (lcec_activate_master(master) == 0) {
+      uint64_t seed = dc_time_offset + rtapi_task_pll_get_reference();
+      if (lcec_activate_master(master, seed) == 0) {
         master->initf_activated = 1;
       }
     }
   }
 }
 
-static int lcec_activate_master(lcec_master_t *master) {
+static int lcec_activate_master(lcec_master_t *master, uint64_t seed_app_time) {
   if (master->activated) {
     return 0;
   }
 
   rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "Activating master %s\n", master->name);
 
-  // Seed application time before activation so reference clock starts near
-  // wall time. Speeds up OP state transition.
-  ecrt_master_application_time(master->master, dc_time_offset + rtapi_get_time());
+  // Seed application time before activation. Caller picks the time source:
+  //   - rtapi_app_main (non-RT): wall clock; phase jump on cycle 1 is accepted.
+  //   - lcec_activate / lcec_write_master fallback (RT): pll_get_reference,
+  //     same source used by dcsync cycle_start, so anchor is phase-aligned.
+  ecrt_master_application_time(master->master, seed_app_time);
 
   if (ecrt_master_activate(master->master)) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to activate master %s\n", master->name);
@@ -1225,7 +1234,9 @@ void lcec_read_master(void *arg, long period) {
 
 /// @brief Write all output pins on a master and its slaves.
 // NOTE: ecrt_master_application_time() is seeded once before activation in
-// lcec_activate_master(), then called per-cycle from dcsync callbacks.
+// lcec_activate_master() (caller picks time source: wall clock from non-RT
+// rtapi_app_main, pll_get_reference from RT initf/fallback paths), then
+// called per-cycle from dcsync callbacks.
 void lcec_write_master(void *arg, long period) {
   lcec_master_t *master = (lcec_master_t *)arg;
   lcec_slave_t *slave;
@@ -1245,7 +1256,8 @@ void lcec_write_master(void *arg, long period) {
           "Falling back to inline activation.\n",
           master->name, LCEC_MODULE_NAME);
     }
-    if (lcec_activate_master(master) != 0) {
+    // RT-context fallback: PLL ref still aligned with dcsync, even mid-cycle.
+    if (lcec_activate_master(master, dc_time_offset + rtapi_task_pll_get_reference()) != 0) {
       return;  // activation failed, can't proceed this cycle
     }
   }
