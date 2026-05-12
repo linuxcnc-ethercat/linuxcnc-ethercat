@@ -1,16 +1,18 @@
-Source: linuxcnc-ethercat-bb
-Section: unknown
-Priority: extra
-Maintainer: Bjarne von Horn <vh@igh.de>
+Source: linuxcnc-ethercat
+Section: misc
+Priority: optional
+Maintainer: Luca Toniolo <toniolo.luca@gmail.com>
 Build-Depends: debhelper (>= 8.0.0), libexpat1-dev, linuxcnc-dev | linuxcnc-sim-dev | linuxcnc-uspace-dev | machinekit-dev, etherlabmaster-dev | libethercat-dev
 Standards-Version: 3.9.3
 
-Package: linuxcnc-ethercat-bb
+Package: linuxcnc-ethercat
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, linuxcnc | linuxcnc-sim | linuxcnc-uspace | machinekit, etherlabmaster | ethercat-master
-Conflicts: linuxcnc-ethercat, linuxcnc-ethercat-pi
-Provides: linuxcnc-ethercat
-Replaces: linuxcnc-ethercat
-Description: LinuxCNC EtherCAT HAL driver (bang-bang DC sync)
- Bang-bang inline DC sync controller flavor of linuxcnc-ethercat.
- Conflicts with linuxcnc-ethercat-pi (PI controller flavor).
+Conflicts: linuxcnc-ethercat-bb, linuxcnc-ethercat-pi
+Replaces: linuxcnc-ethercat-bb, linuxcnc-ethercat-pi
+Provides: linuxcnc-ethercat-bb
+Description: LinuxCNC EtherCAT HAL driver
+ HAL driver letting LinuxCNC drive EtherCAT slave devices via the
+ IgH EtherLab master. Supports CiA 402 motion devices, generic PDOs,
+ distributed-clock sync, and a growing catalog of vendor-specific
+ modules.
