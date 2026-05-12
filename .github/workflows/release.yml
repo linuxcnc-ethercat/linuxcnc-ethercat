@@ -9,29 +9,66 @@ permissions:
     contents: write
 
 jobs:
-    build-and-release:
+    build:
+        name: ${{ matrix.distro }}
         runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                distro: [debian-11, debian-12, debian-13]
+                include:
+                    - distro: debian-11
+                      image: debian:bullseye
+                      codename: bullseye
+                      etherlab_repo: Debian_11
+                    - distro: debian-12
+                      image: debian:bookworm
+                      codename: bookworm
+                      etherlab_repo: Debian_12
+                    - distro: debian-13
+                      image: debian:trixie
+                      codename: trixie
+                      etherlab_repo: Debian_Testing
+
         container:
-            image: debian:trixie
+            image: ${{ matrix.image }}
+
         steps:
             - name: Install build dependencies
+              env:
+                  DEBIAN_FRONTEND: noninteractive
+                  CODENAME: ${{ matrix.codename }}
+                  ETHERLAB_REPO: ${{ matrix.etherlab_repo }}
               run: |
+                  set -e
+                  echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80-retries
+                  echo 'Acquire::http::Timeout "30";' >> /etc/apt/apt.conf.d/80-retries
                   apt-get update
                   apt-get install -y --no-install-recommends ca-certificates curl gpg
-                  curl -fsSL https://download.opensuse.org/repositories/science:/EtherLab/Debian_Testing/Release.key \
+                  curl -fsSL "https://download.opensuse.org/repositories/science:/EtherLab/${ETHERLAB_REPO}/Release.key" \
                       | gpg --dearmor -o /usr/share/keyrings/etherlab.gpg
-                  echo "deb [signed-by=/usr/share/keyrings/etherlab.gpg] https://download.opensuse.org/repositories/science:/EtherLab/Debian_Testing/ ./" \
+                  echo "deb [signed-by=/usr/share/keyrings/etherlab.gpg] https://download.opensuse.org/repositories/science:/EtherLab/${ETHERLAB_REPO}/ ./" \
                       > /etc/apt/sources.list.d/etherlab.list
+                  # Two LinuxCNC signing keys are in use:
+                  # - 3CB9FD148F374FEF: old DSA key, signs bullseye/bookworm
+                  # - E43B5A8E78CC2927: 2025-10 RSA key, signs trixie
+                  { curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xEEDD0D29F81DCAA0D258661F3CB9FD148F374FEF"; \
+                    curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x0CE3E44425B11F871BBCC6F5E43B5A8E78CC2927"; } \
+                      | gpg --dearmor -o /usr/share/keyrings/linuxcnc.gpg
+                  echo "deb [signed-by=/usr/share/keyrings/linuxcnc.gpg] https://www.linuxcnc.org/ ${CODENAME} base 2.9-uspace" \
+                      > /etc/apt/sources.list.d/linuxcnc.list
                   apt-get update
                   apt-get install -y --no-install-recommends \
                       git build-essential devscripts debhelper \
-                      linuxcnc-uspace-dev libethercat-dev \
-                      yapps2
+                      linuxcnc-uspace-dev libethercat-dev yapps2
 
             - name: Checkout
               uses: actions/checkout@v4
               with:
                   fetch-depth: 0
+
+            - name: Mark repo as safe (container runs as root)
+              run: git config --global --add safe.directory "$PWD"
 
             - name: Set version from git tag
               run: |
@@ -43,17 +80,45 @@ jobs:
                   touch TODO
                   dpkg-buildpackage -d -us -uc -b
                   mkdir -p dist
-                  cp ../*.deb dist/
-                  rm -f dist/*-dbgsym*.deb
+                  for src in ../*.deb; do
+                      [ -f "$src" ] || continue
+                      case "$src" in *-dbgsym*) continue ;; esac
+                      fname="$(basename "$src")"
+                      base="${fname%_*.deb}"
+                      suffix="${fname##*_}"
+                      cp "$src" "dist/${base}_${{ matrix.distro }}_${suffix}"
+                  done
 
             - name: Run tests
               run: |
                   cd src
                   make test
 
+            - name: Upload deb artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: linuxcnc-ethercat-deb-${{ matrix.distro }}
+                  path: dist/*.deb
+                  if-no-files-found: error
+
+    release:
+        name: Attach debs to GitHub release
+        needs: build
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - name: Download all artefacts
+              uses: actions/download-artifact@v4
+              with:
+                  path: artifacts
+
+            - name: List artefacts
+              run: find artifacts -type f -name '*.deb' -print
+
             - name: Create GitHub Release
               uses: softprops/action-gh-release@v2
               with:
-                  files: dist/*.deb
+                  files: artifacts/**/*.deb
                   generate_release_notes: true
                   prerelease: ${{ contains(github.ref_name, '~pre') || contains(github.ref_name, '-pre') }}
