@@ -9,51 +9,136 @@ permissions:
     contents: write
 
 jobs:
-    build-and-release:
+    build:
+        name: ${{ matrix.distro }}
         runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                distro: [debian-11, debian-12, debian-13]
+                include:
+                    - distro: debian-11
+                      image: debian:bullseye
+                      codename: bullseye
+                      etherlab_repo: Debian_11
+                      deb_rev: deb11u1
+                    - distro: debian-12
+                      image: debian:bookworm
+                      codename: bookworm
+                      etherlab_repo: Debian_12
+                      deb_rev: deb12u1
+                    - distro: debian-13
+                      image: debian:trixie
+                      codename: trixie
+                      etherlab_repo: Debian_Testing
+                      deb_rev: deb13u1
+
         container:
-            image: debian:trixie
+            image: ${{ matrix.image }}
+
         steps:
             - name: Install build dependencies
+              env:
+                  DEBIAN_FRONTEND: noninteractive
+                  CODENAME: ${{ matrix.codename }}
+                  ETHERLAB_REPO: ${{ matrix.etherlab_repo }}
               run: |
+                  set -e
+                  echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80-retries
+                  echo 'Acquire::http::Timeout "30";' >> /etc/apt/apt.conf.d/80-retries
                   apt-get update
                   apt-get install -y --no-install-recommends ca-certificates curl gpg
-                  curl -fsSL https://download.opensuse.org/repositories/science:/EtherLab/Debian_Testing/Release.key \
+                  curl -fsSL "https://download.opensuse.org/repositories/science:/EtherLab/${ETHERLAB_REPO}/Release.key" \
                       | gpg --dearmor -o /usr/share/keyrings/etherlab.gpg
-                  echo "deb [signed-by=/usr/share/keyrings/etherlab.gpg] https://download.opensuse.org/repositories/science:/EtherLab/Debian_Testing/ ./" \
+                  echo "deb [signed-by=/usr/share/keyrings/etherlab.gpg] https://download.opensuse.org/repositories/science:/EtherLab/${ETHERLAB_REPO}/ ./" \
                       > /etc/apt/sources.list.d/etherlab.list
+                  # Two LinuxCNC signing keys are in use:
+                  # - 3CB9FD148F374FEF: old DSA key, signs bullseye/bookworm
+                  # - E43B5A8E78CC2927: 2025-10 RSA key, signs trixie
+                  { curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xEEDD0D29F81DCAA0D258661F3CB9FD148F374FEF"; \
+                    curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x0CE3E44425B11F871BBCC6F5E43B5A8E78CC2927"; } \
+                      | gpg --dearmor -o /usr/share/keyrings/linuxcnc.gpg
+                  echo "deb [signed-by=/usr/share/keyrings/linuxcnc.gpg] https://www.linuxcnc.org/ ${CODENAME} base 2.9-uspace" \
+                      > /etc/apt/sources.list.d/linuxcnc.list
                   apt-get update
                   apt-get install -y --no-install-recommends \
                       git build-essential devscripts debhelper \
-                      linuxcnc-uspace-dev libethercat-dev \
-                      yapps2
+                      linuxcnc-uspace-dev libethercat-dev yapps2
 
             - name: Checkout
               uses: actions/checkout@v4
               with:
                   fetch-depth: 0
 
+            - name: Mark repo as safe (container runs as root)
+              run: git config --global --add safe.directory "$PWD"
+
             - name: Set version from git tag
               run: |
                   VERSION="${GITHUB_REF_NAME#v}"
-                  dch --newversion "${VERSION}" --distribution stable "Release ${VERSION}"
+                  # Codename-suffixed version so each distro's .deb has a
+                  # unique pool filename in the downstream apt repo.
+                  dch --newversion "${VERSION}+${{ matrix.deb_rev }}" \
+                      --distribution stable \
+                      "Release ${VERSION} for ${{ matrix.codename }}"
 
             - name: Build deb package
               run: |
                   touch TODO
                   dpkg-buildpackage -d -us -uc -b
                   mkdir -p dist
-                  cp ../*.deb dist/
-                  rm -f dist/*-dbgsym*.deb
+                  for src in ../*.deb; do
+                      [ -f "$src" ] || continue
+                      case "$src" in *-dbgsym*) continue ;; esac
+                      cp "$src" "dist/$(basename "$src")"
+                  done
 
             - name: Run tests
               run: |
                   cd src
                   make test
 
+            - name: Upload deb artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: linuxcnc-ethercat-deb-${{ matrix.distro }}
+                  path: dist/*.deb
+                  if-no-files-found: error
+
+    release:
+        name: Attach debs to GitHub release
+        needs: build
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - name: Download all artefacts
+              uses: actions/download-artifact@v4
+              with:
+                  path: artifacts
+
+            - name: List artefacts
+              run: find artifacts -type f -name '*.deb' -print
+
             - name: Create GitHub Release
               uses: softprops/action-gh-release@v2
               with:
-                  files: dist/*.deb
+                  files: artifacts/**/*.deb
                   generate_release_notes: true
                   prerelease: ${{ contains(github.ref_name, '~pre') || contains(github.ref_name, '-pre') }}
+
+            - name: Trigger apt-repo ingestion
+              env:
+                  GH_TOKEN: ${{ secrets.APT_DISPATCH_TOKEN }}
+              run: |
+                  if [ -z "$GH_TOKEN" ]; then
+                      echo "APT_DISPATCH_TOKEN not set; skipping ingestion dispatch."
+                      exit 0
+                  fi
+                  gh api \
+                      -X POST \
+                      -H "Accept: application/vnd.github+json" \
+                      /repos/linuxcnc-ethercat/apt/dispatches \
+                      -f event_type=ingest-release \
+                      -f "client_payload[source_repo]=${{ github.repository }}" \
+                      -f "client_payload[tag]=${{ github.ref_name }}"
