@@ -21,14 +21,17 @@ jobs:
                       image: debian:bullseye
                       codename: bullseye
                       etherlab_repo: Debian_11
+                      deb_rev: deb11u1
                     - distro: debian-12
                       image: debian:bookworm
                       codename: bookworm
                       etherlab_repo: Debian_12
+                      deb_rev: deb12u1
                     - distro: debian-13
                       image: debian:trixie
                       codename: trixie
                       etherlab_repo: Debian_Testing
+                      deb_rev: deb13u1
 
         container:
             image: ${{ matrix.image }}
@@ -73,7 +76,11 @@ jobs:
             - name: Set version from git tag
               run: |
                   VERSION="${GITHUB_REF_NAME#v}"
-                  dch --newversion "${VERSION}" --distribution stable "Release ${VERSION}"
+                  # Codename-suffixed version so each distro's .deb has a
+                  # unique pool filename in the downstream apt repo.
+                  dch --newversion "${VERSION}+${{ matrix.deb_rev }}" \
+                      --distribution stable \
+                      "Release ${VERSION} for ${{ matrix.codename }}"
 
             - name: Build deb package
               run: |
@@ -83,10 +90,7 @@ jobs:
                   for src in ../*.deb; do
                       [ -f "$src" ] || continue
                       case "$src" in *-dbgsym*) continue ;; esac
-                      fname="$(basename "$src")"
-                      base="${fname%_*.deb}"
-                      suffix="${fname##*_}"
-                      cp "$src" "dist/${base}_${{ matrix.distro }}_${suffix}"
+                      cp "$src" "dist/$(basename "$src")"
                   done
 
             - name: Run tests
@@ -122,3 +126,19 @@ jobs:
                   files: artifacts/**/*.deb
                   generate_release_notes: true
                   prerelease: ${{ contains(github.ref_name, '~pre') || contains(github.ref_name, '-pre') }}
+
+            - name: Trigger apt-repo ingestion
+              env:
+                  GH_TOKEN: ${{ secrets.APT_DISPATCH_TOKEN }}
+              run: |
+                  if [ -z "$GH_TOKEN" ]; then
+                      echo "APT_DISPATCH_TOKEN not set; skipping ingestion dispatch."
+                      exit 0
+                  fi
+                  gh api \
+                      -X POST \
+                      -H "Accept: application/vnd.github+json" \
+                      /repos/linuxcnc-ethercat/apt/dispatches \
+                      -f event_type=ingest-release \
+                      -f "client_payload[source_repo]=${{ github.repository }}" \
+                      -f "client_payload[tag]=${{ github.ref_name }}"
