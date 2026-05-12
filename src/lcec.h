@@ -237,6 +237,8 @@ typedef struct lcec_master {
   long long state_update_timer;
   ec_master_state_t ms;
   int activated;                    // Flag: master has been activated (0=not yet, 1=activated)
+  int initf_activated;              // Flag: activation happened via initf path (clean RT-context); when set, BANG-BANG PLL trim is skipped because app_phase was born stable
+  int forgot_warned;                // One-shot guard for the "user forgot initf lcec.activate" warning in lcec_write_master
 #ifdef RTAPI_TASK_PLL_SUPPORT
   uint64_t dc_ref;
   uint64_t dc_ref_time;          // DC reference time (epoch) - set on first app_time call
