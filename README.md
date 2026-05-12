@@ -17,68 +17,79 @@ in 2023, and is the new home for most LinuxCNC EtherCAT development.
 
 ## Installing
 
-The recommended way to install this driver is to use the `.deb` apt
-repository managed by the Etherlab folks.  It should contain
-everything that you need to install Ethercat support for LinuxCNC with
-minimal manual work.
+The recommended way to install this driver is via the project's own
+apt repository at <https://linuxcnc-ethercat.github.io/apt/>, served
+from GitHub Pages.  It ships both `linuxcnc-ethercat` and the matching
+`ethercat-master` (the IgH EtherLab master rebuilt with fixes that
+have not been picked up upstream) for **Debian 11 / 12 / 13** on
+**amd64**.
+
+> The previously-recommended openSUSE `science:EtherLab` repository is
+> no longer the preferred source: it serves the unmodified IgH build
+> and is missing several fixes important to LinuxCNC users (DC-sync
+> cold-start, reference-clock poll storm, etc.). The packages in our
+> apt repo carry a Debian epoch (`1:1.6.9-…`) that supersedes the
+> openSUSE version on a normal `apt upgrade`, so switching is a
+> single-step operation.
 
 ### Initial setup
 
-First, you need to tell `apt` how to find the Etherlab repository,
-hosted at https://build.opensuse.org/project/show/science:EtherLab.  This
-is the preferred mechanism from the [LinuxCNC
-forum](https://forum.linuxcnc.org/ethercat/45336-ethercat-installation-from-repositories-how-to-step-by-step):
+Run as root or with `sudo`:
 
+```sh
+# 1. Install the archive signing key
+curl -fsSL https://linuxcnc-ethercat.github.io/apt/linuxcnc-ethercat-apt.gpg \
+    -o /usr/share/keyrings/linuxcnc-ethercat-apt.gpg
 
+# 2. Detect the codename and add the apt source
+. /etc/os-release
+case "$VERSION_CODENAME" in
+    bullseye|bookworm|trixie) ;;
+    *) echo "Unsupported codename: $VERSION_CODENAME (supported: bullseye, bookworm, trixie)" >&2; exit 1 ;;
+esac
+echo "deb [signed-by=/usr/share/keyrings/linuxcnc-ethercat-apt.gpg] \
+https://linuxcnc-ethercat.github.io/apt/ $VERSION_CODENAME main" \
+    > /etc/apt/sources.list.d/linuxcnc-ethercat.list
+
+# 3. Install
+apt update
+apt install -y linux-headers-$(uname -r) ethercat-master linuxcnc-ethercat
 ```
-sudo mkdir -p /usr/local/share/keyrings/
-wget -O- https://build.opensuse.org/projects/science:EtherLab/signing_keys/download?kind=gpg | gpg --dearmor | sudo dd of=/etc/apt/trusted.gpg.d/science_EtherLab.gpg
-sudo tee -a /etc/apt/sources.list.d/ighvh.sources > /dev/null <<EOT
-Types: deb
-Signed-By: /etc/apt/trusted.gpg.d/science_EtherLab.gpg
-Suites: ./
-URIs: http://download.opensuse.org/repositories/science:/EtherLab/Debian_12/
-EOT
-sudo apt update
-sudo apt install -y linux-headers-$(uname -r) ethercat-master linuxcnc-ethercat
-```
 
-**Note:** If using the official linuxcnc 2.9.x ISO, The Ethercat repository is already installed so only the last two lines above are required.
-
-(These directions are for Debian 12.  Debian 11 should be very similar,
-just change `Debian_12` to `Debian_11`.)
+**Note:** If you previously followed older instructions and added the
+openSUSE `science:EtherLab` source, you can leave it in place — apt
+will prefer our packages because of the version epoch — or remove it
+with `rm /etc/apt/sources.list.d/ighvh.sources`. The official
+LinuxCNC 2.9.x ISO ships with the openSUSE source pre-installed;
+adding the lines above is enough to migrate.
 
 You will then need to do a bit of setup for Ethercat; at a minimum
 you'll need to edit `/etc/ethercat.conf` to tell it which interface it
-should use.  See the forum link (above) for additional details.
+should use.  See the [LinuxCNC
+forum](https://forum.linuxcnc.org/ethercat/45336-ethercat-installation-from-repositories-how-to-step-by-step)
+for additional details.
 
 You can verify that Ethercat is working when `ethercat slaves` shows
-the devices attached to your system.  See the forum link above for
-additional helpful steps.
+the devices attached to your system.
 
 ### Updates
 
-Ongoing updates should be easy and *mostly* handled automatically by
-`apt`.  Just run `sudo apt update` followed by `sudo apt upgrade` and
-things will mostly work, with one possible exception.  If the kernel
-is upgraded, then you *may* need to re-run this command in order to
-get Ethercat working again:
+Ongoing updates are handled by `apt`: `sudo apt update && sudo apt
+upgrade`. If the kernel is upgraded, you may need to re-run
 
 ```
 sudo apt install -y linux-headers-$(uname -r)
 ```
 
-This is because the real-time kernel that LinuxCNC prefers doesn't get
-its headers installed by default, and this breaks compiling the
-Ethercat modules for the new kernel.  Just run this `apt` command and
-then either reboot or run `sudo systemctl start ethercat`.
+to get the matching headers, otherwise the `ethercat` DKMS module
+cannot rebuild against the new kernel. Reboot or
+`sudo systemctl start ethercat` afterwards.
 
 ### Manual Installation
 
-If you decide that you want to install this manually and not use a
-package manager, then first you'll need to make sure that you have the
-[Ethercat Master](https://gitlab.com/etherlab.org/ethercat) and
-LinuxCNC (with its development tools) installed.  Then download
+If you would rather build from source, you need a working
+[Ethercat Master](https://github.com/linuxcnc-ethercat/ethercat) and
+LinuxCNC (with development headers) installed.  Then clone
 linuxcnc-ethercat and run `make install`.
 
 
