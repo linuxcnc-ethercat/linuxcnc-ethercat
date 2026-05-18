@@ -1,3 +1,13 @@
+linuxcnc-ethercat (1.41.0-2) unstable; urgency=low
+
+  * shlibs.local: list libethercat first in the alternatives chain
+    for libethercat.so.1. The previous order let apt resolve the
+    runtime dep to ethercat-master (which ships only the master
+    daemon, no .so), so a clean install of linuxcnc-ethercat could
+    leave lcec.so unable to load at runtime.
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Mon, 18 May 2026 22:00:00 +0200
+
 linuxcnc-ethercat (1.41.0-1) unstable; urgency=low
 
   * Drop the -bb/-pi flavor split: bb is now the canonical driver.

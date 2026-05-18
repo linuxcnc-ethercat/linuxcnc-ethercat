@@ -1,1 +1,1 @@
-libethercat 1 etherlabmaster (>= 1.5.2) | libethercat (>= 1.5.2) | ethercat-master (>= 1.5.2)
+libethercat 1 libethercat (>= 1.5.2) | etherlabmaster (>= 1.5.2) | ethercat-master (>= 1.5.2)
