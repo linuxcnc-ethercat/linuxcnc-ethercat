@@ -74,10 +74,14 @@ jobs:
             - name: Mark repo as safe (container runs as root)
               run: git config --global --add safe.directory "$PWD"
 
-            - name: Set version from git
+            - name: Stamp CI version
               run: |
-                  VERSION=$(git describe --tags --always | sed 's/^v//')
-                  dch --newversion "${VERSION}" --distribution stable "CI build ${VERSION}"
+                  # CI builds aren't published to the apt repo, so we just
+                  # need a parseable version. Force-bump via -b to bypass
+                  # dch's monotonic check (git describe on a feature branch
+                  # often sorts below the canonical changelog version).
+                  ver=$(git describe --tags --always | sed 's/^v//')
+                  dch -b --newversion "${ver}+ci" --distribution stable "CI build ${ver}"
 
             - name: Build deb package
               run: |
