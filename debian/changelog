@@ -1,3 +1,16 @@
+linuxcnc-ethercat (1.41.1-1) unstable; urgency=low
+
+  * Bump upstream to 1.41.1 to overtake the bad 1.41.0+debNNu1
+    pool versions that were published before release.yml was
+    fixed to read the version from debian/changelog. dpkg
+    parsed those as upstream='1.41.0+debNNu1' with no debian
+    revision, so any 1.41.0-N+debNNu1 build sorted lower and
+    apt refused to upgrade systems still running the bad build.
+    1.41.1-1 is unambiguously higher and triggers a clean
+    apt upgrade.
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Tue, 19 May 2026 09:00:00 +0200
+
 linuxcnc-ethercat (1.41.0-2) unstable; urgency=low
 
   * shlibs.local: list libethercat first in the alternatives chain
