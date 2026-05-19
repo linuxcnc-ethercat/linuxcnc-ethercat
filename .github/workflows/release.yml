@@ -73,14 +73,20 @@ jobs:
             - name: Mark repo as safe (container runs as root)
               run: git config --global --add safe.directory "$PWD"
 
-            - name: Set version from git tag
+            - name: Stamp version with codename suffix
               run: |
-                  VERSION="${GITHUB_REF_NAME#v}"
-                  # Codename-suffixed version so each distro's .deb has a
-                  # unique pool filename in the downstream apt repo.
-                  dch --newversion "${VERSION}+${{ matrix.deb_rev }}" \
+                  # Read the canonical version from debian/changelog so the
+                  # codename suffix lands in the Debian revision (e.g.
+                  # 1.41.0-2+deb13u1), not inside the upstream string. Using
+                  # the git tag verbatim once produced versions like
+                  # 1.41.0+deb13u1 (no debian revision), which dpkg sorts
+                  # ABOVE any later 1.41.0-N+debNNuM build. Stay consistent
+                  # with ethercat's release workflow.
+                  base_ver=$(dpkg-parsechangelog --show-field Version)
+                  new_ver="${base_ver}+${{ matrix.deb_rev }}"
+                  dch --newversion "${new_ver}" \
                       --distribution stable \
-                      "Release ${VERSION} for ${{ matrix.codename }}"
+                      "Release ${GITHUB_REF_NAME} for ${{ matrix.codename }}"
 
             - name: Build deb package
               run: |
