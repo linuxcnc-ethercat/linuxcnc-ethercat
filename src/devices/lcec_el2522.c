@@ -18,6 +18,7 @@
 
 /// @file  lcec_el2522.c
 /// @brief Driver for Beckhoff EL2522 2-channel pulse train output module
+///        Supports continuous positioning mode (similar to CiA402 CSP mode)
 
 #include <ecrt.h>
 
@@ -25,34 +26,20 @@
 #include "hal.h"
 #include "math.h"
 
-// ****************************************************************************
-// Known limitations:
-// - Step count positions are limited to int32_t min/max values as the el2522 internal counter
-//   is 32 bits wide and is currently used directly as the position feedback (after scaling).
-//   This is sufficient for most linear axes, (at 1um/step, max travel would be +/- 2.1km),
-//   but it could be limiting for continuous rotary axes or axes with extremely
-//   high step resolutions.
-//   If this is a problem, possible to change impl to use a 64-bit internal counter
-//   and only use the el2522 counter feedback as an incremental update.
-// ****************************************************************************
-
 static int lcec_el2522_init(int comp_id, lcec_slave_t *slave);
 static void lcec_el2522_read(lcec_slave_t *slave, long period);
 static void lcec_el2522_write(lcec_slave_t *slave, long period);
 
-#define LCEC_EL2522_CHANNEL_COUNT     2
-#define LCEC_EL2522_POS_SCALE_DEFAULT 1.0
-#define LCEC_EL2522_MODPARAM_OUTMODE  0
-#define LCEC_EL2522_MODPARAM_FREQLIMIT   2
-
-#define LCEC_EL2522_MODPARAM_CH(ch)                                                                       \
-  {"ch" #ch "OutputMode", LCEC_EL2522_MODPARAM_OUTMODE + ch, MODPARAM_TYPE_STRING, "FrequencyModulation", \
-      "Output mode: FrequencyModulation|PulseDirection|IncrementalEncoder"},                              \
-      {"ch" #ch "FrequencyLimit", LCEC_EL2522_MODPARAM_FREQLIMIT + ch, MODPARAM_TYPE_U32, "50000", "Maximum output frequency in Hz"}
+#define LCEC_EL2522_CHANNEL_COUNT      2
+#define LCEC_EL2522_POS_SCALE_DEFAULT  1.0
+#define LCEC_EL2522_MODPARAM_OUTMODE   0
+#define LCEC_EL2522_MODPARAM_FREQLIMIT 2
 
 static const lcec_modparam_desc_t modparams_base[] = {
-    LCEC_EL2522_MODPARAM_CH(0),
-    LCEC_EL2522_MODPARAM_CH(1),
+  {"ch1OutputMode", LCEC_EL2522_MODPARAM_OUTMODE, MODPARAM_TYPE_STRING, "FrequencyModulation", "Output mode: FrequencyModulation|PulseDirection|IncrementalEncoder"},
+  {"ch1FrequencyLimit", LCEC_EL2522_MODPARAM_FREQLIMIT, MODPARAM_TYPE_U32, "50000", "Maximum output frequency in Hz"},
+  {"ch2OutputMode", LCEC_EL2522_MODPARAM_OUTMODE + 1, MODPARAM_TYPE_STRING, "FrequencyModulation", "Output mode: FrequencyModulation|PulseDirection|IncrementalEncoder"},
+  {"ch2FrequencyLimit", LCEC_EL2522_MODPARAM_FREQLIMIT + 1, MODPARAM_TYPE_U32, "50000", "Maximum output frequency in Hz"},
     {NULL},
 };
 
@@ -70,9 +57,7 @@ static lcec_typelist_t lcec_el2522_types[] = {
         .is_fsoe_logic = 0,
         .proc_preinit = NULL,
         .proc_init = lcec_el2522_init,
-        .modparams = modparams_base,
-        .flags = 0,
-        .sourcefile = NULL},
+        .modparams = modparams_base},
     {NULL},
 };
 ADD_TYPES(lcec_el2522_types);
@@ -105,16 +90,93 @@ typedef struct {
 } lcec_el2522_data_t;
 
 static const lcec_pindesc_t slave_pins[] = {
-    {HAL_FLOAT, HAL_IN, offsetof(lcec_el2522_channel_t, pos_cmd), "%s.%s.%s.pos-%d-cmd"},
-    {HAL_FLOAT, HAL_OUT, offsetof(lcec_el2522_channel_t, pos_fb), "%s.%s.%s.pos-%d-fb"},
-    {HAL_S32, HAL_OUT, offsetof(lcec_el2522_channel_t, count), "%s.%s.%s.count-%d"},
-    {HAL_BIT, HAL_IN, offsetof(lcec_el2522_channel_t, enable), "%s.%s.%s.enable-%d"},
+    {HAL_FLOAT, HAL_IN, offsetof(lcec_el2522_channel_t, pos_cmd), "%s.%s.%s.ch%d.pos-cmd"},
+    {HAL_FLOAT, HAL_OUT, offsetof(lcec_el2522_channel_t, pos_fb), "%s.%s.%s.ch%d.pos-fb"},
+    {HAL_S32, HAL_OUT, offsetof(lcec_el2522_channel_t, count), "%s.%s.%s.ch%d.count"},
+    {HAL_BIT, HAL_IN, offsetof(lcec_el2522_channel_t, enable), "%s.%s.%s.ch%d.enable"},
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
 static const lcec_paramdesc_t slave_params[] = {
-    {HAL_FLOAT, HAL_RW, offsetof(lcec_el2522_channel_t, pos_scale), "%s.%s.%s.pos-%d-scale"},
+    {HAL_FLOAT, HAL_RW, offsetof(lcec_el2522_channel_t, pos_scale), "%s.%s.%s.ch%d.pos-scale"},
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
+};
+
+static ec_pdo_entry_info_t el2522_1601_pdo_entries[] = {
+    {0x0000, 0x00, 3},
+    {0x7000, 0x04, 1},  // Automatic direction, used as 'enable'
+    {0x7000, 0x05, 1},  // Forward
+    {0x7000, 0x06, 1},  // Reverse
+    {0x0000, 0x00, 10},
+    {0x7000, 0x12, 32}, // Target counter value
+};
+
+static ec_pdo_entry_info_t el2522_1606_pdo_entries[] = {
+    {0x0000, 0x00, 3},
+    {0x7010, 0x04, 1},  // Automatic direction, used as 'enable'
+    {0x7010, 0x05, 1},  // Forward
+    {0x7010, 0x06, 1},  // Reverse
+    {0x0000, 0x00, 10},
+    {0x7010, 0x12, 32}, // Target counter value
+};
+static ec_pdo_entry_info_t el2522_160B_pdo_entries[] = {
+    {0x0000, 0x00, 2},
+    {0x7020, 0x03, 1},  // Set Counter
+    {0x0000, 0x00, 12},
+    {0x7020, 0x10, 1},  // Reserved
+    {0x7020, 0x11, 32}, // Set counter Value
+};
+
+static ec_pdo_entry_info_t el2522_160D_pdo_entries[] = {
+    {0x0000, 0x00, 2},
+    {0x7030, 0x03, 1},  // Set Counter
+    {0x0000, 0x00, 12},
+    {0x7030, 0x10, 1},  // Reserved
+    {0x7030, 0x11, 32}, // Set Counter Value
+};
+
+static ec_pdo_entry_info_t el2522_1A03_pdo_entries[] = {
+    {0x0000, 0x00, 2},
+    {0x6020, 0x03, 1},  // Set counter done
+    {0x6020, 0x04, 1},  // Counter underflow
+    {0x6020, 0x05, 1},  // Counter overflow
+    {0x0000, 0x00, 8},
+    {0x6020, 0x0E, 1},  // Sync error
+    {0x6020, 0x0F, 1},  // TxPDO State
+    {0x6020, 0x10, 1},  // TxPDO Toggle
+    {0x6020, 0x11, 32}, // Counter value
+};
+
+static ec_pdo_entry_info_t el2522_1A05_pdo_entries[] = {
+    {0x0000, 0x00, 2},
+    {0x6030, 0x03, 1},  // Set counter done
+    {0x6030, 0x04, 1},  // Counter underflow
+    {0x6030, 0x05, 1},  // Counter overflow
+    {0x0000, 0x00, 8},
+    {0x6030, 0x0E, 1},  // Sync error
+    {0x6030, 0x0F, 1},  // TxPDO State
+    {0x6030, 0x10, 1},  // TxPDO Toggle
+    {0x6030, 0x11, 32}, // Counter value
+};
+
+static ec_pdo_info_t lcec_el2522_pdos_out[] = {
+    {0x1601, 6, el2522_1601_pdo_entries}, // Control Position Ch.1
+    {0x1606, 6, el2522_1606_pdo_entries}, // Control Position Ch.2
+    {0x160B, 5, el2522_160B_pdo_entries}, // Control Ch.1 (Set Counter)
+    {0x160D, 5, el2522_160D_pdo_entries}, // Control Ch.2 (Set Counter)
+};
+
+static ec_pdo_info_t lcec_el2522_pdos_in[] = {
+    {0x1A03, 9, el2522_1A03_pdo_entries}, // Status Ch.1 (Counter value + flags)
+    {0x1A05, 9, el2522_1A05_pdo_entries}, // Status Ch.2 (Counter value + flags)
+};
+
+static ec_sync_info_t lcec_el2522_syncs[] = {
+    {0, EC_DIR_OUTPUT, 0, NULL},
+    {1, EC_DIR_INPUT, 0, NULL},
+    {2, EC_DIR_OUTPUT, 4, lcec_el2522_pdos_out},
+    {3, EC_DIR_INPUT, 2, lcec_el2522_pdos_in},
+    {0xff},
 };
 
 static int lcec_el2522_init(int comp_id, lcec_slave_t *slave) {
@@ -122,46 +184,12 @@ static int lcec_el2522_init(int comp_id, lcec_slave_t *slave) {
 
   slave->proc_read = lcec_el2522_read;
   slave->proc_write = lcec_el2522_write;
+  slave->sync_info = lcec_el2522_syncs;
 
   lcec_master_t *master = slave->master;
   lcec_el2522_data_t *hal_data = LCEC_HAL_ALLOCATE(lcec_el2522_data_t);
   slave->hal_data = hal_data;
 
-  // RxPDO assignment
-  if ((err = lcec_write_sdo8(slave, 0x1C12, 0x00, 0x00)) != 0) {
-    return err;
-  }
-  if ((err = lcec_write_sdo16(slave, 0x1C12, 0x01, 0x1601)) != 0) {
-    return err;
-  }
-  if ((err = lcec_write_sdo16(slave, 0x1C12, 0x02, 0x1606)) != 0) {
-    return err;
-  }
-  if ((err = lcec_write_sdo16(slave, 0x1C12, 0x03, 0x160B)) != 0) {
-    return err;
-  }
-  if ((err = lcec_write_sdo16(slave, 0x1C12, 0x04, 0x160D)) != 0) {
-    return err;
-  }
-  if ((err = lcec_write_sdo8(slave, 0x1C12, 0x00, 0x04)) != 0) {
-    return err;
-  }
-
-  // TxPDO Assign
-  if ((err = lcec_write_sdo8(slave, 0x1C13, 0x00, 0x00)) != 0) {
-    return err;
-  }
-  if ((err = lcec_write_sdo16(slave, 0x1C13, 0x01, 0x1A03)) != 0) {
-    return err;
-  }
-  if ((err = lcec_write_sdo16(slave, 0x1C13, 0x02, 0x1A05)) != 0) {
-    return err;
-  }
-  if ((err = lcec_write_sdo8(slave, 0x1C13, 0x00, 0x02)) != 0) {
-    return err;
-  }
-
-  // Channel PDO, modparams and defaults
   for (int i = 0; i < LCEC_EL2522_CHANNEL_COUNT; i++) {
     LCEC_CONF_MODPARAM_VAL_T *pval = lcec_modparam_get(slave, LCEC_EL2522_MODPARAM_OUTMODE + i);
     if (pval != NULL) {
@@ -173,7 +201,7 @@ static int lcec_el2522_init(int comp_id, lcec_slave_t *slave) {
 
     pval = lcec_modparam_get(slave, LCEC_EL2522_MODPARAM_FREQLIMIT + i);
     if (pval != NULL) {
-      if ((err = lcec_write_sdo32(slave, 0x8000 + (0x10 * i), 0x12, pval->u32)) != 0) {
+      if ((err = lcec_write_sdo32(slave, 0x8000 + (i * 0x10), 0x12, pval->u32)) != 0) {
         return err;
       }
     }
@@ -190,10 +218,10 @@ static int lcec_el2522_init(int comp_id, lcec_slave_t *slave) {
     }
 
     // register pins and params
-    if ((err = lcec_pin_newf_list(channel, slave_pins, LCEC_MODULE_NAME, master->name, slave->name, i)) != 0) {
+    if ((err = lcec_pin_newf_list(channel, slave_pins, LCEC_MODULE_NAME, master->name, slave->name, i+1)) != 0) {
       return err;
     }
-    if ((err = lcec_param_newf_list(channel, slave_params, LCEC_MODULE_NAME, master->name, slave->name, i)) != 0) {
+    if ((err = lcec_param_newf_list(channel, slave_params, LCEC_MODULE_NAME, master->name, slave->name, i+1)) != 0) {
       return err;
     }
 
@@ -242,12 +270,12 @@ static void lcec_el2522_write(lcec_slave_t *slave, long period) {
     if (channel->pos_scale != channel->last_pos_scale) {
       if ((channel->pos_scale < 1e-20) && (channel->pos_scale > -1e-20)) {
         rtapi_print_msg(
-            RTAPI_MSG_ERR, "pos-scale for slave %s.%s.%i is too small, resetting to default\n", slave->master->name, slave->name, i);
-        channel->pos_scale = LCEC_EL2522_POS_SCALE_DEFAULT;
+            RTAPI_MSG_ERR, "Requested pos-scale for %s.%s.ch%i is too small, dropping\n", slave->master->name, slave->name, i+1);
+      } else {
+        channel->last_pos_scale = channel->pos_scale;
+        channel->step_offset = *(channel->count) - *(channel->pos_fb) * channel->pos_scale;
+        channel->pos_scale_recip = 1.0 / channel->pos_scale;
       }
-      channel->step_offset = *(channel->count) - *(channel->pos_fb) * channel->pos_scale;
-      channel->pos_scale_recip = 1.0 / channel->pos_scale;
-      channel->last_pos_scale = channel->pos_scale;
     }
 
     // explicit conversion casts used here to ensure correct handling for negative double values
