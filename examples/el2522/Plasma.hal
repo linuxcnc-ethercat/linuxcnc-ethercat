@@ -1,0 +1,77 @@
+#========================================================
+# HAL File Ethercat EL2522 2 Axis Plasma Table
+# Nathan Hofmeyer 2026-05-22
+# Based on Marc Roth EL2521 example
+#========================================================
+
+#--------------------------------------------------------
+#  Load hal components
+#--------------------------------------------------------
+loadusr -W lcec_conf ethercat.xml
+loadrt lcec
+
+loadrt [KINS]KINEMATICS
+loadrt [EMCMOT]EMCMOT base_period_nsec=[EMCMOT]BASE_PERIOD servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=[KINS]JOINTS num_spindles=[TRAJ]SPINDLES
+
+#--------------------------------------------------------
+#  Add functions to the servo thread
+#--------------------------------------------------------
+
+addf lcec.read-all            servo-thread
+addf motion-command-handler   servo-thread
+addf motion-controller        servo-thread
+addf lcec.write-all           servo-thread
+
+#========================================================
+#  GLOBAL I/O (E-STOP, machine enable, etc.)
+#========================================================
+setp iocontrol.0.emc-enable-in 1
+
+#========================================================
+#  X AXIS  (JOINT 0) EL2522 Channel 1
+#========================================================
+
+#  Scaling (steps / position unit)
+setp lcec.Master.XY-Axes.ch1.pos-scale  1000
+
+#--------------------------
+#  Position command / feedback wiring
+#--------------------------
+net x-pos-cmd      	<= joint.0.motor-pos-cmd     			
+net x-pos-cmd 		=> lcec.Master.XY-Axes.ch1.pos-cmd
+
+net x-pos-fb       	<= lcec.Master.XY-Axes.ch1.pos-fb     	
+net x-pos-fb 		=> joint.0.motor-pos-fb
+
+#--------------------------
+#  Enable chain
+#--------------------------
+net x-amp-enable   	<= joint.0.amp-enable-out    			 
+net x-amp-enable	=> lcec.Master.XY-Axes.ch1.enable
+
+#========================================================
+#  Y AXIS  (JOINT 1) EL2522 Channel 2
+#========================================================
+
+#  Scaling (steps / position unit)
+setp lcec.Master.XY-Axes.ch2.pos-scale  1000
+
+#--------------------------
+#  Position command / feedback wiring
+#--------------------------
+net y-pos-cmd      	<= joint.1.motor-pos-cmd     			
+net y-pos-cmd 		=> lcec.Master.XY-Axes.ch2.pos-cmd
+
+net y-pos-fb       	<= lcec.Master.XY-Axes.ch2.pos-fb     	
+net y-pos-fb 		=> joint.1.motor-pos-fb
+
+#--------------------------
+#  Enable chain
+#--------------------------
+net y-amp-enable   	<= joint.1.amp-enable-out    			 
+net y-amp-enable	=> lcec.Master.XY-Axes.ch2.enable
+
+
+
+
+

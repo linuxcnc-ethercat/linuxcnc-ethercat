@@ -219,10 +219,10 @@ static int lcec_el2522_init(int comp_id, lcec_slave_t *slave) {
     }
 
     // register pins and params
-    if ((err = lcec_pin_newf_list(channel, slave_pins, LCEC_MODULE_NAME, master->name, slave->name, i+1)) != 0) {
+    if ((err = lcec_pin_newf_list(channel, slave_pins, LCEC_MODULE_NAME, master->name, slave->name, i + 1)) != 0) {
       return err;
     }
-    if ((err = lcec_param_newf_list(channel, slave_params, LCEC_MODULE_NAME, master->name, slave->name, i+1)) != 0) {
+    if ((err = lcec_param_newf_list(channel, slave_params, LCEC_MODULE_NAME, master->name, slave->name, i + 1)) != 0) {
       return err;
     }
 
