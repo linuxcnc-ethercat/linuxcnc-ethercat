@@ -119,6 +119,7 @@ static ec_pdo_entry_info_t el2522_1606_pdo_entries[] = {
     {0x0000, 0x00, 10},
     {0x7010, 0x12, 32}, // Target counter value
 };
+
 static ec_pdo_entry_info_t el2522_160B_pdo_entries[] = {
     {0x0000, 0x00, 2},
     {0x7020, 0x03, 1},  // Set Counter
@@ -271,6 +272,7 @@ static void lcec_el2522_write(lcec_slave_t *slave, long period) {
       if ((channel->pos_scale < 1e-20) && (channel->pos_scale > -1e-20)) {
         rtapi_print_msg(
             RTAPI_MSG_ERR, "Requested pos-scale for %s.%s.ch%i is too small, dropping\n", slave->master->name, slave->name, i+1);
+        channel->pos_scale = channel->last_pos_scale;
       } else {
         channel->last_pos_scale = channel->pos_scale;
         channel->step_offset = *(channel->count) - *(channel->pos_fb) * channel->pos_scale;
