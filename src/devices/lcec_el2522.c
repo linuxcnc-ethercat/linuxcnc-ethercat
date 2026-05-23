@@ -21,26 +21,31 @@
 ///        Supports continuous positioning mode (similar to CiA402 CSP mode)
 
 #include <ecrt.h>
+#include <math.h>
+#include <stdbool.h>
 
 #include "../lcec.h"
 #include "hal.h"
-#include "math.h"
 
 static int lcec_el2522_init(int comp_id, lcec_slave_t *slave);
 static void lcec_el2522_read(lcec_slave_t *slave, long period);
 static void lcec_el2522_write(lcec_slave_t *slave, long period);
 
-#define LCEC_EL2522_CHANNEL_COUNT      2
-#define LCEC_EL2522_POS_SCALE_DEFAULT  1.0
-#define LCEC_EL2522_MODPARAM_OUTMODE   0
-#define LCEC_EL2522_MODPARAM_FREQLIMIT 2
+#define LCEC_EL2522_CHANNEL_COUNT           2
+#define LCEC_EL2522_POS_SCALE_DEFAULT     1.0
+#define LCEC_EL2522_MODPARAM_OUTMODE_BASE   0
+#define LCEC_EL2522_MODPARAM_OUTMODE_CH1    0
+#define LCEC_EL2522_MODPARAM_OUTMODE_CH2    1
+#define LCEC_EL2522_MODPARAM_FREQLIMIT_BASE 2
+#define LCEC_EL2522_MODPARAM_FREQLIMIT_CH1  2
+#define LCEC_EL2522_MODPARAM_FREQLIMIT_CH2  3
 
 static const lcec_modparam_desc_t modparams_base[] = {
-  {"ch1OutputMode", LCEC_EL2522_MODPARAM_OUTMODE, MODPARAM_TYPE_STRING, "FrequencyModulation", "Output mode: FrequencyModulation|PulseDirection|IncrementalEncoder"},
-  {"ch1FrequencyLimit", LCEC_EL2522_MODPARAM_FREQLIMIT, MODPARAM_TYPE_U32, "50000", "Maximum output frequency in Hz"},
-  {"ch2OutputMode", LCEC_EL2522_MODPARAM_OUTMODE + 1, MODPARAM_TYPE_STRING, "FrequencyModulation", "Output mode: FrequencyModulation|PulseDirection|IncrementalEncoder"},
-  {"ch2FrequencyLimit", LCEC_EL2522_MODPARAM_FREQLIMIT + 1, MODPARAM_TYPE_U32, "50000", "Maximum output frequency in Hz"},
-    {NULL},
+  {"ch1OutputMode", LCEC_EL2522_MODPARAM_OUTMODE_CH1, MODPARAM_TYPE_STRING, "FrequencyModulation", "Output mode: FrequencyModulation|PulseDirection|IncrementalEncoder"},
+  {"ch1FrequencyLimit", LCEC_EL2522_MODPARAM_FREQLIMIT_CH1, MODPARAM_TYPE_U32, "50000", "Maximum output frequency in Hz"},
+  {"ch2OutputMode", LCEC_EL2522_MODPARAM_OUTMODE_CH2 + 1, MODPARAM_TYPE_STRING, "FrequencyModulation", "Output mode: FrequencyModulation|PulseDirection|IncrementalEncoder"},
+  {"ch2FrequencyLimit", LCEC_EL2522_MODPARAM_FREQLIMIT_CH2 + 1, MODPARAM_TYPE_U32, "50000", "Maximum output frequency in Hz"},
+  {NULL},
 };
 
 static const lcec_lookuptable_int_t lcec_el2522_outmode_table[] = {
@@ -78,7 +83,6 @@ typedef struct {
   unsigned int enable_pdo_os;
   unsigned int enable_pdo_bp;
 
-  // Internal variables
   uint32_t last_count;
   double last_pos_scale;
   double pos_scale_recip;
@@ -87,6 +91,7 @@ typedef struct {
 
 typedef struct {
   lcec_el2522_channel_t channels[LCEC_EL2522_CHANNEL_COUNT];
+  bool last_operational;
 } lcec_el2522_data_t;
 
 static const lcec_pindesc_t slave_pins[] = {
@@ -190,9 +195,10 @@ static int lcec_el2522_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_el2522_data_t *hal_data = LCEC_HAL_ALLOCATE(lcec_el2522_data_t);
   slave->hal_data = hal_data;
-
+  hal_data->last_operational = false;
+  
   for (int i = 0; i < LCEC_EL2522_CHANNEL_COUNT; i++) {
-    LCEC_CONF_MODPARAM_VAL_T *pval = lcec_modparam_get(slave, LCEC_EL2522_MODPARAM_OUTMODE + i);
+    LCEC_CONF_MODPARAM_VAL_T *pval = lcec_modparam_get(slave, LCEC_EL2522_MODPARAM_OUTMODE_BASE + i);
     if (pval != NULL) {
       int operating_mode = lcec_lookupint_i(lcec_el2522_outmode_table, pval->str, 0x00);
       if ((err = lcec_write_sdo8(slave, 0x8000 + (0x10 * i), 0x0E, operating_mode)) != 0) {
@@ -200,7 +206,7 @@ static int lcec_el2522_init(int comp_id, lcec_slave_t *slave) {
       }
     }
 
-    pval = lcec_modparam_get(slave, LCEC_EL2522_MODPARAM_FREQLIMIT + i);
+    pval = lcec_modparam_get(slave, LCEC_EL2522_MODPARAM_FREQLIMIT_BASE + i);
     if (pval != NULL) {
       if ((err = lcec_write_sdo32(slave, 0x8000 + (i * 0x10), 0x12, pval->u32)) != 0) {
         return err;
@@ -243,6 +249,7 @@ static void lcec_el2522_read(lcec_slave_t *slave, long period) {
 
   // wait for slave to be operational
   if (!slave->state.operational) {
+    hal_data->last_operational = false;
     return;
   }
 
@@ -250,12 +257,18 @@ static void lcec_el2522_read(lcec_slave_t *slave, long period) {
     lcec_el2522_channel_t *channel = &hal_data->channels[i];
 
     const uint32_t raw_count = EC_READ_U32(&pd[channel->count_pdo_os]);
-    const int32_t diff = (int32_t)(raw_count - channel->last_count);
+    int32_t diff = (int32_t)(raw_count - channel->last_count);
     channel->last_count = raw_count;
+
+    // Avoid discontinuity on first read after safeop->op.
+    if (!hal_data->last_operational) {
+      diff = 0;
+    }
 
     *(channel->count) += diff;
     *(channel->pos_fb) += ((double)diff) * channel->pos_scale_recip;
   }
+  hal_data->last_operational = true;
 }
 
 static void lcec_el2522_write(lcec_slave_t *slave, long period) {
@@ -266,8 +279,7 @@ static void lcec_el2522_write(lcec_slave_t *slave, long period) {
   for (int i = 0; i < LCEC_EL2522_CHANNEL_COUNT; i++) {
     lcec_el2522_channel_t *channel = &hal_data->channels[i];
 
-    // check for change in scale value, and relcalculate step offset
-    // to avoid position discontinuities.
+    // Check for scale change, and adjust offset to avoid position discontinuity
     if (channel->pos_scale != channel->last_pos_scale) {
       if ((channel->pos_scale < 1e-20) && (channel->pos_scale > -1e-20)) {
         rtapi_print_msg(
