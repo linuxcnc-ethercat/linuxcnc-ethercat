@@ -1,1 +1,16 @@
 Example using EL2522 2-Channel output for a XY plasma table. Based on Marc Roth's EL2521 example.
+
+Note: The driver sets the EL2522 to Continuous Position mode (similar to CiA402 CSP),
+which is appropriate for connection to a external CNC controller (e.g. LinuxCNC).
+This mode expects the motion planning to be handled by the CNC controller,
+while the EL2522 is only responsible to execute the step pulses.
+
+A simplifed interface to the EL2522 is provided via HAL pins and parameters, as described below
+
+Pins:
+- "enable" pin maps onto EL2522 "Automatic Direction" bit. This must be asserted to enable step output
+- "pos_cmd" pin maps onto EL2522 "Target counter value," with scaling applied
+- "pos_fb" pin maps onto EL2522 "Counter value" value," with scaling applied
+- "count" pin provides the number of steps executed at run-time for monitoring and debugging purposes.
+Parameters:
+- "pos_scale" parameter provides scaling from HAL position units (e.g. mm) to EL2522 step counts.
