@@ -246,6 +246,7 @@ Description | Driver | EtherCAT VID:PID | Device Type | Testing Status | Notes
 [AB&T EasyIO 16 din, 16 dout, 4 ain, 2 aout module](https://www.bausano.net/en/hardware/easyio.html) | [easyio](../devices/lcec_easyio.c) | 0x79a:0x0debacca | Analog/Digital Combo | COMPLETELY UNTESTED.  Written without hardware. | 
 [AB&T EpoCAT FR4000](https://www.bausano.net/en/hardware/epocat-fr-1000.html) | [epocat](../src/devices/lcec_epocat.c) | 0x79a:0x00decade | Stepper Drive | Merged 2023-12-31, untested | by @abausano
 Lichuan OL57E-4A 4-axis open-loop stepper drive | [lichuan](../src/devices/lcec_lichuan.c) | 0xa79:0x00006000 | Stepper Drive | Untested, awaiting bench validation by @rodw-au (issue #474) | 4 axes via CiA 402 multiaxis pattern (SDO offset 0x800, PDO index increment 0x10).
+Lichuan CL57E-4A 4-axis closed-loop stepper drive | [lichuan](../src/devices/lcec_lichuan.c) | 0xa79:0x00006100 | Stepper Drive | Untested, config shared by Dil300 on linuxcnc.org forum (post 346506) | 4 axes via CiA 402 multiaxis pattern. Closed-loop variant exposes 0x6077 Torque Actual.
 [Omron MX2 VFD](https://www.ia.omron.com/data_pdf/cat/mx2-v1_i920-e1_14_16_csm1010813.pdf?id=3164) | [ommx2](../devices/lcec_ommx2.c) | 0x83:0x00000053 | VFD |  | 
 [Omron R88D-KN01H-ECT G5 Series ServoDrive/Motor](http://www.ia.omron.com/) | [omrg5](../src/devices/lcec_omrg5.c) | 0x83:0x00000005 | Servo Drive |  | 
 [Omron R88D-KN01L-ECT G5 Series ServoDrive/Motor](http://www.ia.omron.com/) | [omrg5](../src/devices/lcec_omrg5.c) | 0x83:0x00000002 | Servo Drive |  | 
