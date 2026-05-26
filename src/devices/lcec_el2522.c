@@ -43,8 +43,8 @@ static void lcec_el2522_write(lcec_slave_t *slave, long period);
 static const lcec_modparam_desc_t modparams_base[] = {
   {"ch1OutputMode", LCEC_EL2522_MODPARAM_OUTMODE_CH1, MODPARAM_TYPE_STRING, "FrequencyModulation", "Output mode: FrequencyModulation|PulseDirection|IncrementalEncoder"},
   {"ch1FrequencyLimit", LCEC_EL2522_MODPARAM_FREQLIMIT_CH1, MODPARAM_TYPE_U32, "50000", "Maximum output frequency in Hz"},
-  {"ch2OutputMode", LCEC_EL2522_MODPARAM_OUTMODE_CH2 + 1, MODPARAM_TYPE_STRING, "FrequencyModulation", "Output mode: FrequencyModulation|PulseDirection|IncrementalEncoder"},
-  {"ch2FrequencyLimit", LCEC_EL2522_MODPARAM_FREQLIMIT_CH2 + 1, MODPARAM_TYPE_U32, "50000", "Maximum output frequency in Hz"},
+  {"ch2OutputMode", LCEC_EL2522_MODPARAM_OUTMODE_CH2, MODPARAM_TYPE_STRING, "FrequencyModulation", "Output mode: FrequencyModulation|PulseDirection|IncrementalEncoder"},
+  {"ch2FrequencyLimit", LCEC_EL2522_MODPARAM_FREQLIMIT_CH2, MODPARAM_TYPE_U32, "50000", "Maximum output frequency in Hz"},
   {NULL},
 };
 
