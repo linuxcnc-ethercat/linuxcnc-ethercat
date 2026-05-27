@@ -75,6 +75,7 @@ typedef struct {
   int refClockSyncCycles;
   int syncToRefClock;
   int refClockSlaveIdx;
+  int useSeparateLrdLwr;
   char name[LCEC_CONF_STR_MAXLEN];
 } LCEC_CONF_MASTER_T;
 

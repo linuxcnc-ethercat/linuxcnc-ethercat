@@ -77,6 +77,10 @@ and some of which are required:
   `"false"` ↔ positive cycles (R2M). Kept for back-compat — prefer
   the sign-based form. If you specify both they must agree, otherwise
   the parser errors out. (See [#471](https://github.com/linuxcnc-ethercat/linuxcnc-ethercat/issues/471) for a redesign discussion.)
+- `useSeparateLrdLwr="true|false"`: (optional, defaults to `false`)
+  registers input and output PDO entries in separate EtherCAT domains.
+  Use this only for hardware that rejects combined LRW datagrams and
+  needs separate LRD/LWR frames, such as some Yaskawa drives.
 
 Generally, for "normal" systems with DC-sync'd drives, this will look like
 

@@ -298,6 +298,12 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
       p->syncToRefClock = (strcasecmp(val, "true") == 0) ? 1 : -1; // -1 = Need to know if option was given
       continue; // TODO: A general function that can handle four states: yes, no, not given, wrong. Recognize yes/on/true/1/enabled as true
     }
+
+    // parse useSeparateLrdLwr
+    if (strcmp(name, "useSeparateLrdLwr") == 0) {
+      p->useSeparateLrdLwr = (strcasecmp(val, "true") == 0 || strcasecmp(val, "yes") == 0 || strcmp(val, "1") == 0);
+      continue;
+    }
  
     // handle error
     fprintf(stderr, "%s: ERROR: Invalid master attribute %s\n", modname, name);

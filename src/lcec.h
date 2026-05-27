@@ -222,9 +222,16 @@ typedef struct lcec_master {
   ec_master_t *master;              ///< EtherCAT master structure.
   unsigned long mutex;              ///< Mutex for locking operations.
   ec_pdo_entry_reg_t *pdo_entry_regs;
+  int pdo_entry_count;
+  ec_pdo_entry_reg_t *pdo_entry_regs_lwr;
+  int pdo_entry_count_lwr;
   ec_domain_t *domain;
+  ec_domain_t *domain_lwr;
   uint8_t *process_data;
   int process_data_len;
+  uint8_t *process_data_lwr;
+  int process_data_len_lwr;
+  int use_separate_lrd_lwr;
   lcec_slave_t *first_slave;
   lcec_slave_t *last_slave;
   lcec_master_data_t *hal_data;
@@ -246,6 +253,10 @@ typedef struct lcec_master {
   int dc_time_valid_last;         // Previous cycle's dc_time_valid (for detecting consecutive valid reads)
 #endif
 } lcec_master_t;
+
+static inline uint8_t *lcec_master_output_data(lcec_master_t *master) {
+  return master->process_data_lwr != NULL ? master->process_data_lwr : master->process_data;
+}
 
 typedef struct lcec_pdo_entry_reg {
   int current;

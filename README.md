@@ -126,6 +126,10 @@ A [reference guide to LinuxCNC-Ethercat's XML
 configuration](documentation/configuration-reference.md) file is
 available.
 
+Masters that need separate read/write datagrams, for example drives
+that reject LRW, can opt in with `useSeparateLrdLwr="true"` on the
+`<master>` element.
+
 Several examples are available in the [`examples/`](examples/)
 directory, but they're somewhat dated.  The [LinuxCNC
 Forum](https://forum.linuxcnc.org/ethercat) is a better place to
