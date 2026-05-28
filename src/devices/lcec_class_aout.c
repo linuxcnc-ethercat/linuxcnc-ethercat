@@ -139,7 +139,7 @@ lcec_class_aout_channel_t *lcec_aout_register_channel(lcec_slave_t *slave, int i
 /// Call this once per channel registered, from inside of your device's
 /// read function.  Use `lcec_aout_write_all` to read all pins.
 void lcec_aout_write(lcec_slave_t *slave, lcec_class_aout_channel_t *data) {
-  uint8_t *pd = slave->master->process_data;
+  uint8_t *pd = lcec_master_output_data(slave->master);
   int max_value = data->options->max_value;
   double tmpval, tmpdc, raw_val;
 

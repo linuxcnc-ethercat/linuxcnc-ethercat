@@ -280,6 +280,7 @@ void lcec_el1918_logic_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el1918_logic_data_t *hal_data = (lcec_el1918_logic_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
+  uint8_t *pd_out = lcec_master_output_data(master);
   lcec_el1918_logic_fsoe_t *fsoe_data;
   int i, crc_idx;
   uint8_t std_out;
@@ -302,11 +303,11 @@ void lcec_el1918_logic_read(lcec_slave_t *slave, long period) {
     fsoeConf = fsoe_slave->fsoeConf;
     *(fsoe_data->fsoe_master_cmd) = EC_READ_U8(&pd[fsoe_data->fsoe_master_cmd_os]);
     *(fsoe_data->fsoe_master_connid) = EC_READ_U16(&pd[fsoe_data->fsoe_master_connid_os]);
-    *(fsoe_data->fsoe_slave_cmd) = EC_READ_U8(&pd[fsoe_data->fsoe_slave_cmd_os]);
-    *(fsoe_data->fsoe_slave_connid) = EC_READ_U16(&pd[fsoe_data->fsoe_slave_connid_os]);
+    *(fsoe_data->fsoe_slave_cmd) = EC_READ_U8(&pd_out[fsoe_data->fsoe_slave_cmd_os]);
+    *(fsoe_data->fsoe_slave_connid) = EC_READ_U16(&pd_out[fsoe_data->fsoe_slave_connid_os]);
     for (crc_idx = 0, crc = fsoe_data->fsoe_crc; crc_idx < fsoeConf->data_channels; crc_idx++, crc++) {
       *(crc->fsoe_master_crc) = EC_READ_U16(&pd[crc->fsoe_master_crc_os]);
-      *(crc->fsoe_slave_crc) = EC_READ_U16(&pd[crc->fsoe_slave_crc_os]);
+      *(crc->fsoe_slave_crc) = EC_READ_U16(&pd_out[crc->fsoe_slave_crc_os]);
     }
   }
 }
@@ -314,7 +315,7 @@ void lcec_el1918_logic_read(lcec_slave_t *slave, long period) {
 void lcec_el1918_logic_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el1918_logic_data_t *hal_data = (lcec_el1918_logic_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_master_output_data(master);
   uint8_t std_in;
   int i;
 

@@ -271,6 +271,7 @@ static void lcec_el3403_read(lcec_slave_t *slave, long period) {
 
   int i;
   uint8_t *pd = master->process_data;
+  uint8_t *pd_out = lcec_master_output_data(master);
   int32_t current, voltage, active_power, apparent_power, reactive_power, energy, cosphi, frequency, energy_negative;
   uint8_t ovc;
 
@@ -302,7 +303,7 @@ static void lcec_el3403_read(lcec_slave_t *slave, long period) {
     *(chan->active_power) = (double)active_power * EL3403_FACTOR_ACTIVE_POWER;
 
     for (hal_data->index = 0; hal_data->index < 5; hal_data->index++) {
-      EC_WRITE_U8(&pd[chan->index_pdo_os], hal_data->index);
+      EC_WRITE_U8(&pd_out[chan->index_pdo_os], hal_data->index);
 
       ovc = EC_READ_U8(&pd[chan->ovc_pdo_os]);
       switch (ovc) {

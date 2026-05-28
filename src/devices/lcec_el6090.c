@@ -384,7 +384,7 @@ static void lcec_el6090_write(lcec_slave_t *slave, long period) {
   lcec_el6090_data_t *hal_data = (lcec_el6090_data_t *)slave->hal_data;
   lcec_el6090_chan_t *chan;
 
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_master_output_data(master);
   int i;
 
   // Write Value LCD

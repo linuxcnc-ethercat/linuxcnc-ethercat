@@ -316,7 +316,7 @@ static void lcec_el5102_write(lcec_slave_t *slave, long period) {
 static void lcec_el5102_write_channel(lcec_slave_t *slave, long period, int channel) {
   lcec_master_t *master = slave->master;
   lcec_el5102_channel_data_t *data = &((lcec_el5102_data_t *)slave->hal_data)->channel[channel];
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_master_output_data(master);
 
   // Set control bits.  Note that there are 10 of these defined above,
   // but we're only actually using 4 of them.  We should add the

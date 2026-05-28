@@ -76,7 +76,7 @@ static int lcec_ex260_init(int comp_id, lcec_slave_t *slave) {
 static void lcec_ex260_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_ex260_pin_t *hal_data = (lcec_ex260_pin_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_master_output_data(master);
   lcec_ex260_pin_t *pin;
   unsigned int i, s;
 

@@ -725,7 +725,7 @@ static void lcec_el7041_read(lcec_slave_t *s, long period) {
 static void lcec_el7041_write(lcec_slave_t *s, long period) {
   lcec_master_t *m = s->master;
   lcec_el7041_data_t *hd = (lcec_el7041_data_t *)s->hal_data;
-  uint8_t *pd = m->process_data;
+  uint8_t *pd = lcec_master_output_data(m);
   double tmpval, tmpdc, raw_val;
   int enable_on_edge;
 

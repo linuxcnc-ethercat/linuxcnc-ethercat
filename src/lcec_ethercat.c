@@ -42,7 +42,8 @@ lcec_slave_t *lcec_slave_by_index(lcec_master_t *master, int index) {
 /// @brief Copy FSoE (Safety over EtherCAT / FailSafe over EtherCAT) data between slaves and masters.
 void copy_fsoe_data(lcec_slave_t *slave, unsigned int slave_offset, unsigned int master_offset) {
   lcec_master_t *master = slave->master;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd_in = master->process_data;
+  uint8_t *pd_out = lcec_master_output_data(master);
   const LCEC_CONF_FSOE_T *fsoeConf = slave->fsoeConf;
 
   if (fsoeConf == NULL) {
@@ -50,11 +51,11 @@ void copy_fsoe_data(lcec_slave_t *slave, unsigned int slave_offset, unsigned int
   }
 
   if (slave->fsoe_slave_offset != NULL) {
-    memcpy(&pd[*(slave->fsoe_slave_offset)], &pd[slave_offset], LCEC_FSOE_SIZE(fsoeConf->data_channels, fsoeConf->slave_data_len));
+    memcpy(&pd_out[*(slave->fsoe_slave_offset)], &pd_in[slave_offset], LCEC_FSOE_SIZE(fsoeConf->data_channels, fsoeConf->slave_data_len));
   }
 
   if (slave->fsoe_master_offset != NULL) {
-    memcpy(&pd[master_offset], &pd[*(slave->fsoe_master_offset)], LCEC_FSOE_SIZE(fsoeConf->data_channels, fsoeConf->master_data_len));
+    memcpy(&pd_out[master_offset], &pd_in[*(slave->fsoe_master_offset)], LCEC_FSOE_SIZE(fsoeConf->data_channels, fsoeConf->master_data_len));
   }
 }
 
