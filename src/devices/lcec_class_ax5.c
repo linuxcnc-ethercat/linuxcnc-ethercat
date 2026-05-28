@@ -243,7 +243,7 @@ void lcec_class_ax5_read(lcec_slave_t *slave, lcec_class_ax5_chan_t *chan) {
 
 void lcec_class_ax5_write(lcec_slave_t *slave, lcec_class_ax5_chan_t *chan) {
   lcec_master_t *master = slave->master;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_master_output_data(master);
   uint16_t ctrl;
   double velo_cmd_raw;
 

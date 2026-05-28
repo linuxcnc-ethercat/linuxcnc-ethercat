@@ -535,7 +535,7 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
 static void lcec_deasda_write_csv(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_deasda_data_t *hal_data = (lcec_deasda_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_master_output_data(master);
   uint16_t control;
   double speed_raw;
   int switch_on_edge;
@@ -588,7 +588,7 @@ static void lcec_deasda_write_csv(lcec_slave_t *slave, long period) {
 static void lcec_deasda_write_csp(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_deasda_data_t *hal_data = (lcec_deasda_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_master_output_data(master);
   uint16_t control;
   int32_t pos_puu;
   int switch_on_edge;

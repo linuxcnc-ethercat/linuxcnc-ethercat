@@ -328,7 +328,7 @@ static void lcec_el5151_read(lcec_slave_t *slave, long period) {
 static void lcec_el5151_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el5151_data_t *hal_data = (lcec_el5151_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_master_output_data(master);
 
   // set output data
   EC_WRITE_BIT(&pd[hal_data->set_count_pdo_os], hal_data->set_count_pdo_bp, *(hal_data->set_raw_count));

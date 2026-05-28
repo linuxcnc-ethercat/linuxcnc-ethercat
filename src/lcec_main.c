@@ -145,14 +145,29 @@ static int lcec_pdo_entry_direction(lcec_slave_t *slave, const ec_pdo_entry_reg_
   return -1;
 }
 
-static int lcec_pdo_entry_is_output(lcec_master_t *master, const ec_pdo_entry_reg_t *entry) {
+static int lcec_pdo_entry_is_output(lcec_master_t *master, const ec_pdo_entry_reg_t *entry, int *is_output) {
   ec_direction_t dir;
+  lcec_slave_t *slave = lcec_pdo_owner(master, entry);
 
-  if (lcec_pdo_entry_direction(lcec_pdo_owner(master, entry), entry, &dir) == 0) {
-    return dir == EC_DIR_OUTPUT;
+  if (lcec_pdo_entry_direction(slave, entry, &dir) != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR,
+        LCEC_MSG_PFX "master %s cannot split PDO 0x%04x:%02x for slave position %u (%s, vid=0x%08x pid=0x%08x): "
+                     "entry direction is missing from sync_info; disable useSeparateLrdLwr or provide complete sync_info\n",
+        master->name, entry->index, entry->subindex, entry->position, slave != NULL ? slave->name : "unknown",
+        entry->vendor_id, entry->product_code);
+    return -1;
+  }
+  if (dir != EC_DIR_INPUT && dir != EC_DIR_OUTPUT) {
+    rtapi_print_msg(RTAPI_MSG_ERR,
+        LCEC_MSG_PFX "master %s cannot split PDO 0x%04x:%02x for slave position %u (%s, vid=0x%08x pid=0x%08x): "
+                     "sync_info uses unsupported direction %d\n",
+        master->name, entry->index, entry->subindex, entry->position, slave != NULL ? slave->name : "unknown",
+        entry->vendor_id, entry->product_code, dir);
+    return -1;
   }
 
-  return (entry->index & 0xf000) == 0x7000;
+  *is_output = (dir == EC_DIR_OUTPUT);
+  return 0;
 }
 
 static int lcec_split_pdo_domains(
@@ -160,16 +175,37 @@ static int lcec_split_pdo_domains(
   lcec_pdo_entry_reg_t *in_regs;
   lcec_pdo_entry_reg_t *out_regs;
   int i;
+  int input_count = 0;
+  int output_count = 0;
 
-  in_regs = lcec_allocate_pdo_entry_reg(all_regs->current + 1);
-  out_regs = lcec_allocate_pdo_entry_reg(all_regs->current + 1);
+  for (i = 0; i < all_regs->current; i++) {
+    int is_output;
+
+    if (lcec_pdo_entry_is_output(master, &all_regs->pdo_entry_regs[i], &is_output) != 0) {
+      return -1;
+    }
+    if (is_output) {
+      output_count++;
+    } else {
+      input_count++;
+    }
+  }
+
+  in_regs = lcec_allocate_pdo_entry_reg(input_count + 1);
+  out_regs = lcec_allocate_pdo_entry_reg(output_count + 1);
   if (in_regs == NULL || out_regs == NULL) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s split PDO allocation failed\n", master->name);
     return -1;
   }
 
   for (i = 0; i < all_regs->current; i++) {
-    lcec_pdo_entry_reg_t *dest = lcec_pdo_entry_is_output(master, &all_regs->pdo_entry_regs[i]) ? out_regs : in_regs;
+    int is_output;
+    lcec_pdo_entry_reg_t *dest;
+
+    if (lcec_pdo_entry_is_output(master, &all_regs->pdo_entry_regs[i], &is_output) != 0) {
+      return -1;
+    }
+    dest = is_output ? out_regs : in_regs;
 
     dest->pdo_entry_regs[dest->current++] = all_regs->pdo_entry_regs[i];
   }
@@ -1386,18 +1422,7 @@ void lcec_write_master(void *arg, long period) {
   // process slaves
   for (slave = master->first_slave; slave != NULL; slave = slave->next) {
     if (slave->proc_write != NULL) {
-      if (master->use_separate_lrd_lwr && master->process_data_lwr != NULL) {
-        uint8_t *saved_process_data = master->process_data;
-        int saved_process_data_len = master->process_data_len;
-
-        master->process_data = master->process_data_lwr;
-        master->process_data_len = master->process_data_len_lwr;
-        slave->proc_write(slave, period);
-        master->process_data = saved_process_data;
-        master->process_data_len = saved_process_data_len;
-      } else {
-        slave->proc_write(slave, period);
-      }
+      slave->proc_write(slave, period);
     }
   }
 

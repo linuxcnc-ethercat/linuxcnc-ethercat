@@ -202,9 +202,6 @@ static void lcec_ep9214_read(lcec_slave_t *slave, long period) {
 
 /// @brief Write values to the device.
 static void lcec_ep9214_write(lcec_slave_t *slave, long period) {
-  uint8_t *pd = slave->master->process_data;
-  lcec_ep9214_data_t *hal_data = (lcec_ep9214_data_t *)slave->hal_data;
-
   // wait for slave to be operational
   if (!slave->state.operational) {
     return;

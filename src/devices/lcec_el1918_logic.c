@@ -315,7 +315,7 @@ void lcec_el1918_logic_read(lcec_slave_t *slave, long period) {
 void lcec_el1918_logic_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_el1918_logic_data_t *hal_data = (lcec_el1918_logic_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_master_output_data(master);
   uint8_t std_in;
   int i;
 

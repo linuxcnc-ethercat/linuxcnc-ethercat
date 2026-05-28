@@ -316,7 +316,7 @@ static void lcec_ph3lm2rm_enc_read(uint8_t *pd, lcec_ph3lm2rm_enc_data_t *ch) {
 static void lcec_ph3lm2rm_write(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_ph3lm2rm_data_t *hal_data = (lcec_ph3lm2rm_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_master_output_data(master);
   int i;
   lcec_ph3lm2rm_rm_data_t *rm;
   lcec_ph3lm2rm_lm_data_t *lm;

@@ -539,7 +539,7 @@ void lcec_cia402_read_all(lcec_slave_t *slave, lcec_class_cia402_channels_t *cha
   } while (0)
 
 void lcec_cia402_write(lcec_slave_t *slave, lcec_class_cia402_channel_t *data) {
-  uint8_t *pd = slave->master->process_data;
+  uint8_t *pd = lcec_master_output_data(slave->master);
 
   EC_WRITE_U16(&pd[data->controlword_os], (uint16_t)(*(data->controlword)));
 

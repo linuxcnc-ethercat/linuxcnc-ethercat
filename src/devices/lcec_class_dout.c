@@ -148,7 +148,7 @@ lcec_class_dout_channel_t *lcec_dout_register_channel_packed(lcec_slave_t *slave
 /// @param data A lcec_class_dout_channel_t *, as returned by lcec_dout_register_channel.
 void lcec_dout_write(lcec_slave_t *slave, lcec_class_dout_channel_t *data) {
   lcec_master_t *master = slave->master;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_master_output_data(master);
   hal_bit_t s;
   int os = data->pdo_os;
   int bp = data->pdo_bp;
