@@ -1,3 +1,18 @@
+linuxcnc-ethercat (1.41.1-2) unstable; urgency=low
+
+  * shlibs.local: drop ethercat-master from the libethercat.so.1
+    alternatives. ethercat-master ships only the master daemon and
+    CLI tools, no shared library, so apt treated the OR-dependency
+    as satisfied on systems that already had ethercat-master
+    installed and never pulled in libethercat. lcec_configgen (and
+    anything else linked against libethercat.so.1) then failed to
+    start. The runtime library dependency now resolves to
+    libethercat or etherlabmaster only; the ethercat CLI is still
+    covered by the explicit etherlabmaster | ethercat-master
+    dependency in debian/control.
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Thu, 11 Jun 2026 12:00:00 +0200
+
 linuxcnc-ethercat (1.41.1-1) unstable; urgency=low
 
   * Bump upstream to 1.41.1 to overtake the bad 1.41.0+debNNu1
