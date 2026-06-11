@@ -17,21 +17,30 @@ jobs:
             matrix:
                 distro: [debian-11, debian-12, debian-13]
                 include:
+                    # linuxcnc_org_repo: build against linuxcnc.org's
+                    # linuxcnc-uspace-dev instead of Debian main. Needed on
+                    # bullseye (no linuxcnc in Debian 11) and bookworm (only
+                    # a 2023 2.9.0~pre1 snapshot). Trixie builds against
+                    # Debian's own 1:2.9.4 so the generated shlibs dep is
+                    # installable on stock Debian without third-party repos.
                     - distro: debian-11
                       image: debian:bullseye
                       codename: bullseye
                       etherlab_repo: Debian_11
                       deb_rev: deb11u1
+                      linuxcnc_org_repo: true
                     - distro: debian-12
                       image: debian:bookworm
                       codename: bookworm
                       etherlab_repo: Debian_12
                       deb_rev: deb12u1
+                      linuxcnc_org_repo: true
                     - distro: debian-13
                       image: debian:trixie
                       codename: trixie
                       etherlab_repo: Debian_Testing
                       deb_rev: deb13u1
+                      linuxcnc_org_repo: false
 
         container:
             image: ${{ matrix.image }}
@@ -42,6 +51,7 @@ jobs:
                   DEBIAN_FRONTEND: noninteractive
                   CODENAME: ${{ matrix.codename }}
                   ETHERLAB_REPO: ${{ matrix.etherlab_repo }}
+                  LINUXCNC_ORG_REPO: ${{ matrix.linuxcnc_org_repo }}
               run: |
                   set -e
                   echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80-retries
@@ -52,14 +62,16 @@ jobs:
                       | gpg --dearmor -o /usr/share/keyrings/etherlab.gpg
                   echo "deb [signed-by=/usr/share/keyrings/etherlab.gpg] https://download.opensuse.org/repositories/science:/EtherLab/${ETHERLAB_REPO}/ ./" \
                       > /etc/apt/sources.list.d/etherlab.list
-                  # Two LinuxCNC signing keys are in use:
-                  # - 3CB9FD148F374FEF: old DSA key, signs bullseye/bookworm
-                  # - E43B5A8E78CC2927: 2025-10 RSA key, signs trixie
-                  { curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xEEDD0D29F81DCAA0D258661F3CB9FD148F374FEF"; \
-                    curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x0CE3E44425B11F871BBCC6F5E43B5A8E78CC2927"; } \
-                      | gpg --dearmor -o /usr/share/keyrings/linuxcnc.gpg
-                  echo "deb [signed-by=/usr/share/keyrings/linuxcnc.gpg] https://www.linuxcnc.org/ ${CODENAME} base 2.9-uspace" \
-                      > /etc/apt/sources.list.d/linuxcnc.list
+                  if [ "${LINUXCNC_ORG_REPO}" = "true" ]; then
+                      # Two LinuxCNC signing keys are in use:
+                      # - 3CB9FD148F374FEF: old DSA key, signs bullseye/bookworm
+                      # - E43B5A8E78CC2927: 2025-10 RSA key, signs trixie
+                      { curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xEEDD0D29F81DCAA0D258661F3CB9FD148F374FEF"; \
+                        curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x0CE3E44425B11F871BBCC6F5E43B5A8E78CC2927"; } \
+                          | gpg --dearmor -o /usr/share/keyrings/linuxcnc.gpg
+                      echo "deb [signed-by=/usr/share/keyrings/linuxcnc.gpg] https://www.linuxcnc.org/ ${CODENAME} base 2.9-uspace" \
+                          > /etc/apt/sources.list.d/linuxcnc.list
+                  fi
                   apt-get update
                   apt-get install -y --no-install-recommends \
                       git build-essential devscripts debhelper \
