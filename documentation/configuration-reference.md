@@ -163,6 +163,55 @@ In order to get this correct for any given device, you'll need to
 refer to the manufacturer's documentation, and some trial and error
 may be required.
 
+### `<subModule>`
+
+Some EtherCAT devices are *modular*: a single slave (typically a bus
+coupler) hosts a number of pluggable modules on a backplane, and each
+module is configured independently.  The Leadshine `R2EC`/`R3EC`
+digital-I/O couplers are an example — one coupler is a single slave
+that can carry up to 32 (R2EC) or 64 (R3EC) input, output, analog, or
+encoder modules.
+
+For these devices you describe each populated slot with a
+`<subModule>` tag inside the `<slave>`:
+
+- `id="<slot>"`: (required): the backplane slot the module is plugged
+  into, starting at `0`.  Accepts decimal or `0x`-prefixed hex.  Used
+  when naming the module's HAL pins.
+- `ident="<ident>"`: (required): the module's type identifier, as
+  reported by the coupler and listed in the manufacturer's ESI/module
+  documentation.  Accepts decimal or `0x`-prefixed hex.  The driver
+  validates this against the modules it knows about, so an unknown
+  `ident` (or a `<subModule>` under a slave type that isn't modular)
+  is rejected at parse time.
+- `name="<name>"`: (optional, defaults to the value of `id`): the name
+  used when naming this module's HAL pins.
+
+Each `<subModule>` may contain its own `<modParam name="..."
+value="..."/>` tags.  These work exactly like the slave-level
+`<modParam>` tags described above, except that the allowed names and
+values are defined by the *module type* (the `ident`) rather than by
+the coupler.  You can mix slave-level `<modParam>` tags (which
+configure the coupler itself) with `<subModule>` tags in any order.
+
+Here is an example for a Leadshine `R2EC` coupler carrying a 16-channel
+digital-input module in slot 0 and a 16-channel digital-output module
+in slot 1:
+
+```xml
+    <slave idx="0" type="R2EC" name="io">
+      <subModule id="0" ident="0x61100025" name="in0">
+        <modParam name="inputFilter0" value="20"/>
+      </subModule>
+      <subModule id="1" ident="0x61100205" name="out0">
+        <modParam name="safeState" value="0"/>
+      </subModule>
+    </slave>
+```
+
+Refer to the specific driver's documentation for the list of supported
+module `ident`s and the `<modParam>`s available for each.
+
 ### `<syncManagers>`
 
 The `<syncManager>` tag sets up an EtherCAT sync manager.  (link

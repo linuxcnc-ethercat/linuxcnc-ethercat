@@ -103,3 +103,33 @@ lcec_modparam_desc_t *lcec_modparam_desc_merge_docs(lcec_modparam_desc_t const *
 
   return c;
 }
+
+/// @brief Find a configured submodule on a slave by its slot id.
+lcec_slave_submodule_t *lcec_submodule_find(lcec_slave_t *slave, uint8_t id) {
+  lcec_slave_submodule_t *s;
+
+  for (s = slave->submodules; s != NULL; s = s->next) {
+    if (s->id == id) {
+      return s;
+    }
+  }
+
+  return NULL;
+}
+
+/// @brief Get a modparam value from a submodule by its numeric id.
+LCEC_CONF_MODPARAM_VAL_T *lcec_submodule_modparam_get(lcec_slave_submodule_t *submodule, int id) {
+  lcec_slave_modparam_t *p;
+
+  if (submodule == NULL || submodule->modparams == NULL) {
+    return NULL;
+  }
+
+  for (p = submodule->modparams; p->id >= 0; p++) {
+    if (p->id == id) {
+      return &p->value;
+    }
+  }
+
+  return NULL;
+}

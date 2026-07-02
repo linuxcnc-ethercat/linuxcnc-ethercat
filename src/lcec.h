@@ -69,6 +69,7 @@ extern "C" {
 #define LCEC_MODUSOFT_VID   0x00000907
 #define LCEC_LICHUAN_VID    0x00000a79
 #define LCEC_RTELLIGENT_VID 0x00000a88
+#define LCEC_LEADSHINE_VID  0x00004321
 
 // State update period (ns)
 #define LCEC_STATE_UPDATE_PERIOD 1000000000LL
@@ -147,6 +148,18 @@ typedef struct {
   const char *config_comment;  ///< A comment to added to the output in lcec_configgen.
 } lcec_modparam_doc_t;
 
+/// @brief Definition of a submodule type supported by a modular device.
+///
+/// A modular coupler (e.g. a bus coupler with a backplane) exposes a
+/// NULL-terminated array of these via `lcec_typelist_t.modules`.  The XML
+/// parser uses it to validate `<subModule ident="...">` and its child
+/// `<modParam>` entries.
+typedef struct {
+  const char *name;                       /// name of the module as per ESI file
+  uint32_t ident;                         /// ident of the module as per ESI file, matched against <subModule ident=...>
+  const lcec_modparam_desc_t *modparams;  /// modparams supported by this submodule type (may be NULL)
+} lcec_submodule_desc_t;
+
 /// @brief Definition of a device that LinuxCNC-Ethercat supports.
 typedef struct {
   const char *name;                       ///< The device's name ("EL1008")
@@ -158,6 +171,7 @@ typedef struct {
   const lcec_modparam_desc_t *modparams;  ///< XML modparams, if any
   uint64_t flags;                         ///< Flags, passed through to `proc_init` as `slave->flags`.
   const char *sourcefile;                 ///< Source filename, autopopulated.
+  const lcec_submodule_desc_t *modules;   /// XXX: added slave submodule or channels*(could be implemented later)
 } lcec_typelist_t;
 
 /// @brief Linked list for holding device type definitions.
@@ -187,22 +201,22 @@ typedef struct lcec_master_data {
   hal_u32_t pll_max_err;
   hal_u32_t *pll_reset_cnt;
   hal_u32_t dc_phase_max_err;
-  hal_s32_t *app_phase;            // Our execution phase in local cycle (ns, real-time)
-  hal_bit_t *dc_phased;           // PLL lock status indicator
-  hal_s32_t *phase_jitter_out;     // Output: measured app_phase jitter amplitude (ns)
-  hal_s32_t *drift_mode;            // Input: 0=simple, 1=manual
-  hal_s32_t *pll_drift;            // Input: debug offset added to PLL correction (ns)
-  hal_s32_t *pll_final;            // Output: final PLL correction value sent to rtapi (ns)
-  int32_t auto_drift_delay;        // Internal: auto-drift delay counter
+  hal_s32_t *app_phase;         // Our execution phase in local cycle (ns, real-time)
+  hal_bit_t *dc_phased;         // PLL lock status indicator
+  hal_s32_t *phase_jitter_out;  // Output: measured app_phase jitter amplitude (ns)
+  hal_s32_t *drift_mode;        // Input: 0=simple, 1=manual
+  hal_s32_t *pll_drift;         // Input: debug offset added to PLL correction (ns)
+  hal_s32_t *pll_final;         // Output: final PLL correction value sent to rtapi (ns)
+  int32_t auto_drift_delay;     // Internal: auto-drift delay counter
 #endif
   // Phase calibration for sync_to_ref_clock=false mode
-  int32_t phase_measure_cnt;       // Internal: measurement cycle counter
-  int32_t phase_min;               // Internal: minimum app_phase during measurement
-  int32_t phase_max;               // Internal: maximum app_phase during measurement
-  int32_t phase_last;              // Internal: last app_phase value (for boundary detection)
-  int32_t phase_jitter;            // Internal: calculated jitter amplitude
-  int32_t phase_target;            // Internal: target app_phase position
-  int32_t phase_calibrated;        // Internal: 0=measuring, 1=calibrated
+  int32_t phase_measure_cnt;  // Internal: measurement cycle counter
+  int32_t phase_min;          // Internal: minimum app_phase during measurement
+  int32_t phase_max;          // Internal: maximum app_phase during measurement
+  int32_t phase_last;         // Internal: last app_phase value (for boundary detection)
+  int32_t phase_jitter;       // Internal: calculated jitter amplitude
+  int32_t phase_target;       // Internal: target app_phase position
+  int32_t phase_calibrated;   // Internal: 0=measuring, 1=calibrated
 } lcec_master_data_t;
 
 typedef struct lcec_slave_state {
@@ -236,14 +250,15 @@ typedef struct lcec_master {
   int sync_to_ref_clock;
   long long state_update_timer;
   ec_master_state_t ms;
-  int activated;                    // Flag: master has been activated (0=not yet, 1=activated)
-  int initf_activated;              // Flag: activation happened via initf path (clean RT-context); when set, BANG-BANG PLL trim is skipped because app_phase was born stable
-  int forgot_warned;                // One-shot guard for the "user forgot initf lcec.activate" warning in lcec_write_master
+  int activated;        // Flag: master has been activated (0=not yet, 1=activated)
+  int initf_activated;  // Flag: activation happened via initf path (clean RT-context); when set, BANG-BANG PLL trim is skipped because
+                        // app_phase was born stable
+  int forgot_warned;    // One-shot guard for the "user forgot initf lcec.activate" warning in lcec_write_master
 #ifdef RTAPI_TASK_PLL_SUPPORT
   uint64_t dc_ref;
-  uint64_t dc_ref_time;          // DC reference time (epoch) - set on first app_time call
+  uint64_t dc_ref_time;  // DC reference time (epoch) - set on first app_time call
   uint32_t app_time_last;
-  int dc_time_valid_last;         // Previous cycle's dc_time_valid (for detecting consecutive valid reads)
+  int dc_time_valid_last;  // Previous cycle's dc_time_valid (for detecting consecutive valid reads)
 #endif
 } lcec_master_t;
 
@@ -292,6 +307,15 @@ typedef struct {
   LCEC_CONF_MODPARAM_VAL_T value;  /// The value set in `<modparam name="..." value="..."/>`
 } lcec_slave_modparam_t;
 
+/// @brief A submodule configured on a modular slave, reconstructed from `<subModule>`.
+typedef struct lcec_slave_submodule {
+  struct lcec_slave_submodule *next;  /// Next submodule on the same slave, or NULL.
+  uint8_t id;                         /// Slot id from `<subModule id="...">`.
+  uint32_t ident;                     /// Module ident from `<subModule ident="...">`.
+  char name[LCEC_CONF_STR_MAXLEN];    /// Name from `<subModule name="...">`.
+  lcec_slave_modparam_t *modparams;   /// This submodule's modparams, id=-1 terminated (NULL if none).
+} lcec_slave_submodule_t;
+
 /// @brief EtherCAT slave.
 typedef struct lcec_slave {
   lcec_slave_t *prev;                        ///< Next slave
@@ -320,6 +344,8 @@ typedef struct lcec_slave {
   lcec_slave_sdoconf_t *sdo_config;          ///< SDO config.
   lcec_slave_idnconf_t *idn_config;          ///< IDN config.
   lcec_slave_modparam_t *modparams;          ///< modParams.
+  lcec_slave_submodule_t *submodules;        ///<  XXX: submodule implementation
+                                             ///
   const LCEC_CONF_FSOE_T *fsoeConf;          ///< Safety config.
   int is_fsoe_logic;                         ///< Device supports FSoE safety logic.
   unsigned int *fsoe_slave_offset;           ///< FSoE slave offset.
@@ -431,5 +457,17 @@ int lcec_append_pdo_entry_reg(lcec_pdo_entry_reg_t *dest, lcec_pdo_entry_reg_t *
 
 void *lcec_hal_malloc(size_t size, const char *file, const char *func, int line);
 void *lcec_malloc(size_t size, const char *file, const char *func, int line);
+
+/// @brief Find a configured submodule on a slave by its slot id.
+/// @param[in] slave the slave (modular coupler) to search.
+/// @param[in] id    the slot id from <submodule id="...">.
+/// @returns a pointer to the matching submodule, or NULL if not found.
+lcec_slave_submodule_t *lcec_submodule_find(lcec_slave_t *slave, uint8_t id);
+
+/// @brief Get a modparam value from a submodule by its numeric id.
+/// @param[in] submodule the submodule to search (e.g. from lcec_submodule_find).
+/// @param[in] id        the modparam id from the submodule type's lcec_modparam_desc_t.
+/// @returns a pointer to the value union, or NULL if that modparam was not set.
+LCEC_CONF_MODPARAM_VAL_T *lcec_submodule_modparam_get(lcec_slave_submodule_t *submodule, int id);
 
 #endif
