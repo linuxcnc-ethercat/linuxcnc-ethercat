@@ -273,6 +273,8 @@ void lcec_ain_read_all(lcec_slave_t *slave, lcec_class_ain_channels_t *channels)
   for (int i = 0; i < channels->count; i++) {
     lcec_class_ain_channel_t *channel = channels->channels[i];
 
-    lcec_ain_read(slave, channel);
+    if (channel != NULL) {
+      lcec_ain_read(slave, channel);
+    }
   }
 }
