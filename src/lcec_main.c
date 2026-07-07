@@ -1173,6 +1173,18 @@ void lcec_read_master(void *arg, long period) {
   lcec_slave_t *slave;
   int check_states;
 
+  // Master not yet activated: process_data is NULL until lcec_activate_master()
+  // runs. On new (initf-capable) linuxcnc loaded with a legacy .hal that omits
+  // `initf lcec.activate <thread>`, lcec_write_master() inline-activates as a
+  // fallback -- but read-all is conventionally addf'd *before* write-all, so
+  // without this bail the slave proc_read below dereferences the NULL
+  // process_data and SIGSEGVs the whole realtime before write-all ever runs.
+  // Skip this cycle; write_master activates the master and reads resume on the
+  // next tick. This keeps `initf` optional and old configs crash-free.
+  if (!master->activated) {
+    return;
+  }
+
   // check period. If the XML omitted appTimePeriod, master->app_time_period
   // is 0 and the modulo at lcec_main.c:1258 would SIGFPE on the first cycle;
   // adopt the actual HAL servo period so the XML attribute is optional.
