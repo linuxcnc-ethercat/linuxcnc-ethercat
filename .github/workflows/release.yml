@@ -26,19 +26,16 @@ jobs:
                     - distro: debian-11
                       image: debian:bullseye
                       codename: bullseye
-                      etherlab_repo: Debian_11
                       deb_rev: deb11u1
                       linuxcnc_org_repo: true
                     - distro: debian-12
                       image: debian:bookworm
                       codename: bookworm
-                      etherlab_repo: Debian_12
                       deb_rev: deb12u1
                       linuxcnc_org_repo: true
                     - distro: debian-13
                       image: debian:trixie
                       codename: trixie
-                      etherlab_repo: Debian_Testing
                       deb_rev: deb13u1
                       linuxcnc_org_repo: false
 
@@ -50,7 +47,6 @@ jobs:
               env:
                   DEBIAN_FRONTEND: noninteractive
                   CODENAME: ${{ matrix.codename }}
-                  ETHERLAB_REPO: ${{ matrix.etherlab_repo }}
                   LINUXCNC_ORG_REPO: ${{ matrix.linuxcnc_org_repo }}
               run: |
                   set -e
@@ -58,10 +54,12 @@ jobs:
                   echo 'Acquire::http::Timeout "30";' >> /etc/apt/apt.conf.d/80-retries
                   apt-get update
                   apt-get install -y --no-install-recommends ca-certificates curl gpg
-                  curl -fsSL "https://download.opensuse.org/repositories/science:/EtherLab/${ETHERLAB_REPO}/Release.key" \
-                      | gpg --dearmor -o /usr/share/keyrings/etherlab.gpg
-                  echo "deb [signed-by=/usr/share/keyrings/etherlab.gpg] https://download.opensuse.org/repositories/science:/EtherLab/${ETHERLAB_REPO}/ ./" \
-                      > /etc/apt/sources.list.d/etherlab.list
+                  # EtherCAT (libethercat-dev) comes from our own apt repo
+                  # instead of the OpenSUSE science:/EtherLab builds.
+                  curl -fsSL "https://linuxcnc-ethercat.github.io/apt/linuxcnc-ethercat-apt.gpg" \
+                      -o /usr/share/keyrings/linuxcnc-ethercat-apt.gpg
+                  echo "deb [signed-by=/usr/share/keyrings/linuxcnc-ethercat-apt.gpg] https://linuxcnc-ethercat.github.io/apt/ ${CODENAME} main" \
+                      > /etc/apt/sources.list.d/linuxcnc-ethercat.list
                   if [ "${LINUXCNC_ORG_REPO}" = "true" ]; then
                       # Two LinuxCNC signing keys are in use:
                       # - 3CB9FD148F374FEF: old DSA key, signs bullseye/bookworm
