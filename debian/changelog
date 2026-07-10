@@ -1,3 +1,17 @@
+linuxcnc-ethercat (1.41.2-1) unstable; urgency=low
+
+  * fix(syncs): bounds-check the dynamic PDO layout and report an
+    overflow instead of writing past the sync-manager buffer.
+  * fix(main): guard lcec_read_master against being called before the
+    master is activated, avoiding a crash on early reads.
+  * ci: bump the GitHub Actions runners to the Node 24 releases.
+  * ci: pull libethercat-dev from our own apt repo
+    (linuxcnc-ethercat.github.io/apt) instead of the OpenSUSE
+    science:/EtherLab builds, removing an out-of-our-control build
+    dependency.
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Fri, 10 Jul 2026 10:48:07 +0800
+
 linuxcnc-ethercat (1.41.1-3) unstable; urgency=low
 
   * ci/release: build the trixie package against Debian main's
