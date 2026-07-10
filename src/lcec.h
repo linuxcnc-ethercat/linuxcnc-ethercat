@@ -389,6 +389,10 @@ typedef struct {
   int pdo_entry_limit;  ///< Device limit on the number of PDO entries per PDO
   int pdo_limit;        ///< Device limit on the number of PDOs per sync.
   int pdo_increment;    ///< Number to increment PDO number when overflowing.
+
+  int error;  ///< Sticky overflow flag: set nonzero when any `lcec_syncs_add_*` call could not fit.
+              ///< Drivers that build a layout from configuration (e.g. modular couplers) can make all
+              ///< the add calls and then check this once, instead of the return value of every call.
 } lcec_syncs_t;
 
 /// @brief Lookup table mapping string to int
@@ -432,9 +436,18 @@ int lcec_param_newf_list(void *base, const lcec_paramdesc_t *list, ...);
 void copy_fsoe_data(lcec_slave_t *slave, unsigned int slave_offset, unsigned int master_offset) __attribute__((nonnull));
 void lcec_syncs_init(lcec_slave_t *slave, lcec_syncs_t *syncs) __attribute__((nonnull));
 void lcec_syncs_enable_autoflow(lcec_slave_t *slave, lcec_syncs_t *syncs, int pdo_limit, int pdo_entry_limit, int pdo_increment);
-void lcec_syncs_add_sync(lcec_syncs_t *syncs, ec_direction_t dir, ec_watchdog_mode_t watchdog_mode);
-void lcec_syncs_add_pdo_info(lcec_syncs_t *syncs, uint16_t index);
-void lcec_syncs_add_pdo_entry(lcec_syncs_t *syncs, uint16_t index, uint8_t subindex, uint8_t bit_length);
+/// @brief Append a sync manager / PDO / PDO entry to a `lcec_syncs_t` layout.
+///
+/// Each returns 0 on success and -1 when the corresponding fixed buffer
+/// (`LCEC_MAX_SYNC_COUNT` / `LCEC_MAX_PDO_INFO_COUNT` / `LCEC_MAX_PDO_ENTRY_COUNT`)
+/// is full, in which case nothing is added.  The failure is also recorded
+/// stickily in `syncs->error`, so a driver that builds a variable-sized layout
+/// in a loop may ignore the individual return values and check `syncs->error`
+/// once after building.  Callers that ignore both (the common static case, which
+/// cannot overflow) keep their previous behavior.
+int lcec_syncs_add_sync(lcec_syncs_t *syncs, ec_direction_t dir, ec_watchdog_mode_t watchdog_mode);
+int lcec_syncs_add_pdo_info(lcec_syncs_t *syncs, uint16_t index);
+int lcec_syncs_add_pdo_entry(lcec_syncs_t *syncs, uint16_t index, uint8_t subindex, uint8_t bit_length);
 
 const lcec_typelist_t *lcec_findslavetype(const char *name) __attribute__((nonnull));
 void lcec_addtype(lcec_typelist_t *type, const char *sourcefile) __attribute__((nonnull));

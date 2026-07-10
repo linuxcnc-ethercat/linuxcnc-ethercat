@@ -78,25 +78,40 @@ void lcec_syncs_enable_autoflow(lcec_slave_t *slave, lcec_syncs_t *syncs, int pd
 }
 
 /// @brief Add a new EtherCAT sync manager configuration.
-void lcec_syncs_add_sync(lcec_syncs_t *syncs, ec_direction_t dir, ec_watchdog_mode_t watchdog_mode) {
+int lcec_syncs_add_sync(lcec_syncs_t *syncs, ec_direction_t dir, ec_watchdog_mode_t watchdog_mode) {
+  // Reject before touching the buffer: the last slot is reserved for the 0xff
+  // terminator written below.
+  if (syncs->sync_count >= LCEC_MAX_SYNC_COUNT) {
+    rtapi_print_msg(RTAPI_MSG_ERR,
+        LCEC_MSG_PFX "lcec_syncs_add_sync: WARNING: sync full for slave %s.%s, not adding more.  Expect failure.\n",
+        syncs->slave->master->name, syncs->slave->name);
+    syncs->error = 1;
+    return -1;
+  }
+
   syncs->curr_sync = &syncs->syncs[syncs->sync_count];
 
   syncs->curr_sync->index = syncs->sync_count;
   syncs->curr_sync->dir = dir;
   syncs->curr_sync->watchdog_mode = watchdog_mode;
 
-  if (syncs->sync_count > LCEC_MAX_SYNC_COUNT) {
-    rtapi_print_msg(RTAPI_MSG_ERR,
-        LCEC_MSG_PFX "lcec_syncs_add_sync: WARNING: sync full for slave %s.%s, not adding more.  Expect failure.\n",
-        syncs->slave->master->name, syncs->slave->name);
-  } else {
-    (syncs->sync_count)++;
-  }
+  (syncs->sync_count)++;
   syncs->syncs[syncs->sync_count].index = 0xff;
+  return 0;
 }
 
 /// @brief Add a new PDO to an existing sync manager.
-void lcec_syncs_add_pdo_info(lcec_syncs_t *syncs, uint16_t index) {
+int lcec_syncs_add_pdo_info(lcec_syncs_t *syncs, uint16_t index) {
+  // Reject before writing so we never index past the buffer.  `>` (not `>=`)
+  // keeps the pre-existing usable capacity; only the out-of-bounds write is removed.
+  if (syncs->pdo_info_count > LCEC_MAX_PDO_INFO_COUNT) {
+    rtapi_print_msg(RTAPI_MSG_ERR,
+        LCEC_MSG_PFX "lcec_syncs_add_pdo_info: WARNING: pdo_info full for slave %s.%s, not adding more.  Expect failure.\n",
+        syncs->slave->master->name, syncs->slave->name);
+    syncs->error = 1;
+    return -1;
+  }
+
   syncs->curr_pdo_info = &syncs->pdo_infos[syncs->pdo_info_count];
 
   if (syncs->curr_sync->pdos == NULL) {
@@ -106,19 +121,18 @@ void lcec_syncs_add_pdo_info(lcec_syncs_t *syncs, uint16_t index) {
 
   syncs->curr_pdo_info->index = index;
 
-  if (syncs->pdo_info_count > LCEC_MAX_PDO_INFO_COUNT) {
-    rtapi_print_msg(RTAPI_MSG_ERR,
-        LCEC_MSG_PFX "lcec_syncs_add_pdo_info: WARNING: pdo_info full for slave %s.%s, not adding more.  Expect failure.\n",
-        syncs->slave->master->name, syncs->slave->name);
-  } else if (syncs->autoflow && (syncs->pdo_info_count > syncs->pdo_limit)) {
+  if (syncs->autoflow && (syncs->pdo_info_count > syncs->pdo_limit)) {
     rtapi_print_msg(RTAPI_MSG_ERR,
         LCEC_MSG_PFX
         "lcec_syncs_add_pdo_info: WARNING: pdo_info full for slave %s.%s has reached the configured limit of %d, not adding more.  Expect "
         "failure.\n",
         syncs->slave->master->name, syncs->slave->name, syncs->pdo_limit);
-  } else {
-    (syncs->pdo_info_count)++;
+    syncs->error = 1;
+    return -1;
   }
+
+  (syncs->pdo_info_count)++;
+  return 0;
 }
 
 /// @brief Add a new PDO entry to an existing PDO.
@@ -126,7 +140,17 @@ void lcec_syncs_add_pdo_info(lcec_syncs_t *syncs, uint16_t index) {
 /// If `autoflow` is turned on for this syhnc, then this *may* close
 /// out one PDO and open up another one, if we've hit the
 /// pdo_entry_limit specified in `lcec_syncs_enable_autoflow`.
-void lcec_syncs_add_pdo_entry(lcec_syncs_t *syncs, uint16_t index, uint8_t subindex, uint8_t bit_length) {
+int lcec_syncs_add_pdo_entry(lcec_syncs_t *syncs, uint16_t index, uint8_t subindex, uint8_t bit_length) {
+  // Reject before writing so we never index past the buffer.  `>` (not `>=`)
+  // keeps the pre-existing usable capacity; only the out-of-bounds write is removed.
+  if (syncs->pdo_entry_count > LCEC_MAX_PDO_ENTRY_COUNT) {
+    rtapi_print_msg(RTAPI_MSG_ERR,
+        LCEC_MSG_PFX "lcec_syncs_add_pdo_entry: WARNING: pdo_entries full for slave %s.%s, not adding more.  Expect failure.\n",
+        syncs->slave->master->name, syncs->slave->name);
+    syncs->error = 1;
+    return -1;
+  }
+
   syncs->curr_pdo_entry = &syncs->pdo_entries[syncs->pdo_entry_count];
 
   if (syncs->curr_pdo_info->entries == NULL) {
@@ -134,7 +158,8 @@ void lcec_syncs_add_pdo_entry(lcec_syncs_t *syncs, uint16_t index, uint8_t subin
   }
   (syncs->curr_pdo_info->n_entries)++;
   if (syncs->autoflow && (syncs->curr_pdo_info->n_entries >= syncs->pdo_entry_limit)) {
-    // Open up a new PDO, because this one is full.
+    // Open up a new PDO, because this one is full.  On overflow this sets
+    // syncs->error; the entry below still lands in a valid slot (guarded above).
     lcec_syncs_add_pdo_info(syncs, syncs->curr_pdo_info->index + syncs->pdo_increment);
     syncs->curr_pdo_entry = &syncs->pdo_entries[syncs->pdo_entry_count];
   }
@@ -143,13 +168,8 @@ void lcec_syncs_add_pdo_entry(lcec_syncs_t *syncs, uint16_t index, uint8_t subin
   syncs->curr_pdo_entry->subindex = subindex;
   syncs->curr_pdo_entry->bit_length = bit_length;
 
-  if (syncs->pdo_entry_count > LCEC_MAX_PDO_ENTRY_COUNT) {
-    rtapi_print_msg(RTAPI_MSG_ERR,
-        LCEC_MSG_PFX "lcec_syncs_add_pdo_entry: WARNING: pdo_entries full for slave %s.%s, not adding more.  Expect failure.\n",
-        syncs->slave->master->name, syncs->slave->name);
-  } else {
-    (syncs->pdo_entry_count)++;
-  }
+  (syncs->pdo_entry_count)++;
+  return 0;
 }
 
 /// @brief Read an SDO configuration from a slave device.

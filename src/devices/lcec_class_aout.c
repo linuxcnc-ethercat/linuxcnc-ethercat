@@ -218,6 +218,8 @@ void lcec_aout_write_all(lcec_slave_t *slave, lcec_class_aout_channels_t *channe
   for (int i = 0; i < channels->count; i++) {
     lcec_class_aout_channel_t *channel = channels->channels[i];
 
-    lcec_aout_write(slave, channel);
+    if (channel != NULL) {
+      lcec_aout_write(slave, channel);
+    }
   }
 }

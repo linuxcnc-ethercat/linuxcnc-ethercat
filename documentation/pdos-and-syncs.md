@@ -174,6 +174,36 @@ per PDO.  By using `autoflow`, we can transparently map a handful of
 PDO entries into a many PDOs as required without needing to modify any
 higher-level code.
 
+### Checking for overflow
+
+The layout buffers are fixed size (`LCEC_MAX_SYNC_COUNT`,
+`LCEC_MAX_PDO_INFO_COUNT`, `LCEC_MAX_PDO_ENTRY_COUNT`).  A static driver
+knows its layout at compile time and cannot overflow them, so it can
+ignore this.  A driver that builds a layout from *configuration* (for
+example a modular bus coupler that maps a variable set of `<subModule>`s)
+can exceed them, and needs to notice.
+
+`lcec_syncs_add_sync()`, `lcec_syncs_add_pdo_info()`, and
+`lcec_syncs_add_pdo_entry()` return `0` on success and `-1` when the
+corresponding buffer is full (in which case nothing is added).  The
+failure is also recorded stickily in `syncs->error`, so you don't have to
+check every call -- build the whole layout in a loop and check once:
+
+```c
+  lcec_syncs_init(slave, syncs);
+  lcec_syncs_add_sync(syncs, EC_DIR_OUTPUT, EC_WD_DEFAULT);
+  // ... add PDOs/entries for each configured channel in a loop ...
+  if (syncs->error) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s: too many PDOs/entries for the configured layout\n", slave->name);
+    return -EINVAL;
+  }
+  slave->sync_info = &syncs->syncs[0];
+```
+
+Failing `_init` this way turns an over-sized configuration into a clear
+startup error instead of a silently truncated (and previously
+memory-corrupting) PDO map.
+
 ## Performance
 
 If we don't explicitly set `sync_info`, then the Etherlab EtherCAT
