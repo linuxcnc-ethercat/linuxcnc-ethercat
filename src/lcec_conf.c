@@ -368,6 +368,7 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
 
 static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **attr) {
   const lcec_typelist_t *slaveType;
+  int syncUnitCycle;
 
   LCEC_CONF_XML_STATE_T *state = (LCEC_CONF_XML_STATE_T *)inst;
 
@@ -378,6 +379,8 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
   }
 
   p->confType = lcecConfTypeSlave;
+  strncpy(p->syncUnit, "default", LCEC_CONF_STR_MAXLEN);
+  p->syncUnitCycle = state->currMaster->appTimePeriod;
 
   int valid = 0;
 
@@ -429,6 +432,23 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
       continue;
     }
 
+    if (strcmp(name, "syncUnit") == 0) {
+      strncpy(p->syncUnit, val, LCEC_CONF_STR_MAXLEN);
+      p->syncUnit[LCEC_CONF_STR_MAXLEN - 1] = 0;
+      continue;
+    }
+
+    if (strcmp(name, "syncUnitCycle") == 0) {
+      syncUnitCycle = parseSyncCycle(state, val);
+      if (syncUnitCycle <= 0) {
+        fprintf(stderr, "%s: ERROR: Invalid syncUnitCycle %s\n", modname, val);
+        XML_StopParser(inst->parser, 0);
+        return;
+      }
+      p->syncUnitCycle = syncUnitCycle;
+      continue;
+    }
+
     if (strcmp(name, "vid") == 0) {
       p->vid = strtol(val, NULL, 16);
       continue;
@@ -459,6 +479,20 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
   // set default name
   if (p->name[0] == 0) {
     snprintf(p->name, LCEC_CONF_STR_MAXLEN, "%d", p->index);
+  }
+
+  if (p->syncUnit[0] == 0) {
+    fprintf(stderr, "%s: ERROR: Slave %s has empty syncUnit attribute\n", modname, p->name);
+    XML_StopParser(inst->parser, 0);
+    return;
+  }
+
+  if (p->syncUnitCycle == 0 || state->currMaster->appTimePeriod == 0 ||
+      (p->syncUnitCycle % state->currMaster->appTimePeriod) != 0) {
+    fprintf(stderr, "%s: ERROR: Slave %s syncUnitCycle %u is not a positive multiple of appTimePeriod %u\n", modname, p->name,
+        p->syncUnitCycle, state->currMaster->appTimePeriod);
+    XML_StopParser(inst->parser, 0);
+    return;
   }
 
   // type is required

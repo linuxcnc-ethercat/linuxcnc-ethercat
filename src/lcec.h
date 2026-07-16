@@ -232,6 +232,29 @@ typedef struct lcec_slave_state {
   hal_bit_t *state_op;      ///< Is the device in state `OP`?  Equivalant to the `.slave-state-op` HAL pin.
 } lcec_slave_state_t;
 
+typedef struct lcec_pdo_entry_reg {
+  int current;
+  int max;
+  ec_pdo_entry_reg_t *pdo_entry_regs;
+} lcec_pdo_entry_reg_t;
+
+typedef struct lcec_sync_unit {
+  struct lcec_sync_unit *prev;
+  struct lcec_sync_unit *next;
+  char name[LCEC_CONF_STR_MAXLEN];
+  uint32_t cycle_time;
+  unsigned int cycle_divider;
+  unsigned int cycle_counter;
+  int pdo_entry_count;
+  lcec_pdo_entry_reg_t *regs;
+  ec_domain_t *domain;
+  uint8_t *process_data;
+  int process_data_len;
+  int queued;
+  int process;
+  int write;
+} lcec_sync_unit_t;
+
 typedef struct lcec_master {
   lcec_master_t *prev;              ///< Next master.
   lcec_master_t *next;              ///< Previous master.
@@ -243,6 +266,9 @@ typedef struct lcec_master {
   ec_domain_t *domain;
   uint8_t *process_data;
   int process_data_len;
+  lcec_sync_unit_t *first_sync_unit;
+  lcec_sync_unit_t *last_sync_unit;
+  int sync_units_started;
   lcec_slave_t *first_slave;
   lcec_slave_t *last_slave;
   lcec_master_data_t *hal_data;
@@ -264,12 +290,6 @@ typedef struct lcec_master {
   int dc_time_valid_last;         // Previous cycle's dc_time_valid (for detecting consecutive valid reads)
 #endif
 } lcec_master_t;
-
-typedef struct lcec_pdo_entry_reg {
-  int current;
-  int max;
-  ec_pdo_entry_reg_t *pdo_entry_regs;
-} lcec_pdo_entry_reg_t;
 
 /// @brief Slave Distributed Clock configuration.
 typedef struct {
@@ -315,8 +335,11 @@ typedef struct lcec_slave {
   lcec_slave_t *prev;                        ///< Next slave
   lcec_slave_t *next;                        ///< Previous slave
   lcec_master_t *master;                     ///< Master for this slave
+  lcec_sync_unit_t *sync_unit;               ///< Process-data Sync Unit containing this slave.
   int index;                                 ///< Index of this slave.
   char name[LCEC_CONF_STR_MAXLEN];           ///< Slave name.
+  char sync_unit_name[LCEC_CONF_STR_MAXLEN]; ///< Configured Sync Unit name.
+  uint32_t sync_unit_cycle;                  ///< Configured process-data cycle in ns.
   uint32_t vid;                              ///< Slave's vendor ID
   uint32_t pid;                              ///< Slave's EtherCAT PID/device ID.
   ec_sync_info_t *sync_info;                 ///< Sync Manager configuration.
