@@ -234,6 +234,7 @@ typedef struct lcec_master {
   int sync_ref_cnt;
   int sync_ref_cycles;
   int sync_to_ref_clock;
+  int ref_clock_slave_idx;          // DC reference clock slave index (-1 = auto-pick first DC-capable slave)
   long long state_update_timer;
   ec_master_state_t ms;
   int activated;                    // Flag: master has been activated (0=not yet, 1=activated)

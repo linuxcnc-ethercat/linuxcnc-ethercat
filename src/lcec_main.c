@@ -280,6 +280,43 @@ int rtapi_app_main(void) {
       pdo_entry_count += lcec_pdo_entry_reg_len(slave->regs);
     }
 
+    // Select a specific DC reference clock slave if requested via refClockSlaveIdx.
+    // Default (-1) leaves the master to auto-pick the first DC-capable slave.
+    // The selection must happen before ecrt_master_activate(); it is applied by
+    // the master (find_dc_ref_clock) so the chosen slave drives the DC system time.
+    if (master->ref_clock_slave_idx >= 0) {
+#ifdef EC_HAVE_SELECT_REF_CLOCK
+      lcec_slave_t *ref_slave = NULL;
+      for (slave = master->first_slave; slave != NULL; slave = slave->next) {
+        if (slave->index == master->ref_clock_slave_idx) {
+          ref_slave = slave;
+          break;
+        }
+      }
+      if (ref_slave == NULL) {
+        rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX
+            "master %s: refClockSlaveIdx=%d matches no configured slave\n",
+            master->name, master->ref_clock_slave_idx);
+        goto fail2;
+      }
+      if (ecrt_master_select_reference_clock(master->master, ref_slave->config)) {
+        rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX
+            "master %s: failed to select slave %s (idx %d) as DC reference clock\n",
+            master->name, ref_slave->name, master->ref_clock_slave_idx);
+        goto fail2;
+      }
+      rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX
+          "master %s: selected slave %s (idx %d) as DC reference clock\n",
+          master->name, ref_slave->name, master->ref_clock_slave_idx);
+#else
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX
+          "master %s: refClockSlaveIdx=%d set but libethercat lacks "
+          "ecrt_master_select_reference_clock (EC_HAVE_SELECT_REF_CLOCK)\n",
+          master->name, master->ref_clock_slave_idx);
+      goto fail2;
+#endif
+    }
+
     lcec_pdo_entry_reg_t *master_regs = lcec_allocate_pdo_entry_reg(pdo_entry_count + 1);
     for (slave = master->first_slave; slave != NULL; slave = slave->next) {
       if (lcec_append_pdo_entry_reg(master_regs, slave->regs) < 0) {
@@ -491,6 +528,7 @@ int lcec_parse_config(void) {
         //   true: DC is clock source, servo thread syncs to DC via PLL
         // Note: legacy mode - negative refClockSyncCycles enables sync_to_ref_clock
         master->sync_to_ref_clock = master_conf->syncToRefClock;
+        master->ref_clock_slave_idx = master_conf->refClockSlaveIdx;
 
         // add master to list
         LCEC_LIST_APPEND(first_master, last_master, master);
