@@ -8,6 +8,7 @@
 
 - [Configuration Reference](configuration-reference.md)
 - [Distributed Clocks](distributed-clocks.md)
+- [Master HAL Pins](master-pins.md)
 
 ## Development Documentation
 
