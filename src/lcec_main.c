@@ -70,6 +70,12 @@ static const lcec_pindesc_t master_pins[] = {
     {HAL_S32, HAL_IN, offsetof(lcec_master_data_t, pll_drift), "%s.pll-drift"},
     {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_final), "%s.pll-final"},
 #endif
+    {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, wkc), "%s.wkc"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, wkc_min), "%s.wkc-min"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, wkc_change_cnt), "%s.wkc-change-count"},
+    {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, wkc_state), "%s.wkc-state"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, dc_sync_diff), "%s.dc-sync-diff"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_master_data_t, dc_sync_converged), "%s.dc-sync-converged"},
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
@@ -79,6 +85,8 @@ static const lcec_paramdesc_t master_params[] = {
     {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, pll_step), "%s.pll-step"},
     {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, pll_max_err), "%s.pll-max-err"},
 #endif
+    {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, dc_sync_max), "%s.dc-sync-max"},
+    {HAL_BIT, HAL_RW, offsetof(lcec_master_data_t, dc_sync_monitor), "%s.dc-sync-monitor"},
     {HAL_TYPE_UNSPECIFIED},
 };
 
@@ -310,6 +318,12 @@ int rtapi_app_main(void) {
     // Initialize auto-drift delay counter (wait 100 cycles before applying)
     master->hal_data->auto_drift_delay = 100;
 #endif
+    // DC synchrony convergence threshold: 4% of period (10 us at 4 kHz);
+    // app_time_period can be 0 here when the XML omits appTimePeriod.
+    master->hal_data->dc_sync_max = (master->app_time_period != 0) ? master->app_time_period / 25 : 10000;
+    // Monitor on by default (one broadcast datagram per cycle); setp to 0
+    // for zero overhead when the dc-sync pins are unused.
+    master->hal_data->dc_sync_monitor = 1;
 
     // Activate master (only when initf is unavailable; otherwise lcec.activate
     // funct does it from RT context after the user's `initf lcec.activate <thread>`).
@@ -1210,9 +1224,13 @@ void lcec_read_master(void *arg, long period) {
   }
 
   // receive process data & master state
+  ec_domain_state_t domain_state;
+  uint32_t dc_sync_diff;
   rtapi_mutex_get(&master->mutex);
   ecrt_master_receive(master->master);
   ecrt_domain_process(master->domain);
+  ecrt_domain_state(master->domain, &domain_state);
+  dc_sync_diff = master->hal_data->dc_sync_monitor ? ecrt_master_sync_monitor_process(master->master) : 0xffffffffu;
   if (check_states) {
     ecrt_master_state(master->master, &master->ms);
   }
@@ -1220,6 +1238,40 @@ void lcec_read_master(void *arg, long period) {
 
   // update state pins
   lcec_update_master_hal(master->hal_data, &master->ms);
+
+  // update working counter pins; min/change tracking starts once the domain
+  // first reaches a complete exchange (EC_WC_COMPLETE), so bring-up ramping
+  // does not pollute the stats
+  {
+    lcec_master_data_t *hd = master->hal_data;
+    uint32_t wkc_now = domain_state.working_counter;
+    *(hd->wkc) = wkc_now;
+    *(hd->wkc_state) = (hal_s32_t)domain_state.wc_state;
+    if (!hd->wkc_full_seen) {
+      if (domain_state.wc_state == EC_WC_COMPLETE) {
+        hd->wkc_full_seen = 1;
+        *(hd->wkc_min) = wkc_now;
+        *(hd->wkc_change_cnt) = 0;
+      }
+    } else {
+      if (wkc_now < *(hd->wkc_min)) {
+        *(hd->wkc_min) = wkc_now;
+      }
+      // no rtapi_print here: a flapping bus would emit at cycle rate from the
+      // RT thread; the change counter pin + recorder are the log
+      if (wkc_now != hd->wkc_last) {
+        (*(hd->wkc_change_cnt))++;
+      }
+    }
+    hd->wkc_last = wkc_now;
+
+    // DC synchrony: broadcast read of system time difference (0x092C);
+    // 0xffffffff means the monitor datagram was not received this cycle
+    if (dc_sync_diff != 0xffffffffu) {
+      *(hd->dc_sync_diff) = dc_sync_diff;
+      *(hd->dc_sync_converged) = (dc_sync_diff < hd->dc_sync_max);
+    }
+  }
 
   // update global state
   global_ms.slaves_responding += master->ms.slaves_responding;
@@ -1328,6 +1380,12 @@ void lcec_write_master(void *arg, long period) {
 
   // sync slaves to ref clock
   ecrt_master_sync_slave_clocks(master->master);
+
+  // queue DC synchrony monitor datagram (broadcast read of 0x092C),
+  // processed next cycle in lcec_read_master
+  if (master->hal_data->dc_sync_monitor) {
+    ecrt_master_sync_monitor_queue(master->master);
+  }
 
   // send domain data
   ecrt_master_send(master->master);

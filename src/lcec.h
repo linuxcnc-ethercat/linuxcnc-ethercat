@@ -195,6 +195,18 @@ typedef struct lcec_master_data {
   hal_s32_t *pll_final;            // Output: final PLL correction value sent to rtapi (ns)
   int32_t auto_drift_delay;        // Internal: auto-drift delay counter
 #endif
+  // Domain working counter monitoring
+  hal_u32_t *wkc;             // Output: current domain working counter
+  hal_u32_t *wkc_min;         // Output: min WKC since first complete exchange
+  hal_u32_t *wkc_change_cnt;  // Output: WKC change count since first complete exchange
+  hal_s32_t *wkc_state;       // Output: 0=zero, 1=incomplete, 2=complete (ec_wc_state_t)
+  uint32_t wkc_last;          // Internal: previous WKC value
+  int wkc_full_seen;          // Internal: domain reached EC_WC_COMPLETE at least once
+  // DC synchrony monitoring (broadcast read of 0x092C system time difference)
+  hal_u32_t *dc_sync_diff;       // Output: upper estimate of max slave time diff (ns)
+  hal_bit_t *dc_sync_converged;  // Output: dc_sync_diff below dc-sync-max threshold
+  hal_u32_t dc_sync_max;         // Param: convergence threshold (ns)
+  hal_bit_t dc_sync_monitor;     // Param: enable the per-cycle monitor datagram (default on)
   // Phase calibration for sync_to_ref_clock=false mode
   int32_t phase_measure_cnt;       // Internal: measurement cycle counter
   int32_t phase_min;               // Internal: minimum app_phase during measurement
