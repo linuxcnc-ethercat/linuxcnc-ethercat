@@ -270,10 +270,14 @@ static int lcec_mdp_write_module_list(lcec_slave_t *slave, const lcec_mdp_family
       return err;
     }
   }
+  // Some couplers maintain the count themselves and mark 0xF030:00 read-only
+  // (UTRIO UC20 aborts with 0x06010002 "attempt to write a read-only
+  // object").  Not fatal: the ident subindices above are what the
+  // configured-vs-detected check consumes.
   if ((err = lcec_write_sdo8(slave, LCEC_MDP_CONFMODULES, 0x00, count)) != 0) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: failed writing module count to 0x%04x:00\n", slave->master->name, slave->name,
-        LCEC_MDP_CONFMODULES);
-    return err;
+    rtapi_print_msg(RTAPI_MSG_WARN,
+        LCEC_MSG_PFX "%s.%s: module count write to 0x%04x:00 rejected (read-only on some couplers), continuing\n", slave->master->name,
+        slave->name, LCEC_MDP_CONFMODULES);
   }
   return 0;
 }
