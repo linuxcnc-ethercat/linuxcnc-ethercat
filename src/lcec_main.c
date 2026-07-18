@@ -74,6 +74,7 @@ static const lcec_pindesc_t master_pins[] = {
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, wkc_min), "%s.wkc-min"},
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, wkc_change_cnt), "%s.wkc-change-count"},
     {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, wkc_state), "%s.wkc-state"},
+    {HAL_BIT, HAL_IO, offsetof(lcec_master_data_t, wkc_reset), "%s.wkc-reset"},
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, dc_sync_diff), "%s.dc-sync-diff"},
     {HAL_BIT, HAL_OUT, offsetof(lcec_master_data_t, dc_sync_converged), "%s.dc-sync-converged"},
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
@@ -1245,6 +1246,16 @@ void lcec_read_master(void *arg, long period) {
   {
     lcec_master_data_t *hd = master->hal_data;
     uint32_t wkc_now = domain_state.working_counter;
+
+    // user-requested stats reset: clear min/change tracking and re-arm the
+    // first-complete-exchange gate so wkc-min re-anchors; pin self-clears
+    if (*(hd->wkc_reset)) {
+      *(hd->wkc_reset) = 0;
+      hd->wkc_full_seen = 0;
+      *(hd->wkc_min) = 0;
+      *(hd->wkc_change_cnt) = 0;
+    }
+
     *(hd->wkc) = wkc_now;
     *(hd->wkc_state) = (hal_s32_t)domain_state.wc_state;
     if (!hd->wkc_full_seen) {
@@ -1266,10 +1277,20 @@ void lcec_read_master(void *arg, long period) {
     hd->wkc_last = wkc_now;
 
     // DC synchrony: broadcast read of system time difference (0x092C);
-    // 0xffffffff means the monitor datagram was not received this cycle
-    if (dc_sync_diff != 0xffffffffu) {
-      *(hd->dc_sync_diff) = dc_sync_diff;
-      *(hd->dc_sync_converged) = (dc_sync_diff < hd->dc_sync_max);
+    // 0xffffffff means the monitor datagram was not received this cycle.
+    // Tolerate a few consecutive misses (startup, single datagram timeouts),
+    // then invalidate so a dead bus cannot keep showing stale-converged.
+    if (hd->dc_sync_monitor) {
+      if (dc_sync_diff != 0xffffffffu) {
+        hd->dc_sync_miss_cnt = 0;
+        *(hd->dc_sync_diff) = dc_sync_diff;
+        *(hd->dc_sync_converged) = (dc_sync_diff < hd->dc_sync_max);
+      } else if (hd->dc_sync_miss_cnt < LCEC_DC_SYNC_MISS_MAX) {
+        hd->dc_sync_miss_cnt++;
+      } else {
+        *(hd->dc_sync_converged) = 0;
+        *(hd->dc_sync_diff) = 0xffffffffu;
+      }
     }
   }
 

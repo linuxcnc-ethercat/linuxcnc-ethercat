@@ -73,6 +73,10 @@ extern "C" {
 // State update period (ns)
 #define LCEC_STATE_UPDATE_PERIOD 1000000000LL
 
+// Consecutive missing DC sync monitor datagrams tolerated before the
+// dc-sync pins are invalidated (see lcec_read_master)
+#define LCEC_DC_SYNC_MISS_MAX 10
+
 // IDN builder
 #define LCEC_IDN_TYPE_P 0x8000
 #define LCEC_IDN_TYPE_S 0x0000
@@ -200,6 +204,7 @@ typedef struct lcec_master_data {
   hal_u32_t *wkc_min;         // Output: min WKC since first complete exchange
   hal_u32_t *wkc_change_cnt;  // Output: WKC change count since first complete exchange
   hal_s32_t *wkc_state;       // Output: 0=zero, 1=incomplete, 2=complete (ec_wc_state_t)
+  hal_bit_t *wkc_reset;       // IO: set to 1 to clear min/change stats; self-clears
   uint32_t wkc_last;          // Internal: previous WKC value
   int wkc_full_seen;          // Internal: domain reached EC_WC_COMPLETE at least once
   // DC synchrony monitoring (broadcast read of 0x092C system time difference)
@@ -207,6 +212,7 @@ typedef struct lcec_master_data {
   hal_bit_t *dc_sync_converged;  // Output: dc_sync_diff below dc-sync-max threshold
   hal_u32_t dc_sync_max;         // Param: convergence threshold (ns)
   hal_bit_t dc_sync_monitor;     // Param: enable the per-cycle monitor datagram (default on)
+  int dc_sync_miss_cnt;          // Internal: consecutive cycles without a monitor response
   // Phase calibration for sync_to_ref_clock=false mode
   int32_t phase_measure_cnt;       // Internal: measurement cycle counter
   int32_t phase_min;               // Internal: minimum app_phase during measurement
