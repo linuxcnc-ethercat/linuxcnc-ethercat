@@ -75,6 +75,10 @@ static const lcec_pindesc_t master_pins[] = {
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, wkc_change_cnt), "%s.wkc-change-count"},
     {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, wkc_state), "%s.wkc-state"},
     {HAL_BIT, HAL_IO, offsetof(lcec_master_data_t, wkc_reset), "%s.wkc-reset"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, app_time_lo), "%s.app-time-lo"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, app_time_hi), "%s.app-time-hi"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, mono_time_lo), "%s.mono-time-lo"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, mono_time_hi), "%s.mono-time-hi"},
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, dc_sync_diff), "%s.dc-sync-diff"},
     {HAL_BIT, HAL_OUT, offsetof(lcec_master_data_t, dc_sync_converged), "%s.dc-sync-converged"},
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
@@ -1382,6 +1386,15 @@ void lcec_write_master(void *arg, long period) {
 #endif
 
   ecrt_master_application_time(master->master, app_time);
+
+  // publish the (app time, monotonic time) correlation pair; `now` was
+  // sampled with rtapi_get_time() adjacent to the app_time computation, so
+  // external processes can map CLOCK_MONOTONIC timestamps into the DC time
+  // domain: dc(T) = app_time + (T - mono_time)
+  *(master->hal_data->app_time_lo) = (hal_u32_t)(app_time & 0xffffffffull);
+  *(master->hal_data->app_time_hi) = (hal_u32_t)(app_time >> 32);
+  *(master->hal_data->mono_time_lo) = (hal_u32_t)((uint64_t)now & 0xffffffffull);
+  *(master->hal_data->mono_time_hi) = (hal_u32_t)((uint64_t)now >> 32);
 
   // Read DC reference clock time (must be before sync_slave_clocks which
   // re-queues the sync datagram and overwrites the received data)

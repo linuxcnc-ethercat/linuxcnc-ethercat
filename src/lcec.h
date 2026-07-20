@@ -213,6 +213,13 @@ typedef struct lcec_master_data {
   hal_u32_t dc_sync_max;         // Param: convergence threshold (ns)
   hal_bit_t dc_sync_monitor;     // Param: enable the per-cycle monitor datagram (default on)
   int dc_sync_miss_cnt;          // Internal: consecutive cycles without a monitor response
+  // Cycle time correlation: DC app time and the OS monotonic clock, sampled
+  // back-to-back each cycle, so external processes can map timestamps taken
+  // with clock_gettime(CLOCK_MONOTONIC) into the DC time domain
+  hal_u32_t *app_time_lo;   // Output: DC app time of this cycle, low 32 bits (ns)
+  hal_u32_t *app_time_hi;   // Output: DC app time of this cycle, high 32 bits
+  hal_u32_t *mono_time_lo;  // Output: monotonic time sampled with app time, low 32 bits (ns)
+  hal_u32_t *mono_time_hi;  // Output: monotonic time sampled with app time, high 32 bits
   // Phase calibration for sync_to_ref_clock=false mode
   int32_t phase_measure_cnt;       // Internal: measurement cycle counter
   int32_t phase_min;               // Internal: minimum app_phase during measurement
