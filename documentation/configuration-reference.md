@@ -99,6 +99,13 @@ device:
 - `name="<name>"`: (optional but strongly recommended, defaults to the
   value of `idx`): The name of the device.  This is used in naming HAL
   pins in LinuxCNC.
+- `syncUnit="<name>"`: (optional, defaults to `default`): Places the slave
+  in a named process-data Sync Unit. Each Sync Unit owns a separate EtherCAT
+  domain. Slaves with the same Sync Unit name must use the same cycle.
+- `syncUnitCycle="<time|*N>"`: (optional, defaults to the master cycle):
+  Process-data exchange period for this Sync Unit. It must be a positive
+  integer multiple of the master's `appTimePeriod`; for example, `*2` means
+  every second master cycle.
 -  `vid="<vid>"`: (required for generic, usable but not recommended for others): the Vendor ID for the
    device.  You can determine this via `ethercat slaves -v`.
 - `pid="<pid>"`: (required for generic, usable but not recommended for others): the product ID for the

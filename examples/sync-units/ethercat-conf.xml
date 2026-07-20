@@ -1,0 +1,21 @@
+<masters>
+  <master idx="0" appTimePeriod="1000000" refClockSyncCycles="-1">
+
+    <!-- Slave 1: its PDO datagram is queued every second master cycle. -->
+    <slave idx="0" type="generic"
+           vid="00000002" pid="00000001"
+           name="slow-slave"
+           syncUnit="slow" syncUnitCycle="*2">
+      <!-- Add this slave's sync managers and PDO mapping here. -->
+    </slave>
+
+    <!-- Slave 2: its PDO datagram is queued every master cycle. -->
+    <slave idx="1" type="generic"
+           vid="00000002" pid="00000002"
+           name="fast-slave"
+           syncUnit="fast" syncUnitCycle="*1">
+      <!-- Add this slave's sync managers and PDO mapping here. -->
+    </slave>
+
+  </master>
+</masters>

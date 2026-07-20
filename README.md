@@ -126,6 +126,10 @@ A [reference guide to LinuxCNC-Ethercat's XML
 configuration](documentation/configuration-reference.md) file is
 available.
 
+Slaves can also be grouped into named process-data Sync Units when one master
+must exchange different groups at different integer-multiple cycle times. See
+the [distributed-clock and Sync Unit guide](documentation/distributed-clocks.md#process-data-sync-units).
+
 Several examples are available in the [`examples/`](examples/)
 directory, but they're somewhat dated.  The [LinuxCNC
 Forum](https://forum.linuxcnc.org/ethercat) is a better place to
