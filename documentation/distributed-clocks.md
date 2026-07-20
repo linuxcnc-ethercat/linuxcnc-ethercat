@@ -102,6 +102,11 @@ If `pll-reset-count` increases, the difference in speed between
 the clocks is large. Increasing `pll-step` might help. `pll-step` is limited
 to 1% of appTimePeriod.
 
+To verify that the slaves' clocks themselves are in sync (as opposed
+to the servo thread tracking the reference clock), see the
+`dc-sync-diff` / `dc-sync-converged` pins in
+[Master HAL Pins](master-pins.md#dc-synchrony-monitoring).
+
 
 ## Slave settings
 
