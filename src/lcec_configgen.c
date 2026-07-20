@@ -43,6 +43,16 @@ static int flag_typedb = 1;
 static int flag_extra_cia_modparams = 0;
 static int flag_generic_pdos = 1;
 
+// Repeatable -modparam NAME=VALUE flag: applied to every generated <slave>
+// whose driver advertises that modParam in its registry entry.
+typedef struct {
+  char *name;
+  char *value;
+  int applied;
+} cli_modparam_t;
+static cli_modparam_t *cli_modparams = NULL;
+static size_t cli_modparam_count = 0, cli_modparam_cap = 0;
+
 // ===== dynamic helpers =====
 
 static void *xmalloc(size_t n) {
@@ -504,6 +514,22 @@ static const lcec_typelist_t *find_driver(const char *vid_str, const char *pid_s
     if (t->type && t->type->vid == vid && t->type->pid == pid) return t->type;
   }
   return NULL;
+}
+
+static const lcec_typelist_t *find_driver_by_name(const char *name) {
+  for (lcec_typelinkedlist_t *t = typeslist; t; t = t->next) {
+    if (t->type && t->type->name && !strcmp(t->type->name, name)) return t->type;
+  }
+  return NULL;
+}
+
+// True if `name` appears in the driver's registered modparam list.
+static bool driver_supports_modparam(const lcec_typelist_t *t, const char *name) {
+  if (!t || !t->modparams) return false;
+  for (const lcec_modparam_desc_t *m = t->modparams; m->name != NULL; m++) {
+    if (!strcasecmp(m->name, name)) return true;
+  }
+  return false;
 }
 
 static const char *infer_type(const ec_slave_t *s) {
@@ -1079,9 +1105,12 @@ static master_config_t *find_master(master_config_t **masters, size_t n, const c
 static void usage(const char *argv0) {
   fprintf(stderr,
           "Usage: %s [options]\n"
-          "  -typedb              Use built-in driver db (default true)\n"
-          "  -extra_cia_modparams Add CiA modParams to all CiA 402 devices\n"
-          "  -generic_pdos        Walk PDOs for generic devices (default true)\n",
+          "  -typedb               Use built-in driver db (default true)\n"
+          "  -extra_cia_modparams  Add CiA modParams to all CiA 402 devices\n"
+          "  -generic_pdos         Walk PDOs for generic devices (default true)\n"
+          "  -modparam NAME=VALUE  Add <modParam name=NAME value=VALUE/> to every\n"
+          "                        generated <slave> (repeatable). Example:\n"
+          "                        -modparam zeroBasedAxisNames=true\n",
           argv0);
 }
 
@@ -1091,7 +1120,8 @@ static int parse_bool(const char *s) {
 }
 
 int main(int argc, char **argv) {
-  // Parse Go-style "-flag=value" / "-flag" args (matches existing tool's CLI).
+  // Parse "-flag", "-flag=value", "--flag" args. -modparam consumes the
+  // following argv token (NAME=VALUE), e.g. -modparam zeroBasedAxisNames=true.
   for (int i = 1; i < argc; i++) {
     char *a = argv[i];
     if (a[0] != '-') {
@@ -1112,7 +1142,34 @@ int main(int argc, char **argv) {
       flag_extra_cia_modparams = parse_bool(val);
     else if (!strcmp(a, "generic_pdos"))
       flag_generic_pdos = parse_bool(val);
-    else if (!strcmp(a, "h") || !strcmp(a, "help")) {
+    else if (!strcmp(a, "modparam")) {
+      if (val) {
+        fprintf(stderr, "%s: -modparam takes its argument as a separate token, e.g. -modparam NAME=VALUE\n", argv[0]);
+        return 1;
+      }
+      if (++i >= argc) {
+        fprintf(stderr, "%s: -modparam requires NAME=VALUE\n", argv[0]);
+        return 1;
+      }
+      char *kv = argv[i];
+      char *inner_eq = strchr(kv, '=');
+      if (!inner_eq || inner_eq == kv) {
+        fprintf(stderr, "%s: -modparam value must be NAME=VALUE, got '%s'\n", argv[0], kv);
+        return 1;
+      }
+      *inner_eq = 0;
+      if (cli_modparam_count == cli_modparam_cap) {
+        cli_modparam_cap = cli_modparam_cap ? cli_modparam_cap * 2 : 4;
+        cli_modparams = realloc(cli_modparams, cli_modparam_cap * sizeof(cli_modparam_t));
+        if (!cli_modparams) {
+          fprintf(stderr, "lcec_configgen: oom\n");
+          return 1;
+        }
+      }
+      cli_modparams[cli_modparam_count].name = xstrdup(kv);
+      cli_modparams[cli_modparam_count].value = xstrdup(inner_eq + 1);
+      cli_modparam_count++;
+    } else if (!strcmp(a, "h") || !strcmp(a, "help")) {
       usage(argv[0]);
       return 0;
     } else {
@@ -1169,6 +1226,17 @@ int main(int argc, char **argv) {
       build_pdos(s, sc);
     }
 
+    if (cli_modparam_count) {
+      const lcec_typelist_t *driver = find_driver(s->vendor_id, s->product_id);
+      if (!driver && !strcmp(sc->type, "basic_cia402")) driver = find_driver_by_name("basic_cia402");
+      for (size_t k = 0; k < cli_modparam_count; k++) {
+        if (driver_supports_modparam(driver, cli_modparams[k].name)) {
+          mp_push(sc, mp_param(cli_modparams[k].name, cli_modparams[k].value));
+          cli_modparams[k].applied++;
+        }
+      }
+    }
+
     fixup_pin_names(sc);
 
     if (mm->slave_count == mm->slave_cap) {
@@ -1180,6 +1248,15 @@ int main(int argc, char **argv) {
 
   // Sort masters by idx for deterministic output.
   qsort(masters, mc, sizeof(*masters), master_cmp);
+
+  for (size_t k = 0; k < cli_modparam_count; k++) {
+    if (cli_modparams[k].applied == 0) {
+      fprintf(stderr,
+          "lcec_configgen: warning: -modparam %s=%s did not match any slave on the bus "
+          "(no driver in the generated config advertises this modParam)\n",
+          cli_modparams[k].name, cli_modparams[k].value);
+    }
+  }
 
   printf("<masters>\n");
   for (size_t i = 0; i < mc; i++) {
