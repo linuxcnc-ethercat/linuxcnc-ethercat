@@ -424,6 +424,7 @@ int lcec_parse_config(void) {
   LCEC_CONF_SDOCONF_T *sdo_conf;
   LCEC_CONF_IDNCONF_T *idn_conf;
   LCEC_CONF_MODPARAM_T *modparam_conf;
+  LCEC_CONF_SUBMODULE_T *submodule_conf;
   ec_pdo_entry_info_t *generic_pdo_entries;
   ec_pdo_info_t *generic_pdos;
   ec_sync_info_t *generic_sync_managers;
@@ -432,6 +433,9 @@ int lcec_parse_config(void) {
   lcec_slave_sdoconf_t *sdo_config;
   lcec_slave_idnconf_t *idn_config;
   lcec_slave_modparam_t *modparams;
+  lcec_slave_submodule_t *submodule, *last_submodule;
+  lcec_slave_modparam_t *submodule_modparams;
+  int submodule_mp_remaining;
 
   // initialize list
   first_master = NULL;
@@ -484,6 +488,10 @@ int lcec_parse_config(void) {
   idn_config = NULL;
   pe_conf = NULL;
   modparams = NULL;
+  submodule = NULL;
+  last_submodule = NULL;
+  submodule_modparams = NULL;
+  submodule_mp_remaining = 0;
   while ((conf_type = ((LCEC_CONF_NULL_T *)conf)->confType) != lcecConfTypeNone) {
     // get type
     switch (conf_type) {
@@ -546,6 +554,10 @@ int lcec_parse_config(void) {
         sdo_config = NULL;
         idn_config = NULL;
         modparams = NULL;
+        submodule = NULL;
+        last_submodule = NULL;
+        submodule_modparams = NULL;
+        submodule_mp_remaining = 0;
 
         slave->index = slave_conf->index;
         strncpy(slave->name, slave_conf->name, LCEC_CONF_STR_MAXLEN);
@@ -633,11 +645,49 @@ int lcec_parse_config(void) {
         slave->sdo_config = sdo_config;
         slave->idn_config = idn_config;
         slave->modparams = modparams;
+        slave->submodules = NULL;
         slave->dc_conf = NULL;
         slave->wd_conf = NULL;
 
         // update slave count
         slave_count++;
+        break;
+
+      case lcecConfTypeSubModule:
+        // get config token
+        submodule_conf = (LCEC_CONF_SUBMODULE_T *)conf;
+        conf += sizeof(LCEC_CONF_SUBMODULE_T);
+
+        // check for slave
+        if (slave == NULL) {
+          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Slave node for submodule config missing\n");
+          goto fail2;
+        }
+
+        // create new submodule
+        submodule = LCEC_ALLOCATE(lcec_slave_submodule_t);
+        submodule->next = NULL;
+        submodule->id = submodule_conf->id;
+        submodule->ident = submodule_conf->ident;
+        strncpy(submodule->name, submodule_conf->name, LCEC_CONF_STR_MAXLEN);
+        submodule->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
+
+        // alloc this submodule's modparam array (id=-1 terminated)
+        submodule_modparams = NULL;
+        submodule_mp_remaining = submodule_conf->modParamCount;
+        if (submodule_conf->modParamCount > 0) {
+          submodule_modparams = LCEC_ALLOCATE_ARRAY(lcec_slave_modparam_t, (submodule_conf->modParamCount + 1));
+          submodule_modparams[submodule_conf->modParamCount].id = -1;
+        }
+        submodule->modparams = submodule_modparams;
+
+        // append to the slave's submodule list, preserving XML order
+        if (last_submodule == NULL) {
+          slave->submodules = submodule;
+        } else {
+          last_submodule->next = submodule;
+        }
+        last_submodule = submodule;
         break;
 
       case lcecConfTypeDcConf:
@@ -902,18 +952,39 @@ int lcec_parse_config(void) {
           goto fail2;
         }
 
-        if (modparams == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "modparams is nullg\n");
-          goto fail2;
+        // Route to the current submodule while it still has unfilled slots,
+        // otherwise to the slave.  A submodule's modparams are serialized
+        // directly after its <subModule> record, so consuming exactly
+        // modParamCount of them correctly attributes any slave-level modparams
+        // that appear before or after a <subModule>.
+        if (submodule != NULL && submodule_mp_remaining > 0) {
+          if (submodule_modparams == NULL) {
+            rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "submodule modparams is null\n");
+            goto fail2;
+          }
+
+          // copy attributes
+          submodule_modparams->id = modparam_conf->id;
+          submodule_modparams->value = modparam_conf->value;
+          submodule_modparams->name = modparam_conf->name;
+
+          // next entry
+          submodule_modparams++;
+          submodule_mp_remaining--;
+        } else {
+          if (modparams == NULL) {
+            rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "modparams is null\n");
+            goto fail2;
+          }
+
+          // copy attributes
+          modparams->id = modparam_conf->id;
+          modparams->value = modparam_conf->value;
+          modparams->name = modparam_conf->name;
+
+          // next entry
+          modparams++;
         }
-
-        // copy attributes
-        modparams->id = modparam_conf->id;
-        modparams->value = modparam_conf->value;
-        modparams->name = modparam_conf->name;
-
-        // next entry
-        modparams++;
         break;
 
       default:
