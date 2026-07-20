@@ -112,6 +112,9 @@ jobs:
                   cd src
                   make test
 
+            - name: Check ESI-generated headers are current
+              run: ./scripts/check-generated-headers.sh
+
             - name: Upload deb artifact
               uses: actions/upload-artifact@v7
               with:

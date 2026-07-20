@@ -51,7 +51,9 @@ typedef enum {
   lcecConfTypeIdnDataRaw,
   lcecConfTypeInitCmds,
   lcecConfTypeComplexEntry,
-  lcecConfTypeModParam
+  lcecConfTypeModParam,
+  lcecConfTypeSubModule,          /// XXX: Submodule Implementation
+  lcecConfTypeSubModuleModParam,  /// Submodule Implementation
 } LCEC_CONF_TYPE_T;
 
 typedef enum {
@@ -166,6 +168,15 @@ typedef struct {
   size_t length;
   uint8_t data[];
 } LCEC_CONF_IDNCONF_T;
+
+/// XXX: submodule implementation
+typedef struct {
+  LCEC_CONF_TYPE_T confType;
+  uint8_t id;  // slot id
+  uint32_t ident;
+  unsigned int modParamCount;
+  char name[LCEC_CONF_STR_MAXLEN];
+} LCEC_CONF_SUBMODULE_T;
 
 typedef union {
   hal_bit_t bit;
