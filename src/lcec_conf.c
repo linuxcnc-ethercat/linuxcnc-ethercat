@@ -295,10 +295,10 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
 
     // parse syncToRefClock
     if (strcmp(name, "syncToRefClock") == 0) {
-      p->syncToRefClock = (strcasecmp(val, "true") == 0) ? 1 : -1; // -1 = Need to know if option was given
-      continue; // TODO: A general function that can handle four states: yes, no, not given, wrong. Recognize yes/on/true/1/enabled as true
+      p->syncToRefClock = (strcasecmp(val, "true") == 0) ? 1 : -1;  // -1 = Need to know if option was given
+      continue;  // TODO: A general function that can handle four states: yes, no, not given, wrong. Recognize yes/on/true/1/enabled as true
     }
- 
+
     // handle error
     fprintf(stderr, "%s: ERROR: Invalid master attribute %s\n", modname, name);
     XML_StopParser(inst->parser, 0);
@@ -317,8 +317,7 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
   int given_cycles = p->refClockSyncCycles;
 
   if (given_cycles < -1) {
-    fprintf(stderr, "%s: ERROR: refClockSyncCycles=%d invalid, only -1, 0, or positive values allowed\n",
-        modname, given_cycles);
+    fprintf(stderr, "%s: ERROR: refClockSyncCycles=%d invalid, only -1, 0, or positive values allowed\n", modname, given_cycles);
     XML_StopParser(inst->parser, 0);
     return;
   }
@@ -333,8 +332,8 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
       fprintf(stderr, "%s: WARNING: syncToRefClock=\"true\" with refClockSyncCycles=%d is redundant, just use refClockSyncCycles=\"-1\"\n",
           modname, given_cycles);
     } else if (given_cycles > 0) {
-      fprintf(stderr, "%s: ERROR: syncToRefClock=\"true\" conflicts with refClockSyncCycles=%d (positive = R2M mode)\n",
-          modname, given_cycles);
+      fprintf(
+          stderr, "%s: ERROR: syncToRefClock=\"true\" conflicts with refClockSyncCycles=%d (positive = R2M mode)\n", modname, given_cycles);
       XML_StopParser(inst->parser, 0);
       return;
     }
@@ -344,8 +343,8 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
   } else {
     // syncToRefClock="false"
     if (given_cycles < 0) {
-      fprintf(stderr, "%s: ERROR: syncToRefClock=\"false\" conflicts with refClockSyncCycles=%d (negative = M2R mode)\n",
-          modname, given_cycles);
+      fprintf(stderr, "%s: ERROR: syncToRefClock=\"false\" conflicts with refClockSyncCycles=%d (negative = M2R mode)\n", modname,
+          given_cycles);
       XML_StopParser(inst->parser, 0);
       return;
     }
@@ -356,7 +355,7 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
     p->syncToRefClock = 0;
     // refClockSyncCycles already >= 0, keep as-is
   }
-  
+
   // set default name
   if (p->name[0] == 0) {
     snprintf(p->name, LCEC_CONF_STR_MAXLEN, "%d", p->index);
@@ -487,8 +486,7 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
     return;
   }
 
-  if (p->syncUnitCycle == 0 || state->currMaster->appTimePeriod == 0 ||
-      (p->syncUnitCycle % state->currMaster->appTimePeriod) != 0) {
+  if (p->syncUnitCycle == 0 || state->currMaster->appTimePeriod == 0 || (p->syncUnitCycle % state->currMaster->appTimePeriod) != 0) {
     fprintf(stderr, "%s: ERROR: Slave %s syncUnitCycle %u is not a positive multiple of appTimePeriod %u\n", modname, p->name,
         p->syncUnitCycle, state->currMaster->appTimePeriod);
     XML_StopParser(inst->parser, 0);
