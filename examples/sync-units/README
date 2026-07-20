@@ -1,0 +1,13 @@
+Sync Unit example
+=================
+
+This example splits one 1 ms EtherCAT master into two process-data domains:
+
+- "slow" is exchanged every 2 ms.
+- "fast" is exchanged every 1 ms.
+
+All slaves sharing a syncUnit name must specify the same syncUnitCycle. If both
+attributes are omitted, the slave uses the default Sync Unit at the master rate.
+
+Replace the placeholder slave types and IDs in ethercat-conf.xml with the actual
+devices and PDO mappings.
