@@ -1,3 +1,14 @@
+linuxcnc-ethercat (1.42.0-1) unstable; urgency=low
+
+  * feat(main): add domain WKC monitoring pins to the master
+    (wkc, wkc-min, wkc-change-count, wkc-state, wkc-reset) and DC
+    synchrony monitoring pins (dc-sync-diff, dc-sync-converged,
+    dc-sync-max, dc-sync-monitor), with invalidation of the DC-sync
+    pins on communication loss.
+  * docs: document the master WKC and DC synchrony monitoring pins.
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Tue, 21 Jul 2026 15:50:00 +0800
+
 linuxcnc-ethercat (1.41.2-1) unstable; urgency=low
 
   * fix(syncs): bounds-check the dynamic PDO layout and report an
