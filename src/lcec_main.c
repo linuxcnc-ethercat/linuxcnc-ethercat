@@ -1625,14 +1625,10 @@ void lcec_write_master(void *arg, long period) {
       // Negative error (app_phase < target) means we need to slow down to increase app_phase
       int32_t phase_error = current_app_phase - hal_data->phase_target;
 
-      // Set pll_err for monitoring
-      //*(hal_data->pll_err) = raw_offset + drift;
+      // In R2M mode this is the error actually being controlled, report it
+      // on pll_err (the raw app-vs-DC offset below is M2R-only)
+      *(hal_data->pll_err) = phase_error;
 
-      // Check if locked (within 10% of jitter or 1% of app_period, whichever is larger)
-      int32_t lock_threshold = 0;  // hal_data->phase_jitter;
-      if (lock_threshold < app_period / 100) {
-        lock_threshold = app_period / 100;
-      }
       if (abs(phase_error) < abs(hal_data->pll_step) * 3) {
         *(hal_data->dc_phased) = 1;
       } else if (abs(phase_error) > abs(hal_data->pll_step) * 20) {
@@ -1663,7 +1659,12 @@ void lcec_write_master(void *arg, long period) {
   }
 
   // the first read dc_time value seems to be invalid, so wait for two successive successful reads
-  if (dc_time_valid && master->dc_time_valid_last) {
+  // This block is M2R-only: in R2M mode the master is the clock source and
+  // the raw app_time-vs-dc_time offset is arbitrary, unbounded and not
+  // corrected by anything. Publishing it on pll_err and keying dc_phased on
+  // it made dc_phased flicker every time the drifting offset crossed the
+  // lock window, and suppressed the phase-calibration correction above.
+  if (dc_time_valid && master->dc_time_valid_last && master->sync_to_ref_clock) {
     // Raw offset between app_time and dc_time (this is what varies at each startup)
     int32_t raw_offset = master->app_time_last - dc_time;
 
@@ -1673,16 +1674,14 @@ void lcec_write_master(void *arg, long period) {
     //   other = same as 1 (manual)
     int32_t drift = 0;
     int32_t mode = *(hal_data->drift_mode);
-    if (master->sync_to_ref_clock) {
-      if (mode == 0) {
-        // Mode 0: simple - (app_period - app_phase) % app_period
-        int32_t calc_val = (app_period - current_app_phase) % app_period;
-        if (calc_val < 0) calc_val += app_period;
-        if (hal_data->auto_drift_delay > 0) {
-          hal_data->auto_drift_delay--;
-        } else {
-          drift = calc_val;
-        }
+    if (mode == 0) {
+      // Mode 0: simple - (app_period - app_phase) % app_period
+      int32_t calc_val = (app_period - current_app_phase) % app_period;
+      if (calc_val < 0) calc_val += app_period;
+      if (hal_data->auto_drift_delay > 0) {
+        hal_data->auto_drift_delay--;
+      } else {
+        drift = calc_val;
       }
     }
     // Mode 1 or other: use manual pll-drift value
@@ -1698,24 +1697,21 @@ void lcec_write_master(void *arg, long period) {
     // Only run automatic PLL adjustment when sync_to_ref_clock is enabled
     // When sync_to_ref_clock = false, master is the clock source, DC syncs to us
     // When sync_to_ref_clock = true, DC is the clock source, we sync to DC
-    if (master->sync_to_ref_clock) {
-      // check for invalid error values
-      if (abs(*(hal_data->pll_err)) > hal_data->pll_max_err) {
-        // force resync of master time
-        master->dc_ref -= *(hal_data->pll_err);
-        // skip next control cycle to allow resync
-        dc_time_valid = 0;
-        // increment reset counter to document this event
-        (*(hal_data->pll_reset_cnt))++;
-        // Reset auto-drift delay on resync
-        if (*(hal_data->drift_mode) == 0) {
-          hal_data->auto_drift_delay = 100;
-        }
-      } else {
-        *(hal_data->pll_out) = (*(hal_data->pll_err) < 0) ? -(hal_data->pll_step) : (hal_data->pll_step);
+    // check for invalid error values
+    if (abs(*(hal_data->pll_err)) > hal_data->pll_max_err) {
+      // force resync of master time
+      master->dc_ref -= *(hal_data->pll_err);
+      // skip next control cycle to allow resync
+      dc_time_valid = 0;
+      // increment reset counter to document this event
+      (*(hal_data->pll_reset_cnt))++;
+      // Reset auto-drift delay on resync
+      if (*(hal_data->drift_mode) == 0) {
+        hal_data->auto_drift_delay = 100;
       }
+    } else {
+      *(hal_data->pll_out) = (*(hal_data->pll_err) < 0) ? -(hal_data->pll_step) : (hal_data->pll_step);
     }
-    // Note: When sync_to_ref_clock = false, pll_out is set in the phase calibration code above
   }
 
   // Apply PLL correction with debug offset
