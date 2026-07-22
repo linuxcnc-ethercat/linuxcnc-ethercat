@@ -68,6 +68,7 @@ static const lcec_pindesc_t master_pins[] = {
     {HAL_S32, HAL_IN, offsetof(lcec_master_data_t, drift_mode), "%s.drift-mode"},
     {HAL_S32, HAL_IN, offsetof(lcec_master_data_t, pll_drift), "%s.pll-drift"},
     {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_final), "%s.pll-final"},
+    {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, dc_ref_err), "%s.dc-ref-err"},
 #endif
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, wkc), "%s.wkc"},
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, wkc_min), "%s.wkc-min"},
@@ -1548,6 +1549,7 @@ void lcec_write_master(void *arg, long period) {
   *(hal_data->pll_err) = 0;
   *(hal_data->pll_out) = 0;
   *(hal_data->dc_phased) = 0;
+  *(hal_data->dc_ref_err) = 0;
 
   // Calculate app_phase: our execution position in local cycle
   // This is relative to dc_ref_time (the time we set at activation)
@@ -1658,6 +1660,15 @@ void lcec_write_master(void *arg, long period) {
     }
   }
 
+  // Raw offset between app_time and the DC reference clock. Published on
+  // dc-ref-err in both modes (diagnostic only; in R2M this is the re-anchor
+  // wave that previously polluted pll-err). Control use below is M2R-only.
+  int32_t raw_offset = 0;
+  if (dc_time_valid && master->dc_time_valid_last) {
+    raw_offset = master->app_time_last - dc_time;
+    *(hal_data->dc_ref_err) = raw_offset;
+  }
+
   // the first read dc_time value seems to be invalid, so wait for two successive successful reads
   // This block is M2R-only: in R2M mode the master is the clock source and
   // the raw app_time-vs-dc_time offset is arbitrary, unbounded and not
@@ -1665,9 +1676,6 @@ void lcec_write_master(void *arg, long period) {
   // it made dc_phased flicker every time the drifting offset crossed the
   // lock window, and suppressed the phase-calibration correction above.
   if (dc_time_valid && master->dc_time_valid_last && master->sync_to_ref_clock) {
-    // Raw offset between app_time and dc_time (this is what varies at each startup)
-    int32_t raw_offset = master->app_time_last - dc_time;
-
     // Apply drift compensation based on drift-mode:
     //   0 = simple: (app_period - app_phase) % app_period
     //   1 = manual: use pll-drift pin value

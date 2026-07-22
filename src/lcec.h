@@ -197,6 +197,7 @@ typedef struct lcec_master_data {
   hal_s32_t *drift_mode;        // Input: 0=simple, 1=manual
   hal_s32_t *pll_drift;         // Input: debug offset added to PLL correction (ns)
   hal_s32_t *pll_final;         // Output: final PLL correction value sent to rtapi (ns)
+  hal_s32_t *dc_ref_err;        // Output: raw app_time vs DC reference clock offset (ns), diagnostic only
   int32_t auto_drift_delay;     // Internal: auto-drift delay counter
 #endif
   // Domain working counter monitoring
