@@ -69,6 +69,8 @@ static const lcec_pindesc_t master_pins[] = {
     {HAL_S32, HAL_IN, offsetof(lcec_master_data_t, pll_drift), "%s.pll-drift"},
     {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_final), "%s.pll-final"},
     {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, dc_ref_err), "%s.dc-ref-err"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_master_data_t, dc_ref_locked), "%s.dc-ref-locked"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, dc_ref_cadence_out), "%s.dc-ref-cadence"},
 #endif
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, wkc), "%s.wkc"},
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, wkc_min), "%s.wkc-min"},
@@ -85,6 +87,7 @@ static const lcec_paramdesc_t master_params[] = {
 #ifdef RTAPI_TASK_PLL_SUPPORT
     {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, pll_step), "%s.pll-step"},
     {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, pll_max_err), "%s.pll-max-err"},
+    {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, dc_ref_lock_max), "%s.dc-ref-lock-max"},
 #endif
     {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, dc_sync_max), "%s.dc-sync-max"},
     {HAL_BIT, HAL_RW, offsetof(lcec_master_data_t, dc_sync_monitor), "%s.dc-sync-monitor"},
@@ -373,6 +376,12 @@ int rtapi_app_main(void) {
     master->hal_data->pll_max_err = master->app_time_period;
     // Initialize auto-drift delay counter (wait 100 cycles before applying)
     master->hal_data->auto_drift_delay = 100;
+    // R2M ref-clock convergence: advance threshold period/80 (12.5 us at
+    // 1 ms), evaluated on the peak offset per ~500 ms observation window
+    master->hal_data->dc_ref_lock_max = (master->app_time_period > 0) ? master->app_time_period / 80 : 12500;
+    master->hal_data->dc_ref_lock_dwell =
+        (master->app_time_period > 0) ? (int32_t)(500000000LL / master->app_time_period) : 500;
+    master->hal_data->dc_ref_cadence = 1;
 #endif
     // DC synchrony convergence threshold: 4% of period (10 us at 4 kHz);
     // app_time_period can be 0 here when the XML omits appTimePeriod.
@@ -1522,8 +1531,17 @@ void lcec_write_master(void *arg, long period) {
 
   // sync ref clock to master
   if (!master->sync_to_ref_clock) {
+    // Adaptive anchor cadence: start anchoring every cycle, then gradually
+    // wean the ref slave's DC control loop off dense anchors by doubling the
+    // cadence each time the offset holds in-threshold, up to the configured
+    // refClockSyncCycles. A configured value of 0 (free running) or 1 is
+    // kept as-is.
+    int cadence = master->sync_ref_cycles;
+    if (cadence > 1 && master->hal_data->dc_ref_cadence < cadence) {
+      cadence = master->hal_data->dc_ref_cadence;
+    }
     if (master->sync_ref_cnt == 0) {
-      master->sync_ref_cnt = master->sync_ref_cycles;
+      master->sync_ref_cnt = cadence;
       ecrt_master_sync_reference_clock(master->master);
     }
     master->sync_ref_cnt--;
@@ -1667,6 +1685,46 @@ void lcec_write_master(void *arg, long period) {
   if (dc_time_valid && master->dc_time_valid_last) {
     raw_offset = master->app_time_last - dc_time;
     *(hal_data->dc_ref_err) = raw_offset;
+
+    if (!master->sync_to_ref_clock) {
+      // Cadence ramp, gated on the measured peak offset per observation
+      // window (~500 ms) rather than on time:
+      //   peak < dc_ref_lock_max          -> quiet at this density, double
+      //   peak > 2x dc_ref_lock_max       -> cannot hold it, halve
+      //   peak > 4x dc_ref_lock_max       -> losing it, per-cycle retrain
+      // The cadence self-seeks the sparsest anchoring the slave's DC
+      // control loop can genuinely hold, tightening early and widening as
+      // the loop learns.
+      int32_t abs_off = (raw_offset < 0) ? -raw_offset : raw_offset;
+      int32_t target = master->sync_ref_cycles;
+      if (abs_off > hal_data->dc_ref_peak) {
+        hal_data->dc_ref_peak = abs_off;
+      }
+      if (target <= 1) {
+        // 0 (free running) or 1: no adaptivity
+      } else if (abs_off > (int32_t)hal_data->dc_ref_lock_max * 4) {
+        hal_data->dc_ref_cadence = 1;
+        hal_data->dc_ref_lock_cnt = 0;
+        hal_data->dc_ref_peak = 0;
+        *(hal_data->dc_ref_locked) = 0;
+      } else if (hal_data->dc_ref_lock_cnt < hal_data->dc_ref_lock_dwell) {
+        hal_data->dc_ref_lock_cnt++;
+      } else {
+        if (hal_data->dc_ref_peak < (int32_t)hal_data->dc_ref_lock_max && hal_data->dc_ref_cadence < target) {
+          hal_data->dc_ref_cadence *= 2;
+          if (hal_data->dc_ref_cadence > target) {
+            hal_data->dc_ref_cadence = target;
+          }
+        } else if (hal_data->dc_ref_peak > (int32_t)hal_data->dc_ref_lock_max * 2 && hal_data->dc_ref_cadence > 1) {
+          hal_data->dc_ref_cadence /= 2;
+        }
+        hal_data->dc_ref_lock_cnt = 0;
+        hal_data->dc_ref_peak = 0;
+      }
+      *(hal_data->dc_ref_locked) = (target <= 1 || hal_data->dc_ref_cadence >= target) ? 1 : 0;
+      *(hal_data->dc_ref_cadence_out) =
+          (target > 1 && hal_data->dc_ref_cadence < target) ? (hal_u32_t)hal_data->dc_ref_cadence : (hal_u32_t)target;
+    }
   }
 
   // the first read dc_time value seems to be invalid, so wait for two successive successful reads

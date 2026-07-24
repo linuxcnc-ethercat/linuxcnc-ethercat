@@ -198,6 +198,13 @@ typedef struct lcec_master_data {
   hal_s32_t *pll_drift;         // Input: debug offset added to PLL correction (ns)
   hal_s32_t *pll_final;         // Output: final PLL correction value sent to rtapi (ns)
   hal_s32_t *dc_ref_err;        // Output: raw app_time vs DC reference clock offset (ns), diagnostic only
+  hal_bit_t *dc_ref_locked;     // Output: R2M running at configured refClockSyncCycles
+  hal_u32_t *dc_ref_cadence_out;  // Output: current anchor cadence (cycles between anchors)
+  hal_u32_t dc_ref_lock_max;    // Param: advance threshold; peak |dc-ref-err| (ns) to earn sparser anchoring
+  int32_t dc_ref_cadence;       // Internal: current anchor cadence (ramps 1..configured)
+  int32_t dc_ref_lock_cnt;      // Internal: observation window counter
+  int32_t dc_ref_lock_dwell;    // Internal: observation window length (~500 ms)
+  int32_t dc_ref_peak;          // Internal: peak |dc-ref-err| in the current window (ns)
   int32_t auto_drift_delay;     // Internal: auto-drift delay counter
 #endif
   // Domain working counter monitoring
