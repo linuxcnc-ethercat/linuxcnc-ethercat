@@ -203,7 +203,7 @@ typedef struct lcec_master_data {
   hal_u32_t dc_ref_lock_max;    // Param: advance threshold; peak |dc-ref-err| (ns) to earn sparser anchoring
   int32_t dc_ref_cadence;       // Internal: current anchor cadence (ramps 1..configured)
   int32_t dc_ref_lock_cnt;      // Internal: observation window counter
-  int32_t dc_ref_lock_dwell;    // Internal: observation window length (~500 ms)
+  hal_u32_t dc_ref_lock_dwell;  // Param: observation window in cycles (default ~5 s per cadence step)
   int32_t dc_ref_peak;          // Internal: peak |dc-ref-err| in the current window (ns)
   int32_t auto_drift_delay;     // Internal: auto-drift delay counter
   int32_t phase_locked;         // Internal: instantaneous phase-lock state (hysteresis)

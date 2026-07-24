@@ -88,6 +88,7 @@ static const lcec_paramdesc_t master_params[] = {
     {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, pll_step), "%s.pll-step"},
     {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, pll_max_err), "%s.pll-max-err"},
     {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, dc_ref_lock_max), "%s.dc-ref-lock-max"},
+    {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, dc_ref_lock_dwell), "%s.dc-ref-lock-dwell"},
 #endif
     {HAL_U32, HAL_RW, offsetof(lcec_master_data_t, dc_sync_max), "%s.dc-sync-max"},
     {HAL_BIT, HAL_RW, offsetof(lcec_master_data_t, dc_sync_monitor), "%s.dc-sync-monitor"},
@@ -377,10 +378,13 @@ int rtapi_app_main(void) {
     // Initialize auto-drift delay counter (wait 100 cycles before applying)
     master->hal_data->auto_drift_delay = 100;
     // R2M ref-clock convergence: advance threshold period/80 (12.5 us at
-    // 1 ms), evaluated on the peak offset per ~500 ms observation window
+    // 1 ms), evaluated on the peak offset per observation window. The
+    // window must cover a meaningful fraction of the slave DC control
+    // loop's natural period (observed several seconds) or a lucky quiet
+    // stretch of a wave passes as convergence, so default to ~5 s.
     master->hal_data->dc_ref_lock_max = (master->app_time_period > 0) ? master->app_time_period / 80 : 12500;
     master->hal_data->dc_ref_lock_dwell =
-        (master->app_time_period > 0) ? (int32_t)(500000000LL / master->app_time_period) : 500;
+        (master->app_time_period > 0) ? (hal_u32_t)(5000000000LL / master->app_time_period) : 5000;
     master->hal_data->dc_ref_cadence = 1;
     // dc-phased dwell: ~200 ms worth of cycles before the pin may transition
     master->hal_data->phase_lock_dwell =
@@ -1741,7 +1745,7 @@ void lcec_write_master(void *arg, long period) {
         hal_data->dc_ref_lock_cnt = 0;
         hal_data->dc_ref_peak = 0;
         *(hal_data->dc_ref_locked) = 0;
-      } else if (hal_data->dc_ref_lock_cnt < hal_data->dc_ref_lock_dwell) {
+      } else if (hal_data->dc_ref_lock_cnt < (int32_t)hal_data->dc_ref_lock_dwell) {
         hal_data->dc_ref_lock_cnt++;
       } else {
         if (hal_data->dc_ref_peak < (int32_t)hal_data->dc_ref_lock_max && hal_data->dc_ref_cadence < target) {
