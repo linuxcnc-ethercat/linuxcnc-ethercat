@@ -206,6 +206,10 @@ typedef struct lcec_master_data {
   int32_t dc_ref_lock_dwell;    // Internal: observation window length (~500 ms)
   int32_t dc_ref_peak;          // Internal: peak |dc-ref-err| in the current window (ns)
   int32_t auto_drift_delay;     // Internal: auto-drift delay counter
+  int32_t phase_locked;         // Internal: instantaneous phase-lock state (hysteresis)
+  int32_t phase_lock_cnt;       // Internal: consecutive locked cycles (dc-phased dwell)
+  int32_t phase_unlock_cnt;     // Internal: consecutive unlocked cycles (dc-phased dwell)
+  int32_t phase_lock_dwell;     // Internal: dwell cycles for dc-phased transitions (~200 ms)
 #endif
   // Domain working counter monitoring
   hal_u32_t *wkc;             // Output: current domain working counter
