@@ -373,6 +373,9 @@ int rtapi_app_main(void) {
     master->hal_data->pll_max_err = master->app_time_period;
     // Initialize auto-drift delay counter (wait 100 cycles before applying)
     master->hal_data->auto_drift_delay = 100;
+    // dc-phased dwell: ~200 ms worth of cycles before the pin may transition
+    master->hal_data->phase_lock_dwell =
+        (master->app_time_period > 0) ? (int32_t)(200000000LL / master->app_time_period) : 200;
 #endif
     // DC synchrony convergence threshold: 4% of period (10 us at 4 kHz);
     // app_time_period can be 0 here when the XML omits appTimePeriod.
@@ -1548,8 +1551,9 @@ void lcec_write_master(void *arg, long period) {
   hal_data = master->hal_data;
   *(hal_data->pll_err) = 0;
   *(hal_data->pll_out) = 0;
-  *(hal_data->dc_phased) = 0;
   *(hal_data->dc_ref_err) = 0;
+  // Note: dc_phased is deliberately NOT cleared here; it is a dwell-filtered
+  // lock indicator with state, assigned explicitly in every path below.
 
   // Calculate app_phase: our execution position in local cycle
   // This is relative to dc_ref_time (the time we set at activation)
@@ -1565,6 +1569,8 @@ void lcec_write_master(void *arg, long period) {
 #define PHASE_MEASURE_CYCLES 100
 
     if (!hal_data->phase_calibrated) {
+      // Not locked while measuring
+      *(hal_data->dc_phased) = 0;
       // Phase 1: Measure app_phase jitter over PHASE_MEASURE_CYCLES cycles
       if (hal_data->phase_measure_cnt == 0) {
         // First measurement - initialize
@@ -1612,6 +1618,9 @@ void lcec_write_master(void *arg, long period) {
 
         hal_data->phase_target = target;
         hal_data->phase_calibrated = 1;
+        hal_data->phase_locked = 0;
+        hal_data->phase_lock_cnt = 0;
+        hal_data->phase_unlock_cnt = 0;
 
         rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "Phase calibration complete: jitter=%d target=%d\n", hal_data->phase_jitter,
             hal_data->phase_target);
@@ -1631,22 +1640,47 @@ void lcec_write_master(void *arg, long period) {
       // on pll_err (the raw app-vs-DC offset below is M2R-only)
       *(hal_data->pll_err) = phase_error;
 
-      if (abs(phase_error) < abs(hal_data->pll_step) * 3) {
-        *(hal_data->dc_phased) = 1;
-      } else if (abs(phase_error) > abs(hal_data->pll_step) * 20) {
-        *(hal_data->dc_phased) = 0;
+      // Instantaneous lock state with true hysteresis, decoupled from
+      // pll_step so the pll-step=0 diagnostic freeze does not break lock
+      // detection. Lock within period/100, unlock beyond period/20.
+      int32_t lock_win = app_period / 100;
+      int32_t unlock_win = app_period / 20;
+      if (abs(phase_error) < lock_win) {
+        hal_data->phase_locked = 1;
+      } else if (abs(phase_error) > unlock_win) {
+        hal_data->phase_locked = 0;
       }
 
       // BANG-BANG control: small steps to move towards target
       // Positive pll_out = slow down = app_phase increases
       // Negative pll_out = speed up = app_phase decreases
-      if (*(hal_data->dc_phased)) {
+      if (hal_data->phase_locked) {
         *(hal_data->pll_out) = 0;
       } else {
         if (phase_error > 0) {
           *(hal_data->pll_out) = -(hal_data->pll_step);  // Speed up to reduce app_phase
         } else if (phase_error < 0) {
           *(hal_data->pll_out) = hal_data->pll_step;  // Slow down to increase app_phase
+        }
+      }
+
+      // dc-phased pin: dwell-filtered version of the lock state. The pin is
+      // wired into machine-enable logic by users, so it must not strobe on
+      // single latency spikes: it sets only after phase_lock_dwell (~200 ms)
+      // consecutive locked cycles and clears only after ~200 ms unlocked.
+      if (hal_data->phase_locked) {
+        hal_data->phase_unlock_cnt = 0;
+        if (hal_data->phase_lock_cnt < hal_data->phase_lock_dwell) {
+          hal_data->phase_lock_cnt++;
+        } else {
+          *(hal_data->dc_phased) = 1;
+        }
+      } else {
+        hal_data->phase_lock_cnt = 0;
+        if (hal_data->phase_unlock_cnt < hal_data->phase_lock_dwell) {
+          hal_data->phase_unlock_cnt++;
+        } else {
+          *(hal_data->dc_phased) = 0;
         }
       }
 
@@ -1698,9 +1732,7 @@ void lcec_write_master(void *arg, long period) {
 
     // PLL is considered phased if error is within 10% of period
     int32_t lock_threshold = master->app_time_period / 10;
-    if (abs(*(hal_data->pll_err)) < lock_threshold) {
-      *(hal_data->dc_phased) = 1;
-    }
+    *(hal_data->dc_phased) = (abs(*(hal_data->pll_err)) < lock_threshold) ? 1 : 0;
 
     // Only run automatic PLL adjustment when sync_to_ref_clock is enabled
     // When sync_to_ref_clock = false, master is the clock source, DC syncs to us
@@ -1720,6 +1752,9 @@ void lcec_write_master(void *arg, long period) {
     } else {
       *(hal_data->pll_out) = (*(hal_data->pll_err) < 0) ? -(hal_data->pll_step) : (hal_data->pll_step);
     }
+  } else if (master->sync_to_ref_clock) {
+    // M2R without valid DC time reads: not phased
+    *(hal_data->dc_phased) = 0;
   }
 
   // Apply PLL correction with debug offset
@@ -1731,8 +1766,10 @@ void lcec_write_master(void *arg, long period) {
     // sync_to_ref_clock = true: always use PLL output for continuous sync
     pll_correction = *(hal_data->pll_out) + *(hal_data->pll_drift);
   } else {
-    // sync_to_ref_clock = false: stop adjusting once locked
-    if (*(hal_data->dc_phased)) {
+    // sync_to_ref_clock = false: stop adjusting once locked. Gate on the
+    // instantaneous lock state, not the dwell-filtered dc-phased pin, so
+    // correction resumes immediately when the phase leaves the window.
+    if (hal_data->phase_locked) {
       pll_correction = *(hal_data->pll_drift);
     } else {
       pll_correction = *(hal_data->pll_out) + *(hal_data->pll_drift);
