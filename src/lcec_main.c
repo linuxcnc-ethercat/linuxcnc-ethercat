@@ -1525,8 +1525,9 @@ void lcec_write_master(void *arg, long period) {
   }
 #endif
 
-  // sync ref clock to master
-  if (!master->sync_to_ref_clock) {
+  // sync ref clock to master (skip when free running: sync_ref_cycles == 0,
+  // the datagram is pointless and sync_ref_cnt would just run negative)
+  if (!master->sync_to_ref_clock && master->sync_ref_cycles > 0) {
     if (master->sync_ref_cnt == 0) {
       master->sync_ref_cnt = master->sync_ref_cycles;
       ecrt_master_sync_reference_clock(master->master);
