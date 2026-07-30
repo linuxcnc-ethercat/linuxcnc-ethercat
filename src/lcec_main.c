@@ -1514,9 +1514,19 @@ void lcec_write_master(void *arg, long period) {
 
   // Read DC reference clock time (must be before sync_slave_clocks which
   // re-queues the sync datagram and overwrites the received data)
+  //
+  // Skipped when the master runs free, i.e. when no DC sync is configured in
+  // either direction. The ioctl fails there, and the userspace library prints
+  // the failure to stderr from this thread on every cycle. Both terms are
+  // needed: R2M (syncToRefClock=0, refClockSyncCycles>0) is a DC mode and also
+  // has sync_to_ref_clock == 0, so the direction flag alone does not
+  // distinguish it from free running.
 #ifdef RTAPI_TASK_PLL_SUPPORT
   uint32_t dc_time = 0;
-  int dc_time_valid = (ecrt_master_reference_clock_time(master->master, &dc_time) == 0);
+  int dc_time_valid = 0;
+  if (master->sync_to_ref_clock || master->sync_ref_cycles) {
+    dc_time_valid = (ecrt_master_reference_clock_time(master->master, &dc_time) == 0);
+  }
 #endif
 
   // sync ref clock to master
