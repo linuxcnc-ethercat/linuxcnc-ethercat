@@ -1725,14 +1725,14 @@ void lcec_write_master(void *arg, long period) {
     *(hal_data->dc_ref_err) = raw_offset;
 
     if (!master->sync_to_ref_clock) {
-      // Cadence ramp, gated on the measured peak offset per observation
-      // window (~500 ms) rather than on time:
-      //   peak < dc_ref_lock_max          -> quiet at this density, double
-      //   peak > 2x dc_ref_lock_max       -> cannot hold it, halve
-      //   peak > 4x dc_ref_lock_max       -> losing it, per-cycle retrain
-      // The cadence self-seeks the sparsest anchoring the slave's DC
-      // control loop can genuinely hold, tightening early and widening as
-      // the loop learns.
+      // Cadence ramp with asymmetric response (slow attack, fast release):
+      //   advance: peak < dc_ref_lock_max for a full observation window
+      //            (~5 s of proven quiet) -> double the cadence
+      //   retreat: 10 consecutive cycles over 2x -> halve immediately, so a
+      //            wave cannot resonate against the anchor cadence
+      //   panic:   any cycle over 4x -> drop to per-cycle retraining
+      // The cadence self-seeks the sparsest density the slave's DC control
+      // loop can genuinely hold.
       int32_t abs_off = (raw_offset < 0) ? -raw_offset : raw_offset;
       int32_t target = master->sync_ref_cycles;
       if (abs_off > hal_data->dc_ref_peak) {
@@ -1743,21 +1743,33 @@ void lcec_write_master(void *arg, long period) {
       } else if (abs_off > (int32_t)hal_data->dc_ref_lock_max * 4) {
         hal_data->dc_ref_cadence = 1;
         hal_data->dc_ref_lock_cnt = 0;
+        hal_data->dc_ref_over_cnt = 0;
         hal_data->dc_ref_peak = 0;
         *(hal_data->dc_ref_locked) = 0;
-      } else if (hal_data->dc_ref_lock_cnt < (int32_t)hal_data->dc_ref_lock_dwell) {
-        hal_data->dc_ref_lock_cnt++;
-      } else {
-        if (hal_data->dc_ref_peak < (int32_t)hal_data->dc_ref_lock_max && hal_data->dc_ref_cadence < target) {
-          hal_data->dc_ref_cadence *= 2;
-          if (hal_data->dc_ref_cadence > target) {
-            hal_data->dc_ref_cadence = target;
-          }
-        } else if (hal_data->dc_ref_peak > (int32_t)hal_data->dc_ref_lock_max * 2 && hal_data->dc_ref_cadence > 1) {
+      } else if (abs_off > (int32_t)hal_data->dc_ref_lock_max * 2) {
+        if (hal_data->dc_ref_over_cnt < 10) {
+          hal_data->dc_ref_over_cnt++;
+        } else if (hal_data->dc_ref_cadence > 1) {
           hal_data->dc_ref_cadence /= 2;
+          hal_data->dc_ref_over_cnt = 0;
+          hal_data->dc_ref_lock_cnt = 0;
+          hal_data->dc_ref_peak = 0;
+          *(hal_data->dc_ref_locked) = 0;
         }
-        hal_data->dc_ref_lock_cnt = 0;
-        hal_data->dc_ref_peak = 0;
+      } else {
+        hal_data->dc_ref_over_cnt = 0;
+        if (hal_data->dc_ref_lock_cnt < (int32_t)hal_data->dc_ref_lock_dwell) {
+          hal_data->dc_ref_lock_cnt++;
+        } else {
+          if (hal_data->dc_ref_peak < (int32_t)hal_data->dc_ref_lock_max && hal_data->dc_ref_cadence < target) {
+            hal_data->dc_ref_cadence *= 2;
+            if (hal_data->dc_ref_cadence > target) {
+              hal_data->dc_ref_cadence = target;
+            }
+          }
+          hal_data->dc_ref_lock_cnt = 0;
+          hal_data->dc_ref_peak = 0;
+        }
       }
       *(hal_data->dc_ref_locked) = (target <= 1 || hal_data->dc_ref_cadence >= target) ? 1 : 0;
       *(hal_data->dc_ref_cadence_out) =
