@@ -1,3 +1,15 @@
+linuxcnc-ethercat (1.42.1-1) unstable; urgency=low
+
+  * fix(main): skip the DC reference-clock read when the master runs
+    free. The ioctl fails there and the IgH library prints the failure
+    to stderr from the cyclic thread, which can block for milliseconds
+    when stderr sits on a writeback filesystem. pll-err now reads 0 in
+    free-running mode (the previous value compared against an
+    unsynchronised clock and never reached the control path).
+  * docs: warn against installing with a pending kernel update.
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Thu, 30 Jul 2026 11:21:19 +0800
+
 linuxcnc-ethercat (1.42.0-1) unstable; urgency=low
 
   * feat(main): add domain WKC monitoring pins to the master
