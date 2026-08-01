@@ -95,7 +95,7 @@ Description | Driver | EtherCAT VID:PID | Device Type | Testing Status | Notes
 [Beckhoff EL2124 4Ch. Dig. Output 5V, 20mA](http://www.beckhoff.com/EL2124) | [el2xxx](../src/devices/lcec_el2xxx.c) | 0x2:0x084c3052 | Digital Output |  | 
 [Beckhoff EL2202 2Ch. Dig. Output 24V, 0.5A, DC Sync](http://www.beckhoff.com/EL2202) | [el2202](../src/devices/lcec_el2202.c) | 0x2:0x089a3052 | Digital Output |  | 
 [Beckhoff EL2521 1Ch. Pulse Train Output](http://www.beckhoff.com/EL2521) | [el2521](../src/devices/lcec_el2521.c) | 0x2:0x09d93052 | Digital Output |  | 
-[EL2564 | EtherCAT Terminal, 4-channel LED output, 5…48 V DC, 4 A, RGBW, common anode](http://www.beckhoff.com/EL2564) | [el2564](../src/devices/lcec_el2564.c) | 0x2:0x0a043052 | Digital Output Terminals | Tested and working @mintracer and @medikusDKFZ | gamma / ramp-time / PWM frequency are configured via driver
+[Beckhoff EL2564 4Ch. LED output, 5…48 V DC, 4 A, RGBW, common anode](http://www.beckhoff.com/EL2564) | [el2564](../src/devices/lcec_el2564.c) | 0x2:0x0a043052 | Digital Output Terminals | Tested and working @mintracer and @medikusDKFZ, gamma / ramp-time / PWM frequency are configured via driver
 [Beckhoff EL2612 2Ch. Relay Output, CO (125V AC / 30V DC)](http://www.beckhoff.com/EL2612) | [el2xxx](../src/devices/lcec_el2xxx.c) | 0x2:0x0a343052 | Digital Output |  | 
 [Beckhoff EL2622 2Ch. Relay Output, NO (230V AC / 30V DC)](http://www.beckhoff.com/EL2622) | [el2xxx](../src/devices/lcec_el2xxx.c) | 0x2:0x0a3e3052 | Digital Output |  | 
 [Beckhoff EL2624 4Ch. Relay Output, NO (125V AC / 30V DC)](http://www.beckhoff.com/EL2624) | [el2xxx](../devices/lcec_el2xxx.c) | 0x2:0x0a403052 | Digital Output |  | 
