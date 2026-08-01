@@ -212,7 +212,7 @@ Description | Driver | EtherCAT VID:PID | Device Type | Testing Status | Notes
 [Beckhoff EP1008-0001 8 Ch. Dig. Input 24V, 3ms, M8](https://www.beckhoff.com/EP1008-0001) | [el1xxx](../src/devices/lcec_el1xxx.c) | 0x2:0x03f04052 | Digital Input | Uncertain; @scottlaird has several | 
 [Beckhoff EP1018-0001 8 Ch. Dig. Input 24V, 10µs, M8](https://www.beckhoff.com/EP1018-0001) | [el1xxx](../src/devices/lcec_el1xxx.c) | 0x2:0x03fa4052 | Digital Input | Uncertain; @scottlaird has several | 
 [Beckhoff EP1122-0001 2 port EtherCAT junction](https://www.beckhoff.com/EP1122-0001) | [passive](../src/devices/lcec_passive.c) | 0x2:0x04624052 | System Terminals |  | Passive device
-[EP1809-0021 | EtherCAT Box, 16-channel digital input, 24 V DC, 3 ms, M8](https://www.beckhoff.com/EP1809) | [el1xxx](../src/devices/lcec_el1xxx.c) | 0x2:0x07114052 | Digital Input | tested and working @mintracer | 
+[Beckhoff EP1809-0021 EtherCAT Box, 16-channel digital input, 24 V DC, 3 ms, M8](https://www.beckhoff.com/EP1809) | [el1xxx](../src/devices/lcec_el1xxx.c) | 0x2:0x07114052 | Digital Input | tested and working @mintracer | 
 [Beckhoff EP1819-0005 16 Ch. Dig. Input 24V, 10µs, M8 4pol](https://www.beckhoff.com/EP1819) | [el1xxx](../src/devices/lcec_el1xxx.c) | 0x2:0x071b4052 | Digital Input |  | 
 [Beckhoff EP2008-0001 8 Ch. Dig. Output 24V, 0,5A, M8](https://www.beckhoff.com/EP2008-0001) | [el2xxx](../src/devices/lcec_el2xxx.c) | 0x2:0x07d84052 | Digital Output |  | 
 [Beckhoff EP2028-0001 8 Ch. Dig. Output 24V, 2A, M8](https://www.beckhoff.com/EP2028-0001) | [el2xxx](../src/devices/lcec_el2xxx.c) | 0x2:0x07ec4052 | Digital Output |  | 
