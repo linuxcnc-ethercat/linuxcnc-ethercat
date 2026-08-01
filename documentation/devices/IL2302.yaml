@@ -1,0 +1,11 @@
+---
+Device: IL2302
+VendorID: "0x00000002"
+VendorName: Beckhoff Automation GmbH & Co. KG
+PID: "0x08FD3094"
+Description: IL2302-B110 Coupler Box, 4-channel digital input + 4-channel digital output, EtherCAT, 24 V DC, 3 ms, 0.5 A, M12
+DocumentationURL: http://www.beckhoff.com/IL2302-B110
+DeviceType: Coupler Box module combines four digital inputs and four digital outputs in one device
+Notes: ""
+SrcFile: src/devices/lcec_il2302.c
+TestingStatus: "Tested and working @mintracer"
