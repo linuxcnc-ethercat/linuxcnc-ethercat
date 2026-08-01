@@ -572,7 +572,7 @@ static const lcec_modparam_desc_t per_channel_modparams[] = {
     {"positionLimitMin", CIA402_MP_POSLIMIT_MIN, MODPARAM_TYPE_S32},
     {"positionLimitMax", CIA402_MP_POSLIMIT_MAX, MODPARAM_TYPE_S32},
     {"swPositionLimitMin", CIA402_MP_SWPOSLIMIT_MIN, MODPARAM_TYPE_S32},
-    {"swPositionLimitMax", CIA402_MP_SWPOSLIMIT_MIN, MODPARAM_TYPE_S32},
+    {"swPositionLimitMax", CIA402_MP_SWPOSLIMIT_MAX, MODPARAM_TYPE_S32},
     {"homeOffset", CIA402_MP_HOME_OFFSET, MODPARAM_TYPE_S32},
     {"homeMethod", CIA402_MP_HOME_METHOD, MODPARAM_TYPE_S32},
     {"quickDecel", CIA402_MP_QUICKDECEL, MODPARAM_TYPE_U32},
