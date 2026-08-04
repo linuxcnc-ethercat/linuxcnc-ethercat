@@ -1696,9 +1696,14 @@ void lcec_write_master(void *arg, long period) {
 
     // Fold pll_err into (-period/2, period/2]. drift jumps a full period
     // when app_phase crosses zero; raw_offset is physical and cannot
-    // follow. One conditional step suffices once the resync below keeps
-    // |raw_offset| under one period (#501).
+    // follow. Two steps handle the startup cycle where the sum can exceed
+    // 1.5 periods in one pass (#501).
     int32_t pll_err = raw_offset + drift;
+    if (pll_err > app_period / 2) {
+      pll_err -= app_period;
+    } else if (pll_err < -(app_period / 2)) {
+      pll_err += app_period;
+    }
     if (pll_err > app_period / 2) {
       pll_err -= app_period;
     } else if (pll_err < -(app_period / 2)) {
