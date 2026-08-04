@@ -1,3 +1,16 @@
+linuxcnc-ethercat (1.42.2-1) unstable; urgency=low
+
+  * fix(main): fold pll_err into [-period/2, period/2) in the
+    master-to-reference branch as well; the resync correction now
+    removes only whole periods, so a partially-synchronised slave no
+    longer sees a full-period phase jump. The fold is stepped twice
+    on the startup cycle where pll_err spans two periods.
+  * fix(cia402): 0x6077 actual torque is 16 bits, not 32.
+  * fix(cia402): swPositionLimitMax writes 0x607D:02, not 0x607D:01.
+  * docs: update DEVICES.md.
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Tue, 04 Aug 2026 15:28:54 +0800
+
 linuxcnc-ethercat (1.42.1-1) unstable; urgency=low
 
   * fix(main): skip the DC reference-clock read when the master runs
