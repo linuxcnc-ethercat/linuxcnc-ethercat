@@ -84,3 +84,37 @@ The monitor costs one broadcast datagram per cycle.  If you do not
 use these pins, `setp lcec.0.dc-sync-monitor 0` reduces the cost to a
 single branch (the dc-sync pins then hold their last values and
 should be ignored).
+
+## Time correlation
+
+These pins let an external process map timestamps taken with
+`clock_gettime(CLOCK_MONOTONIC)` into the DC time domain — for
+example, to correlate a camera frame or an external sensor reading
+(timestamped in OS time) with the cycle-sampled position of a
+DC-synchronized drive.
+
+| Pin | Type | Dir | Meaning |
+|---|---|---|---|
+| `lcec.<m>.app-time-lo` / `app-time-hi` | u32 | OUT | DC application time of the current cycle (ns, 64-bit split into low/high words) |
+| `lcec.<m>.mono-time-lo` / `mono-time-hi` | u32 | OUT | `CLOCK_MONOTONIC` time sampled back-to-back with the app time (ns, 64-bit split) |
+
+Both values are sampled adjacently in the write path each cycle, so
+the pair is consistent to within a few tens of nanoseconds.  To map
+an external monotonic timestamp `T` into DC time:
+
+```
+dc(T) = app_time + (T - mono_time)
+```
+
+The pair refreshes every cycle, so `T - mono_time` never needs to
+span more than one period and clock drift over that interval is
+negligible (measured host-vs-DC drift on a real bus is a few ppm,
+i.e. single-digit nanoseconds across one 250 us period).  Do not
+cache one pair and extrapolate for long spans: at a few ppm the
+error grows by several microseconds per second.
+
+Reading a 64-bit value split across two u32 pins from another
+process is not atomic: read `hi`, then `lo`, then `hi` again, and
+retry if `hi` changed (the low word rolls over every ~4.3 s).  For
+the full four-pin set, re-read until two consecutive reads agree —
+the values only change once per cycle, so one retry suffices.
