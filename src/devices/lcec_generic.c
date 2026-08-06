@@ -137,16 +137,16 @@ void lcec_generic_read(lcec_slave_t *slave, long period) {
       case HAL_BIT:
         offset = ((hal_data->pdo_os << 3) | (hal_data->pdo_bp & 0x07)) + hal_data->bitOffset;
         for (j = 0; j < LCEC_CONF_GENERIC_MAX_SUBPINS && hal_data->pin[j] != NULL; j++, offset++) {
-          *((hal_bit_t *)hal_data->pin[j]) = EC_READ_BIT(&pd[offset >> 3], offset & 0x07);
+          LCEC_PIN_BIT_SET((hal_bit_t *)hal_data->pin[j], EC_READ_BIT(&pd[offset >> 3], offset & 0x07));
         }
         break;
 
       case HAL_S32:
-        *((hal_s32_t *)hal_data->pin[0]) = lcec_generic_read_s32(pd, hal_data);
+        LCEC_PIN_S32_SET((hal_s32_t *)hal_data->pin[0], lcec_generic_read_s32(pd, hal_data));
         break;
 
       case HAL_U32:
-        *((hal_u32_t *)hal_data->pin[0]) = lcec_generic_read_u32(pd, hal_data);
+        LCEC_PIN_U32_SET((hal_u32_t *)hal_data->pin[0], lcec_generic_read_u32(pd, hal_data));
         break;
 
       case HAL_FLOAT:
@@ -162,7 +162,7 @@ void lcec_generic_read(lcec_slave_t *slave, long period) {
 
         fval *= hal_data->floatScale;
         fval += hal_data->floatOffset;
-        *((hal_float_t *)hal_data->pin[0]) = fval;
+        LCEC_PIN_FLOAT_SET((hal_float_t *)hal_data->pin[0], fval);
         break;
 
       default:
@@ -190,20 +190,20 @@ void lcec_generic_write(lcec_slave_t *slave, long period) {
       case HAL_BIT:
         offset = ((hal_data->pdo_os << 3) | (hal_data->pdo_bp & 0x07)) + hal_data->bitOffset;
         for (j = 0; j < LCEC_CONF_GENERIC_MAX_SUBPINS && hal_data->pin[j] != NULL; j++, offset++) {
-          EC_WRITE_BIT(&pd[offset >> 3], offset & 0x07, *((hal_bit_t *)hal_data->pin[j]));
+          EC_WRITE_BIT(&pd[offset >> 3], offset & 0x07, LCEC_PIN_BIT_GET((hal_bit_t *)hal_data->pin[j]));
         }
         break;
 
       case HAL_S32:
-        lcec_generic_write_s32(pd, hal_data, *((hal_s32_t *)hal_data->pin[0]));
+        lcec_generic_write_s32(pd, hal_data, LCEC_PIN_S32_GET((hal_s32_t *)hal_data->pin[0]));
         break;
 
       case HAL_U32:
-        lcec_generic_write_u32(pd, hal_data, *((hal_u32_t *)hal_data->pin[0]));
+        lcec_generic_write_u32(pd, hal_data, LCEC_PIN_U32_GET((hal_u32_t *)hal_data->pin[0]));
         break;
 
       case HAL_FLOAT:
-        fval = *((hal_float_t *)hal_data->pin[0]);
+        fval = LCEC_PIN_FLOAT_GET((hal_float_t *)hal_data->pin[0]);
         fval += hal_data->floatOffset;
         fval *= hal_data->floatScale;
 

@@ -544,16 +544,16 @@ static int lcec_param_newfv(hal_type_t type, hal_param_dir_t dir, void *data_add
 
   switch (type) {
     case HAL_BIT:
-      *((hal_bit_t *)data_addr) = 0;
+      LCEC_PIN_BIT_SET((hal_bit_t *)data_addr, 0);
       break;
     case HAL_FLOAT:
-      *((hal_float_t *)data_addr) = 0.0;
+      LCEC_PIN_FLOAT_SET((hal_float_t *)data_addr, 0.0);
       break;
     case HAL_S32:
-      *((hal_s32_t *)data_addr) = 0;
+      LCEC_PIN_S32_SET((hal_s32_t *)data_addr, 0);
       break;
     case HAL_U32:
-      *((hal_u32_t *)data_addr) = 0;
+      LCEC_PIN_U32_SET((hal_u32_t *)data_addr, 0);
       break;
     default:
       break;

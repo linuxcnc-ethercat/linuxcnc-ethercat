@@ -1111,23 +1111,23 @@ lcec_slave_state_t *lcec_init_slave_state_hal(char *master_name, char *slave_nam
 
 /// @brief Update HAL pins for the master.
 void lcec_update_master_hal(lcec_master_data_t *hal_data, ec_master_state_t *ms) {
-  *(hal_data->slaves_responding) = ms->slaves_responding;
-  *(hal_data->state_init) = (ms->al_states & 0x01) != 0;
-  *(hal_data->state_preop) = (ms->al_states & 0x02) != 0;
-  *(hal_data->state_safeop) = (ms->al_states & 0x04) != 0;
-  *(hal_data->state_op) = (ms->al_states & 0x08) != 0;
-  *(hal_data->link_up) = ms->link_up;
-  *(hal_data->all_op) = (ms->al_states == 0x08);
+  LCEC_PIN_U32_SET(hal_data->slaves_responding, ms->slaves_responding);
+  LCEC_PIN_BIT_SET(hal_data->state_init, (ms->al_states & 0x01) != 0);
+  LCEC_PIN_BIT_SET(hal_data->state_preop, (ms->al_states & 0x02) != 0);
+  LCEC_PIN_BIT_SET(hal_data->state_safeop, (ms->al_states & 0x04) != 0);
+  LCEC_PIN_BIT_SET(hal_data->state_op, (ms->al_states & 0x08) != 0);
+  LCEC_PIN_BIT_SET(hal_data->link_up, ms->link_up);
+  LCEC_PIN_BIT_SET(hal_data->all_op, (ms->al_states == 0x08));
 }
 
 /// @brief Update generic HAL pins for a slave.
 void lcec_update_slave_state_hal(lcec_slave_state_t *hal_data, ec_slave_config_state_t *ss) {
-  *(hal_data->online) = ss->online;
-  *(hal_data->operational) = ss->operational;
-  *(hal_data->state_init) = (ss->al_state & 0x01) != 0;
-  *(hal_data->state_preop) = (ss->al_state & 0x02) != 0;
-  *(hal_data->state_safeop) = (ss->al_state & 0x04) != 0;
-  *(hal_data->state_op) = (ss->al_state & 0x08) != 0;
+  LCEC_PIN_BIT_SET(hal_data->online, ss->online);
+  LCEC_PIN_BIT_SET(hal_data->operational, ss->operational);
+  LCEC_PIN_BIT_SET(hal_data->state_init, (ss->al_state & 0x01) != 0);
+  LCEC_PIN_BIT_SET(hal_data->state_preop, (ss->al_state & 0x02) != 0);
+  LCEC_PIN_BIT_SET(hal_data->state_safeop, (ss->al_state & 0x04) != 0);
+  LCEC_PIN_BIT_SET(hal_data->state_op, (ss->al_state & 0x08) != 0);
 }
 
 /// @brief Update all input pins across all masters and slaves.
@@ -1349,29 +1349,29 @@ void lcec_read_master(void *arg, long period) {
 
     // user-requested stats reset: clear min/change tracking and re-arm the
     // first-complete-exchange gate so wkc-min re-anchors; pin self-clears
-    if (*(hd->wkc_reset)) {
-      *(hd->wkc_reset) = 0;
+    if (LCEC_PIN_BIT_GET(hd->wkc_reset)) {
+      LCEC_PIN_BIT_SET(hd->wkc_reset, 0);
       hd->wkc_full_seen = 0;
-      *(hd->wkc_min) = 0;
-      *(hd->wkc_change_cnt) = 0;
+      LCEC_PIN_U32_SET(hd->wkc_min, 0);
+      LCEC_PIN_U32_SET(hd->wkc_change_cnt, 0);
     }
 
-    *(hd->wkc) = wkc_now;
-    *(hd->wkc_state) = (hal_s32_t)domain_state.wc_state;
+    LCEC_PIN_U32_SET(hd->wkc, wkc_now);
+    LCEC_PIN_S32_SET(hd->wkc_state, (hal_s32_t)domain_state.wc_state);
     if (!hd->wkc_full_seen) {
       if (domain_state.wc_state == EC_WC_COMPLETE) {
         hd->wkc_full_seen = 1;
-        *(hd->wkc_min) = wkc_now;
-        *(hd->wkc_change_cnt) = 0;
+        LCEC_PIN_U32_SET(hd->wkc_min, wkc_now);
+        LCEC_PIN_U32_SET(hd->wkc_change_cnt, 0);
       }
     } else {
-      if (wkc_now < *(hd->wkc_min)) {
-        *(hd->wkc_min) = wkc_now;
+      if (wkc_now < LCEC_PIN_U32_GET(hd->wkc_min)) {
+        LCEC_PIN_U32_SET(hd->wkc_min, wkc_now);
       }
       // no rtapi_print here: a flapping bus would emit at cycle rate from the
       // RT thread; the change counter pin + recorder are the log
       if (wkc_now != hd->wkc_last) {
-        (*(hd->wkc_change_cnt))++;
+        LCEC_PIN_U32_SET(hd->wkc_change_cnt, LCEC_PIN_U32_GET(hd->wkc_change_cnt) + 1);
       }
     }
     hd->wkc_last = wkc_now;
@@ -1383,13 +1383,13 @@ void lcec_read_master(void *arg, long period) {
     if (hd->dc_sync_monitor) {
       if (dc_sync_diff != 0xffffffffu) {
         hd->dc_sync_miss_cnt = 0;
-        *(hd->dc_sync_diff) = dc_sync_diff;
-        *(hd->dc_sync_converged) = (dc_sync_diff < hd->dc_sync_max);
+        LCEC_PIN_U32_SET(hd->dc_sync_diff, dc_sync_diff);
+        LCEC_PIN_BIT_SET(hd->dc_sync_converged, (dc_sync_diff < hd->dc_sync_max));
       } else if (hd->dc_sync_miss_cnt < LCEC_DC_SYNC_MISS_MAX) {
         hd->dc_sync_miss_cnt++;
       } else {
-        *(hd->dc_sync_converged) = 0;
-        *(hd->dc_sync_diff) = 0xffffffffu;
+        LCEC_PIN_BIT_SET(hd->dc_sync_converged, 0);
+        LCEC_PIN_U32_SET(hd->dc_sync_diff, 0xffffffffu);
       }
     }
   }
@@ -1551,16 +1551,16 @@ void lcec_write_master(void *arg, long period) {
   // BANG-BANG controller for master thread PLL sync
   // this part is done after ecrt_master_send() to reduce jitter
   hal_data = master->hal_data;
-  *(hal_data->pll_err) = 0;
-  *(hal_data->pll_out) = 0;
-  *(hal_data->dc_phased) = 0;
+  LCEC_PIN_S32_SET(hal_data->pll_err, 0);
+  LCEC_PIN_S32_SET(hal_data->pll_out, 0);
+  LCEC_PIN_BIT_SET(hal_data->dc_phased, 0);
 
   // Calculate app_phase: our execution position in local cycle
   // This is relative to dc_ref_time (the time we set at activation)
   // app_phase = (app_time - dc_ref_time) % period
   // This represents where we are within the current cycle since activation
   int32_t current_app_phase = (int32_t)((app_time - master->dc_ref_time) % master->app_time_period);
-  *(hal_data->app_phase) = current_app_phase;
+  LCEC_PIN_S32_SET(hal_data->app_phase, current_app_phase);
   int32_t app_period = (int32_t)master->app_time_period;
 
   // When sync_to_ref_clock = false: adjust app_phase to a stable position using PLL
@@ -1603,7 +1603,7 @@ void lcec_write_master(void *arg, long period) {
       } else {
         // Phase 2: Calculate jitter and target position
         hal_data->phase_jitter = hal_data->phase_max - hal_data->phase_min;
-        *(hal_data->phase_jitter_out) = hal_data->phase_jitter;  // Output jitter for debugging
+        LCEC_PIN_S32_SET(hal_data->phase_jitter_out, hal_data->phase_jitter);  // Output jitter for debugging
 
         // Target position: jitter + jitter/2 = jitter * 1.5
         int32_t target = hal_data->phase_jitter + hal_data->phase_jitter / 2;
@@ -1632,7 +1632,7 @@ void lcec_write_master(void *arg, long period) {
       int32_t phase_error = current_app_phase - hal_data->phase_target;
 
       // Set pll_err for monitoring
-      //*(hal_data->pll_err) = raw_offset + drift;
+      //LCEC_PIN_S32_SET(hal_data->pll_err, raw_offset + drift);
 
       // Check if locked (within 10% of jitter or 1% of app_period, whichever is larger)
       int32_t lock_threshold = 0;  // hal_data->phase_jitter;
@@ -1640,21 +1640,21 @@ void lcec_write_master(void *arg, long period) {
         lock_threshold = app_period / 100;
       }
       if (abs(phase_error) < abs(hal_data->pll_step) * 3) {
-        *(hal_data->dc_phased) = 1;
+        LCEC_PIN_BIT_SET(hal_data->dc_phased, 1);
       } else if (abs(phase_error) > abs(hal_data->pll_step) * 20) {
-        *(hal_data->dc_phased) = 0;
+        LCEC_PIN_BIT_SET(hal_data->dc_phased, 0);
       }
 
       // BANG-BANG control: small steps to move towards target
       // Positive pll_out = slow down = app_phase increases
       // Negative pll_out = speed up = app_phase decreases
-      if (*(hal_data->dc_phased)) {
-        *(hal_data->pll_out) = 0;
+      if (LCEC_PIN_BIT_GET(hal_data->dc_phased)) {
+        LCEC_PIN_S32_SET(hal_data->pll_out, 0);
       } else {
         if (phase_error > 0) {
-          *(hal_data->pll_out) = -(hal_data->pll_step);  // Speed up to reduce app_phase
+          LCEC_PIN_S32_SET(hal_data->pll_out, -(hal_data->pll_step));  // Speed up to reduce app_phase
         } else if (phase_error < 0) {
-          *(hal_data->pll_out) = hal_data->pll_step;  // Slow down to increase app_phase
+          LCEC_PIN_S32_SET(hal_data->pll_out, hal_data->pll_step);  // Slow down to increase app_phase
         }
       }
 
@@ -1663,8 +1663,8 @@ void lcec_write_master(void *arg, long period) {
       // Force PLL outputs to safe values so rtapi_task_pll_get_reference does
       // not see stale BANG-BANG state. Manual pll_drift pin still applies via
       // pll_correction = pll_out + pll_drift further down.
-      *(hal_data->pll_out) = 0;
-      *(hal_data->dc_phased) = 1;
+      LCEC_PIN_S32_SET(hal_data->pll_out, 0);
+      LCEC_PIN_BIT_SET(hal_data->dc_phased, 1);
     }
   }
 
@@ -1678,7 +1678,7 @@ void lcec_write_master(void *arg, long period) {
     //   1 = manual: use pll-drift pin value
     //   other = same as 1 (manual)
     int32_t drift = 0;
-    int32_t mode = *(hal_data->drift_mode);
+    int32_t mode = LCEC_PIN_S32_GET(hal_data->drift_mode);
     if (master->sync_to_ref_clock) {
       if (mode == 0) {
         // Mode 0: simple - (app_period - app_phase) % app_period
@@ -1708,12 +1708,12 @@ void lcec_write_master(void *arg, long period) {
     } else if (pll_err < -(app_period / 2)) {
       pll_err += app_period;
     }
-    *(hal_data->pll_err) = pll_err;
+    LCEC_PIN_S32_SET(hal_data->pll_err, pll_err);
 
     // PLL is considered phased if error is within 10% of period
     int32_t lock_threshold = master->app_time_period / 10;
-    if (abs(*(hal_data->pll_err)) < lock_threshold) {
-      *(hal_data->dc_phased) = 1;
+    if (abs(LCEC_PIN_S32_GET(hal_data->pll_err)) < lock_threshold) {
+      LCEC_PIN_BIT_SET(hal_data->dc_phased, 1);
     }
 
     // Only run automatic PLL adjustment when sync_to_ref_clock is enabled
@@ -1735,13 +1735,13 @@ void lcec_write_master(void *arg, long period) {
         // skip next control cycle to allow resync
         dc_time_valid = 0;
         // increment reset counter to document this event
-        (*(hal_data->pll_reset_cnt))++;
+        LCEC_PIN_U32_SET(hal_data->pll_reset_cnt, LCEC_PIN_U32_GET(hal_data->pll_reset_cnt) + 1);
         // Reset auto-drift delay on resync
-        if (*(hal_data->drift_mode) == 0) {
+        if (LCEC_PIN_S32_GET(hal_data->drift_mode) == 0) {
           hal_data->auto_drift_delay = 100;
         }
       } else {
-        *(hal_data->pll_out) = (pll_err < 0) ? -(hal_data->pll_step) : (hal_data->pll_step);
+        LCEC_PIN_S32_SET(hal_data->pll_out, (pll_err < 0) ? -(hal_data->pll_step) : (hal_data->pll_step));
       }
     }
     // Note: When sync_to_ref_clock = false, pll_out is set in the phase calibration code above
@@ -1754,17 +1754,17 @@ void lcec_write_master(void *arg, long period) {
   int32_t pll_correction;
   if (master->sync_to_ref_clock) {
     // sync_to_ref_clock = true: always use PLL output for continuous sync
-    pll_correction = *(hal_data->pll_out) + *(hal_data->pll_drift);
+    pll_correction = LCEC_PIN_S32_GET(hal_data->pll_out) + LCEC_PIN_S32_GET(hal_data->pll_drift);
   } else {
     // sync_to_ref_clock = false: stop adjusting once locked
-    if (*(hal_data->dc_phased)) {
-      pll_correction = *(hal_data->pll_drift);
+    if (LCEC_PIN_BIT_GET(hal_data->dc_phased)) {
+      pll_correction = LCEC_PIN_S32_GET(hal_data->pll_drift);
     } else {
-      pll_correction = *(hal_data->pll_out) + *(hal_data->pll_drift);
+      pll_correction = LCEC_PIN_S32_GET(hal_data->pll_out) + LCEC_PIN_S32_GET(hal_data->pll_drift);
     }
   }
 
-  *(hal_data->pll_final) = pll_correction;
+  LCEC_PIN_S32_SET(hal_data->pll_final, pll_correction);
   rtapi_task_pll_set_correction(pll_correction);
 
   master->app_time_last = (uint32_t)app_time;
