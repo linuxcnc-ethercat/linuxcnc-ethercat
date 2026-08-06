@@ -583,9 +583,9 @@ static void lcec_rtec_read(lcec_slave_t *slave, long period) {
   }
 
   if (!(slave->flags & F_NOEXTRAS)) {
-    *(hal_data->alarm_code) = EC_READ_U16(&pd[hal_data->alarm_code_os]);
-    *(hal_data->status_code) = EC_READ_U16(&pd[hal_data->status_code_os]);
-    *(hal_data->voltage) = EC_READ_U16(&pd[hal_data->voltage_os]) / 100.0;
+    LCEC_PIN_U32_SET(hal_data->alarm_code, EC_READ_U16(&pd[hal_data->alarm_code_os]));
+    LCEC_PIN_U32_SET(hal_data->status_code, EC_READ_U16(&pd[hal_data->status_code_os]));
+    LCEC_PIN_FLOAT_SET(hal_data->voltage, EC_READ_U16(&pd[hal_data->voltage_os]) / 100.0);
   }
   lcec_cia402_read_all(slave, hal_data->cia402);
 }

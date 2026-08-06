@@ -216,7 +216,7 @@ static void lcec_ommx2_read(lcec_slave_t *slave, long period) {
   // XXXX: If you need to read device-specific PDOs and set pins, then you should do this here.
   //
   // uint8_t *pd = slave->master->process_data;
-  // *(hal_data->alarm_code) = EC_READ_U16(&pd[hal_data->alarm_code_os]);
+  // LCEC_PIN_U32_SET(hal_data->alarm_code, EC_READ_U16(&pd[hal_data->alarm_code_os]));
 
   lcec_cia402_read_all(slave, hal_data->cia402);
   // XXXX: If you want digital in pins, then uncomment this:

@@ -384,7 +384,7 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
     if ((err = lcec_pin_newf_list(hal_data, slave_pins_csp, LCEC_MODULE_NAME, master->name, slave->name)) != 0) return err;
   }
 
-  *(hal_data->operation_mode) = operationmode;
+  LCEC_PIN_U32_SET(hal_data->operation_mode, operationmode);
   // export parameters
   if ((err = lcec_param_newf_list(hal_data, slave_params, LCEC_MODULE_NAME, master->name, slave->name)) != 0) return err;
 
@@ -447,18 +447,18 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
   uint32_t pos_cnt;
   // wait for slave to be operational
   if (!slave->state.operational) {
-    *(hal_data->ready) = 0;
-    *(hal_data->switched_on) = 0;
-    *(hal_data->oper_enabled) = 0;
-    *(hal_data->fault) = 1;
-    *(hal_data->volt_enabled) = 0;
-    *(hal_data->quick_stoped) = 0;
-    *(hal_data->on_disabled) = 0;
-    *(hal_data->warning) = 0;
-    *(hal_data->remote) = 0;
-    *(hal_data->at_speed) = 0;
-    *(hal_data->limit_active) = 0;
-    *(hal_data->zero_speed) = 0;
+    LCEC_PIN_BIT_SET(hal_data->ready, 0);
+    LCEC_PIN_BIT_SET(hal_data->switched_on, 0);
+    LCEC_PIN_BIT_SET(hal_data->oper_enabled, 0);
+    LCEC_PIN_BIT_SET(hal_data->fault, 1);
+    LCEC_PIN_BIT_SET(hal_data->volt_enabled, 0);
+    LCEC_PIN_BIT_SET(hal_data->quick_stoped, 0);
+    LCEC_PIN_BIT_SET(hal_data->on_disabled, 0);
+    LCEC_PIN_BIT_SET(hal_data->warning, 0);
+    LCEC_PIN_BIT_SET(hal_data->remote, 0);
+    LCEC_PIN_BIT_SET(hal_data->at_speed, 0);
+    LCEC_PIN_BIT_SET(hal_data->limit_active, 0);
+    LCEC_PIN_BIT_SET(hal_data->zero_speed, 0);
     return;
   }
 
@@ -467,18 +467,18 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
 
   // read status word
   status = EC_READ_U16(&pd[hal_data->status_pdo_os]);
-  *(hal_data->ready) = (status >> 0) & 0x01;
-  *(hal_data->switched_on) = (status >> 1) & 0x01;
-  *(hal_data->oper_enabled) = (status >> 2) & 0x01;
+  LCEC_PIN_BIT_SET(hal_data->ready, (status >> 0) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->switched_on, (status >> 1) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->oper_enabled, (status >> 2) & 0x01);
   hal_data->internal_fault = (status >> 3) & 0x01;
-  *(hal_data->volt_enabled) = (status >> 4) & 0x01;
-  *(hal_data->quick_stoped) = !((status >> 5) & 0x01);
-  *(hal_data->on_disabled) = (status >> 6) & 0x01;
-  *(hal_data->warning) = (status >> 7) & 0x01;
-  *(hal_data->remote) = (status >> 9) & 0x01;
-  *(hal_data->at_speed) = (status >> 10) & 0x01;
-  *(hal_data->limit_active) = (status >> 11) & 0x01;
-  *(hal_data->zero_speed) = (status >> 12) & 0x01;
+  LCEC_PIN_BIT_SET(hal_data->volt_enabled, (status >> 4) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->quick_stoped, !((status >> 5) & 0x01));
+  LCEC_PIN_BIT_SET(hal_data->on_disabled, (status >> 6) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->warning, (status >> 7) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->remote, (status >> 9) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->at_speed, (status >> 10) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->limit_active, (status >> 11) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->zero_speed, (status >> 12) & 0x01);
 
   // clear pending fault reset if no fault
   if (!hal_data->internal_fault) hal_data->fault_reset_retry = 0;
@@ -494,17 +494,17 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
         hal_data->fault_reset_retry--;
       }
     }
-    *(hal_data->fault) = 0;
+    LCEC_PIN_BIT_SET(hal_data->fault, 0);
   } else {
-    *(hal_data->fault) = hal_data->internal_fault;
+    LCEC_PIN_BIT_SET(hal_data->fault, hal_data->internal_fault);
   }
 
   // read current speed
   speed_raw = EC_READ_S32(&pd[hal_data->currvel_pdo_os]);
   rpm = (double)speed_raw * DEASDA_RPM_FACTOR;
-  *(hal_data->vel_fb_rpm) = rpm;
-  *(hal_data->vel_fb_rpm_abs) = fabs(rpm);
-  *(hal_data->vel_fb) = rpm * DEASDA_RPM_DIV * hal_data->pos_scale;
+  LCEC_PIN_FLOAT_SET(hal_data->vel_fb_rpm, rpm);
+  LCEC_PIN_FLOAT_SET(hal_data->vel_fb_rpm_abs, fabs(rpm));
+  LCEC_PIN_FLOAT_SET(hal_data->vel_fb, rpm * DEASDA_RPM_DIV * hal_data->pos_scale);
 
   // update raw position counter
   pos_cnt = EC_READ_U32(&pd[hal_data->currpos_pdo_os]);
@@ -515,21 +515,21 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
   class_enc_update(&hal_data->extenc, 1, hal_data->extenc_scale, pos_cnt, 0, 0);
 
   // read current
-  *(hal_data->torque) = (double)EC_READ_S16(&pd[hal_data->torque_pdo_os]) * 0.1;
+  LCEC_PIN_FLOAT_SET(hal_data->torque, (double)EC_READ_S16(&pd[hal_data->torque_pdo_os]) * 0.1);
 
   // read DI status word
   status_di = EC_READ_U32(&pd[hal_data->divalue_pdo_os]);
 
-  *(hal_data->neg_lim_switch) = (status_di >> 0) & 0x01;
-  *(hal_data->pos_lim_switch) = (status_di >> 1) & 0x01;
-  *(hal_data->home_switch) = (status_di >> 2) & 0x01;
-  *(hal_data->di_1) = (status_di >> 16) & 0x01;
-  *(hal_data->di_2) = (status_di >> 17) & 0x01;
-  *(hal_data->di_3) = (status_di >> 18) & 0x01;
-  *(hal_data->di_4) = (status_di >> 19) & 0x01;
-  *(hal_data->di_5) = (status_di >> 20) & 0x01;
-  *(hal_data->di_6) = (status_di >> 21) & 0x01;
-  *(hal_data->di_7) = (status_di >> 22) & 0x01;
+  LCEC_PIN_BIT_SET(hal_data->neg_lim_switch, (status_di >> 0) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->pos_lim_switch, (status_di >> 1) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->home_switch, (status_di >> 2) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->di_1, (status_di >> 16) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->di_2, (status_di >> 17) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->di_3, (status_di >> 18) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->di_4, (status_di >> 19) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->di_5, (status_di >> 20) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->di_6, (status_di >> 21) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->di_7, (status_di >> 22) & 0x01);
 }
 
 static void lcec_deasda_write_csv(lcec_slave_t *slave, long period) {
@@ -544,8 +544,8 @@ static void lcec_deasda_write_csv(lcec_slave_t *slave, long period) {
   if (hal_data->dout) lcec_dout_write_all(slave, hal_data->dout);
 
   // check for enable edge
-  switch_on_edge = *(hal_data->switch_on) && !hal_data->last_switch_on;
-  hal_data->last_switch_on = *(hal_data->switch_on);
+  switch_on_edge = LCEC_PIN_BIT_GET(hal_data->switch_on) && !hal_data->last_switch_on;
+  hal_data->last_switch_on = LCEC_PIN_BIT_GET(hal_data->switch_on);
 
   // check for autoreset
   if (hal_data->fault_autoreset_retries > 0 && hal_data->fault_autoreset_cycles > 0 && switch_on_edge && hal_data->internal_fault) {
@@ -560,25 +560,25 @@ static void lcec_deasda_write_csv(lcec_slave_t *slave, long period) {
   // write dev ctrl
   control = 0;
 
-  if (*(hal_data->enable_volt)) control |= (1 << 1);
-  if (!*(hal_data->quick_stop)) control |= (1 << 2);
-  if (*(hal_data->fault_reset)) control |= (1 << 7);
-  if (*(hal_data->halt)) control |= (1 << 8);
+  if (LCEC_PIN_BIT_GET(hal_data->enable_volt)) control |= (1 << 1);
+  if (!LCEC_PIN_BIT_GET(hal_data->quick_stop)) control |= (1 << 2);
+  if (LCEC_PIN_BIT_GET(hal_data->fault_reset)) control |= (1 << 7);
+  if (LCEC_PIN_BIT_GET(hal_data->halt)) control |= (1 << 8);
 
   if (hal_data->fault_reset_retry > 0) {
     if (hal_data->fault_reset_state) control |= (1 << 7);
   } else {
-    if (*(hal_data->switch_on)) control |= (1 << 0);
-    if (*(hal_data->enable) && *(hal_data->switched_on)) control |= (1 << 3);
+    if (LCEC_PIN_BIT_GET(hal_data->switch_on)) control |= (1 << 0);
+    if (LCEC_PIN_BIT_GET(hal_data->enable) && LCEC_PIN_BIT_GET(hal_data->switched_on)) control |= (1 << 3);
   }
   EC_WRITE_U16(&pd[hal_data->control_pdo_os], control);
 
   // all of this is depeding on CSV/CSP
   // calculate rpm command
-  *(hal_data->vel_rpm) = *(hal_data->cmd_value) * hal_data->pos_scale_rcpt * DEASDA_RPM_MUL;
+  LCEC_PIN_FLOAT_SET(hal_data->vel_rpm, LCEC_PIN_FLOAT_GET(hal_data->cmd_value) * hal_data->pos_scale_rcpt * DEASDA_RPM_MUL);
 
   // set RPM
-  speed_raw = *(hal_data->vel_rpm) * DEASDA_RPM_RCPT;
+  speed_raw = LCEC_PIN_FLOAT_GET(hal_data->vel_rpm) * DEASDA_RPM_RCPT;
   if (speed_raw > (double)0x7fffffff) speed_raw = (double)0x7fffffff;
   if (speed_raw < (double)-0x7fffffff) speed_raw = (double)-0x7fffffff;
 
@@ -597,8 +597,8 @@ static void lcec_deasda_write_csp(lcec_slave_t *slave, long period) {
   if (hal_data->dout) lcec_dout_write_all(slave, hal_data->dout);
 
   // check for enable edge
-  switch_on_edge = *(hal_data->switch_on) && !hal_data->last_switch_on;
-  hal_data->last_switch_on = *(hal_data->switch_on);
+  switch_on_edge = LCEC_PIN_BIT_GET(hal_data->switch_on) && !hal_data->last_switch_on;
+  hal_data->last_switch_on = LCEC_PIN_BIT_GET(hal_data->switch_on);
 
   // check for autoreset
   if (hal_data->fault_autoreset_retries > 0 && hal_data->fault_autoreset_cycles > 0 && switch_on_edge && hal_data->internal_fault) {
@@ -612,23 +612,23 @@ static void lcec_deasda_write_csp(lcec_slave_t *slave, long period) {
 
   // write dev ctrl
   control = 0;
-  if (*(hal_data->enable_volt)) control |= (1 << 1);
-  if (!*(hal_data->quick_stop)) control |= (1 << 2);
-  if (*(hal_data->fault_reset)) control |= (1 << 7);
-  if (*(hal_data->halt)) control |= (1 << 8);
+  if (LCEC_PIN_BIT_GET(hal_data->enable_volt)) control |= (1 << 1);
+  if (!LCEC_PIN_BIT_GET(hal_data->quick_stop)) control |= (1 << 2);
+  if (LCEC_PIN_BIT_GET(hal_data->fault_reset)) control |= (1 << 7);
+  if (LCEC_PIN_BIT_GET(hal_data->halt)) control |= (1 << 8);
 
   if (hal_data->fault_reset_retry > 0) {
     if (hal_data->fault_reset_state) control |= (1 << 7);
   } else {
-    if (*(hal_data->switch_on)) control |= (1 << 0);
-    if (*(hal_data->enable) && *(hal_data->switched_on)) control |= (1 << 3);
+    if (LCEC_PIN_BIT_GET(hal_data->switch_on)) control |= (1 << 0);
+    if (LCEC_PIN_BIT_GET(hal_data->enable) && LCEC_PIN_BIT_GET(hal_data->switched_on)) control |= (1 << 3);
   }
   EC_WRITE_U16(&pd[hal_data->control_pdo_os], control);
 
   // ASDA Drives expect target Position in PUU (Pulse per User Unit)
   // See https://www.deltaww.com/en-US/FAQ/228
   // Calculation accordingly based on pprev and pos_scale (i.e. pitch of ball screw)
-  pos_puu = (int32_t)(*(hal_data->cmd_value) * hal_data->pprev / hal_data->pos_scale);
+  pos_puu = (int32_t)(LCEC_PIN_FLOAT_GET(hal_data->cmd_value) * hal_data->pprev / hal_data->pos_scale);
   EC_WRITE_S32(&pd[hal_data->cmdvalue_pdo_os], pos_puu);
 }
 
