@@ -415,6 +415,7 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
     // set slave type_name
     if (strcmp(name, "type") == 0) {
       strncpy(p->type_name, val, LCEC_CONF_STR_MAXLEN);
+      p->type_name[LCEC_CONF_STR_MAXLEN - 1] = 0;
       continue;
     }
 
