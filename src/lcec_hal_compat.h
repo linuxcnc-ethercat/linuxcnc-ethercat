@@ -72,4 +72,21 @@
 #define LCEC_PIN_U32_GET(p) (*(p))
 #endif
 
+// Type-dispatching variants for macro-generated code where the pin type
+// varies per instantiation (e.g. lcec_class_cia402).  Dispatch is on the
+// declared field pointer type; must be revisited if the field declarations
+// move to the opaque new-API reference types.
+#define LCEC_PIN_GET(p)                         \
+  _Generic((p),                                 \
+      hal_bit_t *: LCEC_PIN_BIT_GET(p),         \
+      hal_float_t *: LCEC_PIN_FLOAT_GET(p),     \
+      hal_s32_t *: LCEC_PIN_S32_GET(p),         \
+      hal_u32_t *: LCEC_PIN_U32_GET(p))
+#define LCEC_PIN_SET(p, v)                      \
+  _Generic((p),                                 \
+      hal_bit_t *: LCEC_PIN_BIT_SET(p, v),      \
+      hal_float_t *: LCEC_PIN_FLOAT_SET(p, v),  \
+      hal_s32_t *: LCEC_PIN_S32_SET(p, v),      \
+      hal_u32_t *: LCEC_PIN_U32_SET(p, v))
+
 #endif  // _LCEC_HAL_COMPAT_H_

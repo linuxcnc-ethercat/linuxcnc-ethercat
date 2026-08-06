@@ -100,38 +100,38 @@ void class_enc_update(
   // this could be used to retain extrapolated multiturn tracking
   // IMPORTANT: hi/lo values need to be stored atomic
   if (hal_data->do_init) {
-    *(hal_data->raw) = *(hal_data->ext_lo) & hal_data->raw_mask;
+    LCEC_PIN_S32_SET(hal_data->raw, LCEC_PIN_U32_GET(hal_data->ext_lo) & hal_data->raw_mask);
   }
 
   // extrapolate to 64 bits
-  pos = ((long long)*(hal_data->ext_hi) << 32) | *(hal_data->ext_lo);
-  pos += raw_diff(hal_data->raw_shift, raw, *(hal_data->raw));
-  *(hal_data->raw) = raw;
-  *(hal_data->ext_hi) = (uint32_t)(pos >> 32);
-  *(hal_data->ext_lo) = (uint32_t)pos;
+  pos = ((long long)LCEC_PIN_U32_GET(hal_data->ext_hi) << 32) | LCEC_PIN_U32_GET(hal_data->ext_lo);
+  pos += raw_diff(hal_data->raw_shift, raw, LCEC_PIN_S32_GET(hal_data->raw));
+  LCEC_PIN_S32_SET(hal_data->raw, raw);
+  LCEC_PIN_U32_SET(hal_data->ext_hi, (uint32_t)(pos >> 32));
+  LCEC_PIN_U32_SET(hal_data->ext_lo, (uint32_t)pos);
 
   // set raw encoder pos
-  *(hal_data->pos_enc) = ((double)pos) * pos_scale;
+  LCEC_PIN_FLOAT_SET(hal_data->pos_enc, ((double)pos) * pos_scale);
 
   // calculate home based abs pos
   pos += raw_diff(hal_data->raw_shift, 0, hal_data->raw_home);
-  *(hal_data->pos_abs) = ((double)pos) * pos_scale;
-  *(hal_data->on_home_neg) = (pos <= 0);
-  *(hal_data->on_home_pos) = (pos >= 0);
+  LCEC_PIN_FLOAT_SET(hal_data->pos_abs, ((double)pos) * pos_scale);
+  LCEC_PIN_BIT_SET(hal_data->on_home_neg, (pos <= 0));
+  LCEC_PIN_BIT_SET(hal_data->on_home_pos, (pos >= 0));
 
   // handle index
-  if (*(hal_data->index_ena)) {
+  if (LCEC_PIN_BIT_GET(hal_data->index_ena)) {
     // get overflow detection window (pprev / 4)
     ovfl_win = pprev >> 2;
     if (ovfl_win == 0 || pprev > 0xffffffff) {
       // no useable singleturn bits -> just reset the position
-      *(hal_data->index_ena) = 0;
+      LCEC_PIN_BIT_SET(hal_data->index_ena, 0);
       set_ref(hal_data, pos);
     } else {
       mod = signed_mod_64(pos, pprev);
       sign = (mod >= 0) ? 1 : -1;
       if (hal_data->index_sign != 0 && sign != hal_data->index_sign && mod <= ovfl_win) {
-        *(hal_data->index_ena) = 0;
+        LCEC_PIN_BIT_SET(hal_data->index_ena, 0);
         set_ref(hal_data, pos - mod);
       }
       hal_data->index_sign = sign;
@@ -146,13 +146,13 @@ void class_enc_update(
   }
 
   // handle rel position init
-  if (hal_data->do_init || *(hal_data->pos_reset)) {
+  if (hal_data->do_init || LCEC_PIN_BIT_GET(hal_data->pos_reset)) {
     set_ref(hal_data, pos);
   }
 
   // calculate rel pos
-  pos -= ((long long)*(hal_data->ref_hi) << 32) | *(hal_data->ref_lo);
-  *(hal_data->pos) = ((double)pos) * pos_scale;
+  pos -= ((long long)LCEC_PIN_U32_GET(hal_data->ref_hi) << 32) | LCEC_PIN_U32_GET(hal_data->ref_lo);
+  LCEC_PIN_FLOAT_SET(hal_data->pos, ((double)pos) * pos_scale);
 
   hal_data->do_init = 0;
 }
@@ -160,8 +160,8 @@ void class_enc_update(
 static int32_t raw_diff(int shift, uint32_t a, uint32_t b) { return ((int32_t)(a << shift) - (int32_t)(b << shift)) >> shift; }
 
 static void set_ref(lcec_class_enc_data_t *hal_data, long long ref) {
-  *(hal_data->ref_hi) = (uint32_t)(ref >> 32);
-  *(hal_data->ref_lo) = (uint32_t)ref;
+  LCEC_PIN_U32_SET(hal_data->ref_hi, (uint32_t)(ref >> 32));
+  LCEC_PIN_U32_SET(hal_data->ref_lo, (uint32_t)ref);
 }
 
 static long long signed_mod_64(long long val, unsigned long div) {
