@@ -290,7 +290,7 @@ static void lcec_el5101_read(lcec_slave_t *slave, long period) {
   LCEC_PIN_FLOAT_SET(hal_data->pos, LCEC_PIN_S32_GET(hal_data->count) * hal_data->scale);
 
   // scale period
-  LCEC_PIN_FLOAT_SET(hal_data->frequency, ((double)(LCEC_PIN_U32_GET(hal_data->raw_frequency))) * (*hal_data->frequency_scale));
+  LCEC_PIN_FLOAT_SET(hal_data->frequency, ((double)(LCEC_PIN_U32_GET(hal_data->raw_frequency))) * LCEC_PIN_FLOAT_GET(hal_data->frequency_scale));
   LCEC_PIN_FLOAT_SET(hal_data->period, ((double)(LCEC_PIN_U32_GET(hal_data->raw_period))) * LCEC_EL5101_PERIOD_SCALE);
 
   hal_data->last_operational = 1;

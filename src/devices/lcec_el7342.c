@@ -472,21 +472,21 @@ static int lcec_el7342_init(int comp_id, lcec_slave_t *slave) {
     }
 
     // initialize pins
-    *(chan->pos_scale) = 1.0;
+    LCEC_PIN_FLOAT_SET(chan->pos_scale, 1.0);
 
-    *(chan->dcm_scale) = 1.0;
-    *(chan->dcm_min_dc) = -1.0;
-    *(chan->dcm_max_dc) = 1.0;
-    *(chan->dcm_sel_info1) = info1_select;
-    *(chan->dcm_sel_info2) = info2_select;
+    LCEC_PIN_FLOAT_SET(chan->dcm_scale, 1.0);
+    LCEC_PIN_FLOAT_SET(chan->dcm_min_dc, -1.0);
+    LCEC_PIN_FLOAT_SET(chan->dcm_max_dc, 1.0);
+    LCEC_PIN_U32_SET(chan->dcm_sel_info1, info1_select);
+    LCEC_PIN_U32_SET(chan->dcm_sel_info2, info2_select);
 
     // initialize variables
     chan->enc_do_init = 1;
     chan->enc_last_count = 0;
-    chan->enc_old_scale = *(chan->pos_scale) + 1.0;
+    chan->enc_old_scale = LCEC_PIN_FLOAT_GET(chan->pos_scale) + 1.0;
     chan->enc_scale_recip = 1.0;
 
-    chan->dcm_old_scale = *(chan->dcm_scale) + 1.0;
+    chan->dcm_old_scale = LCEC_PIN_FLOAT_GET(chan->dcm_scale) + 1.0;
     chan->dcm_scale_recip = 1.0;
   }
 
@@ -512,48 +512,48 @@ static void lcec_el7342_read(lcec_slave_t *slave, long period) {
     chan = &hal_data->chans[i];
 
     // check for change in scale value
-    if (*(chan->pos_scale) != chan->enc_old_scale) {
+    if (LCEC_PIN_FLOAT_GET(chan->pos_scale) != chan->enc_old_scale) {
       // scale value has changed, test and update it
-      if ((*(chan->pos_scale) < 1e-20) && (*(chan->pos_scale) > -1e-20)) {
+      if ((LCEC_PIN_FLOAT_GET(chan->pos_scale) < 1e-20) && (LCEC_PIN_FLOAT_GET(chan->pos_scale) > -1e-20)) {
         // value too small, divide by zero is a bad thing
-        *(chan->pos_scale) = 1.0;
+        LCEC_PIN_FLOAT_SET(chan->pos_scale, 1.0);
       }
       // save new scale to detect future changes
-      chan->enc_old_scale = *(chan->pos_scale);
+      chan->enc_old_scale = LCEC_PIN_FLOAT_GET(chan->pos_scale);
       // we actually want the reciprocal
-      chan->enc_scale_recip = 1.0 / *(chan->pos_scale);
+      chan->enc_scale_recip = 1.0 / LCEC_PIN_FLOAT_GET(chan->pos_scale);
     }
 
     // get bit states
-    *(chan->ina) = EC_READ_BIT(&pd[chan->ina_pdo_os], chan->ina_pdo_bp);
-    *(chan->inb) = EC_READ_BIT(&pd[chan->inb_pdo_os], chan->inb_pdo_bp);
-    *(chan->inext) = EC_READ_BIT(&pd[chan->inext_pdo_os], chan->inext_pdo_bp);
-    *(chan->sync_err) = EC_READ_BIT(&pd[chan->sync_err_pdo_os], chan->sync_err_pdo_bp);
-    *(chan->expol_stall) = EC_READ_BIT(&pd[chan->expol_stall_pdo_os], chan->expol_stall_pdo_bp);
-    *(chan->tx_toggle) = EC_READ_BIT(&pd[chan->tx_toggle_pdo_os], chan->tx_toggle_pdo_bp);
-    *(chan->count_overflow) = EC_READ_BIT(&pd[chan->count_overflow_pdo_os], chan->count_overflow_pdo_bp);
-    *(chan->count_underflow) = EC_READ_BIT(&pd[chan->count_underflow_pdo_os], chan->count_underflow_pdo_bp);
-    *(chan->latch_ext_valid) = EC_READ_BIT(&pd[chan->latch_ext_valid_pdo_os], chan->latch_ext_valid_pdo_bp);
+    LCEC_PIN_BIT_SET(chan->ina, EC_READ_BIT(&pd[chan->ina_pdo_os], chan->ina_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->inb, EC_READ_BIT(&pd[chan->inb_pdo_os], chan->inb_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->inext, EC_READ_BIT(&pd[chan->inext_pdo_os], chan->inext_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->sync_err, EC_READ_BIT(&pd[chan->sync_err_pdo_os], chan->sync_err_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->expol_stall, EC_READ_BIT(&pd[chan->expol_stall_pdo_os], chan->expol_stall_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->tx_toggle, EC_READ_BIT(&pd[chan->tx_toggle_pdo_os], chan->tx_toggle_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->count_overflow, EC_READ_BIT(&pd[chan->count_overflow_pdo_os], chan->count_overflow_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->count_underflow, EC_READ_BIT(&pd[chan->count_underflow_pdo_os], chan->count_underflow_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->latch_ext_valid, EC_READ_BIT(&pd[chan->latch_ext_valid_pdo_os], chan->latch_ext_valid_pdo_bp));
 
-    *(chan->dcm_ready_to_enable) = EC_READ_BIT(&pd[chan->dcm_ready_to_enable_pdo_os], chan->dcm_ready_to_enable_pdo_bp);
-    *(chan->dcm_ready) = EC_READ_BIT(&pd[chan->dcm_ready_pdo_os], chan->dcm_ready_pdo_bp);
-    *(chan->dcm_warning) = EC_READ_BIT(&pd[chan->dcm_warning_pdo_os], chan->dcm_warning_pdo_bp);
-    *(chan->dcm_error) = EC_READ_BIT(&pd[chan->dcm_error_pdo_os], chan->dcm_error_pdo_bp);
-    *(chan->dcm_move_pos) = EC_READ_BIT(&pd[chan->dcm_move_pos_pdo_os], chan->dcm_move_pos_pdo_bp);
-    *(chan->dcm_move_neg) = EC_READ_BIT(&pd[chan->dcm_move_neg_pdo_os], chan->dcm_move_neg_pdo_bp);
-    *(chan->dcm_torque_reduced) = EC_READ_BIT(&pd[chan->dcm_torque_reduced_pdo_os], chan->dcm_torque_reduced_pdo_bp);
-    *(chan->dcm_din1) = EC_READ_BIT(&pd[chan->dcm_din1_pdo_os], chan->dcm_din1_pdo_bp);
-    *(chan->dcm_din2) = EC_READ_BIT(&pd[chan->dcm_din2_pdo_os], chan->dcm_din2_pdo_bp);
-    *(chan->dcm_sync_err) = EC_READ_BIT(&pd[chan->dcm_sync_err_pdo_os], chan->dcm_sync_err_pdo_bp);
-    *(chan->dcm_tx_toggle) = EC_READ_BIT(&pd[chan->dcm_tx_toggle_pdo_os], chan->dcm_tx_toggle_pdo_bp);
+    LCEC_PIN_BIT_SET(chan->dcm_ready_to_enable, EC_READ_BIT(&pd[chan->dcm_ready_to_enable_pdo_os], chan->dcm_ready_to_enable_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->dcm_ready, EC_READ_BIT(&pd[chan->dcm_ready_pdo_os], chan->dcm_ready_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->dcm_warning, EC_READ_BIT(&pd[chan->dcm_warning_pdo_os], chan->dcm_warning_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->dcm_error, EC_READ_BIT(&pd[chan->dcm_error_pdo_os], chan->dcm_error_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->dcm_move_pos, EC_READ_BIT(&pd[chan->dcm_move_pos_pdo_os], chan->dcm_move_pos_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->dcm_move_neg, EC_READ_BIT(&pd[chan->dcm_move_neg_pdo_os], chan->dcm_move_neg_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->dcm_torque_reduced, EC_READ_BIT(&pd[chan->dcm_torque_reduced_pdo_os], chan->dcm_torque_reduced_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->dcm_din1, EC_READ_BIT(&pd[chan->dcm_din1_pdo_os], chan->dcm_din1_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->dcm_din2, EC_READ_BIT(&pd[chan->dcm_din2_pdo_os], chan->dcm_din2_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->dcm_sync_err, EC_READ_BIT(&pd[chan->dcm_sync_err_pdo_os], chan->dcm_sync_err_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->dcm_tx_toggle, EC_READ_BIT(&pd[chan->dcm_tx_toggle_pdo_os], chan->dcm_tx_toggle_pdo_bp));
 
     // read raw values
     raw_count = EC_READ_S16(&pd[chan->count_pdo_os]);
     raw_latch = EC_READ_S16(&pd[chan->latch_pdo_os]);
 
     // read raw info values
-    *(chan->dcm_raw_info1) = EC_READ_S16(&pd[chan->dcm_info1_pdo_os]);
-    *(chan->dcm_raw_info2) = EC_READ_S16(&pd[chan->dcm_info2_pdo_os]);
+    LCEC_PIN_S32_SET(chan->dcm_raw_info1, EC_READ_S16(&pd[chan->dcm_info1_pdo_os]));
+    LCEC_PIN_S32_SET(chan->dcm_raw_info2, EC_READ_S16(&pd[chan->dcm_info2_pdo_os]));
 
     // dispatch info values
     lcec_el7342_set_info(chan, chan->dcm_raw_info1, chan->dcm_sel_info1);
@@ -567,37 +567,37 @@ static void lcec_el7342_read(lcec_slave_t *slave, long period) {
     // check for counter set done
     if (EC_READ_BIT(&pd[chan->set_count_done_pdo_os], chan->set_count_done_pdo_bp)) {
       chan->enc_last_count = raw_count;
-      *(chan->set_raw_count) = 0;
+      LCEC_PIN_BIT_SET(chan->set_raw_count, 0);
     }
 
     // update raw values
-    if (!*(chan->set_raw_count)) {
-      *(chan->raw_count) = raw_count;
+    if (!LCEC_PIN_BIT_GET(chan->set_raw_count)) {
+      LCEC_PIN_S32_SET(chan->raw_count, raw_count);
     }
 
     // handle initialization
-    if (chan->enc_do_init || *(chan->reset)) {
+    if (chan->enc_do_init || LCEC_PIN_BIT_GET(chan->reset)) {
       chan->enc_do_init = 0;
       chan->enc_last_count = raw_count;
-      *(chan->count) = 0;
+      LCEC_PIN_S32_SET(chan->count, 0);
     }
 
     // handle index
-    if (*(chan->latch_ext_valid)) {
-      *(chan->raw_latch) = raw_latch;
+    if (LCEC_PIN_BIT_GET(chan->latch_ext_valid)) {
+      LCEC_PIN_S32_SET(chan->raw_latch, raw_latch);
       chan->enc_last_count = raw_latch;
-      *(chan->count) = 0;
-      *(chan->ena_latch_ext_pos) = 0;
-      *(chan->ena_latch_ext_neg) = 0;
+      LCEC_PIN_S32_SET(chan->count, 0);
+      LCEC_PIN_BIT_SET(chan->ena_latch_ext_pos, 0);
+      LCEC_PIN_BIT_SET(chan->ena_latch_ext_neg, 0);
     }
 
     // compute net counts
     raw_delta = raw_count - chan->enc_last_count;
     chan->enc_last_count = raw_count;
-    *(chan->count) += raw_delta;
+    LCEC_PIN_S32_SET(chan->count, LCEC_PIN_S32_GET(chan->count) + raw_delta);
 
     // scale count to make floating point position
-    *(chan->pos) = *(chan->count) * chan->enc_scale_recip;
+    LCEC_PIN_FLOAT_SET(chan->pos, LCEC_PIN_S32_GET(chan->count) * chan->enc_scale_recip);
   }
 
   hal_data->last_operational = 1;
@@ -617,51 +617,51 @@ static void lcec_el7342_write(lcec_slave_t *slave, long period) {
 
     // validate duty cycle limits, both limits must be between
     // 0.0 and 1.0 (inclusive) and max must be greater then min
-    if (*(chan->dcm_max_dc) > 1.0) {
-      *(chan->dcm_max_dc) = 1.0;
+    if (LCEC_PIN_FLOAT_GET(chan->dcm_max_dc) > 1.0) {
+      LCEC_PIN_FLOAT_SET(chan->dcm_max_dc, 1.0);
     }
-    if (*(chan->dcm_min_dc) > *(chan->dcm_max_dc)) {
-      *(chan->dcm_min_dc) = *(chan->dcm_max_dc);
+    if (LCEC_PIN_FLOAT_GET(chan->dcm_min_dc) > LCEC_PIN_FLOAT_GET(chan->dcm_max_dc)) {
+      LCEC_PIN_FLOAT_SET(chan->dcm_min_dc, LCEC_PIN_FLOAT_GET(chan->dcm_max_dc));
     }
-    if (*(chan->dcm_min_dc) < -1.0) {
-      *(chan->dcm_min_dc) = -1.0;
+    if (LCEC_PIN_FLOAT_GET(chan->dcm_min_dc) < -1.0) {
+      LCEC_PIN_FLOAT_SET(chan->dcm_min_dc, -1.0);
     }
-    if (*(chan->dcm_max_dc) < *(chan->dcm_min_dc)) {
-      *(chan->dcm_max_dc) = *(chan->dcm_min_dc);
+    if (LCEC_PIN_FLOAT_GET(chan->dcm_max_dc) < LCEC_PIN_FLOAT_GET(chan->dcm_min_dc)) {
+      LCEC_PIN_FLOAT_SET(chan->dcm_max_dc, LCEC_PIN_FLOAT_GET(chan->dcm_min_dc));
     }
 
     // do scale calcs only when scale changes
-    if (*(chan->dcm_scale) != chan->dcm_old_scale) {
+    if (LCEC_PIN_FLOAT_GET(chan->dcm_scale) != chan->dcm_old_scale) {
       // validate the new scale value
-      if ((*(chan->dcm_scale) < 1e-20) && (*(chan->dcm_scale) > -1e-20)) {
+      if ((LCEC_PIN_FLOAT_GET(chan->dcm_scale) < 1e-20) && (LCEC_PIN_FLOAT_GET(chan->dcm_scale) > -1e-20)) {
         // value too small, divide by zero is a bad thing
-        *(chan->dcm_scale) = 1.0;
+        LCEC_PIN_FLOAT_SET(chan->dcm_scale, 1.0);
       }
       // get ready to detect future scale changes
-      chan->dcm_old_scale = *(chan->dcm_scale);
+      chan->dcm_old_scale = LCEC_PIN_FLOAT_GET(chan->dcm_scale);
       // we will need the reciprocal
-      chan->dcm_scale_recip = 1.0 / *(chan->dcm_scale);
+      chan->dcm_scale_recip = 1.0 / LCEC_PIN_FLOAT_GET(chan->dcm_scale);
     }
 
     // get command
-    tmpval = *(chan->dcm_value);
-    if (*(chan->dcm_absmode) && (tmpval < 0)) {
+    tmpval = LCEC_PIN_FLOAT_GET(chan->dcm_value);
+    if (LCEC_PIN_BIT_GET(chan->dcm_absmode) && (tmpval < 0)) {
       tmpval = -tmpval;
     }
 
     // convert value command to duty cycle
-    tmpdc = tmpval * chan->dcm_scale_recip + *(chan->dcm_offset);
-    if (tmpdc < *(chan->dcm_min_dc)) {
-      tmpdc = *(chan->dcm_min_dc);
+    tmpdc = tmpval * chan->dcm_scale_recip + LCEC_PIN_FLOAT_GET(chan->dcm_offset);
+    if (tmpdc < LCEC_PIN_FLOAT_GET(chan->dcm_min_dc)) {
+      tmpdc = LCEC_PIN_FLOAT_GET(chan->dcm_min_dc);
     }
-    if (tmpdc > *(chan->dcm_max_dc)) {
-      tmpdc = *(chan->dcm_max_dc);
+    if (tmpdc > LCEC_PIN_FLOAT_GET(chan->dcm_max_dc)) {
+      tmpdc = LCEC_PIN_FLOAT_GET(chan->dcm_max_dc);
     }
 
     // set output values
-    if (*(chan->dcm_enable) == 0) {
+    if (LCEC_PIN_BIT_GET(chan->dcm_enable) == 0) {
       raw_val = 0;
-      *(chan->dcm_curr_dc) = 0;
+      LCEC_PIN_FLOAT_SET(chan->dcm_curr_dc, 0);
     } else {
       raw_val = (double)0x7fff * tmpdc;
       if (raw_val > (double)0x7fff) {
@@ -670,21 +670,21 @@ static void lcec_el7342_write(lcec_slave_t *slave, long period) {
       if (raw_val < (double)-0x7fff) {
         raw_val = (double)-0x7fff;
       }
-      *(chan->dcm_curr_dc) = tmpdc;
+      LCEC_PIN_FLOAT_SET(chan->dcm_curr_dc, tmpdc);
     }
 
     // update value
-    *(chan->dcm_raw_val) = (int32_t)raw_val;
+    LCEC_PIN_S32_SET(chan->dcm_raw_val, (int32_t)raw_val);
 
     // set output data
-    EC_WRITE_BIT(&pd[chan->set_count_pdo_os], chan->set_count_pdo_bp, *(chan->set_raw_count));
-    EC_WRITE_BIT(&pd[chan->ena_latch_ext_pos_pdo_os], chan->ena_latch_ext_pos_pdo_bp, *(chan->ena_latch_ext_pos));
-    EC_WRITE_BIT(&pd[chan->ena_latch_ext_neg_pdo_os], chan->ena_latch_ext_neg_pdo_bp, *(chan->ena_latch_ext_neg));
-    EC_WRITE_S16(&pd[chan->set_count_val_pdo_os], *(chan->set_raw_count_val));
+    EC_WRITE_BIT(&pd[chan->set_count_pdo_os], chan->set_count_pdo_bp, LCEC_PIN_BIT_GET(chan->set_raw_count));
+    EC_WRITE_BIT(&pd[chan->ena_latch_ext_pos_pdo_os], chan->ena_latch_ext_pos_pdo_bp, LCEC_PIN_BIT_GET(chan->ena_latch_ext_pos));
+    EC_WRITE_BIT(&pd[chan->ena_latch_ext_neg_pdo_os], chan->ena_latch_ext_neg_pdo_bp, LCEC_PIN_BIT_GET(chan->ena_latch_ext_neg));
+    EC_WRITE_S16(&pd[chan->set_count_val_pdo_os], LCEC_PIN_S32_GET(chan->set_raw_count_val));
 
-    EC_WRITE_BIT(&pd[chan->dcm_ena_pdo_os], chan->dcm_ena_pdo_bp, *(chan->dcm_enable));
-    EC_WRITE_BIT(&pd[chan->dcm_reset_pdo_os], chan->dcm_reset_pdo_bp, *(chan->dcm_reset));
-    EC_WRITE_BIT(&pd[chan->dcm_reduce_torque_pdo_os], chan->dcm_reduce_torque_pdo_bp, *(chan->dcm_reduce_torque));
+    EC_WRITE_BIT(&pd[chan->dcm_ena_pdo_os], chan->dcm_ena_pdo_bp, LCEC_PIN_BIT_GET(chan->dcm_enable));
+    EC_WRITE_BIT(&pd[chan->dcm_reset_pdo_os], chan->dcm_reset_pdo_bp, LCEC_PIN_BIT_GET(chan->dcm_reset));
+    EC_WRITE_BIT(&pd[chan->dcm_reduce_torque_pdo_os], chan->dcm_reduce_torque_pdo_bp, LCEC_PIN_BIT_GET(chan->dcm_reduce_torque));
     EC_WRITE_S16(&pd[chan->dcm_velo_pdo_os], (int16_t)raw_val);
   }
 }
@@ -692,11 +692,11 @@ static void lcec_el7342_write(lcec_slave_t *slave, long period) {
 static void lcec_el7342_set_info(lcec_el7342_chan_t *chan, hal_s32_t *raw_info, hal_u32_t *sel_info) {
   switch (*sel_info) {
     case INFO_SEL_MOTOR_VELO:
-      *(chan->dcm_velo_fb) = (double)*raw_info * 0.0001 * chan->dcm_old_scale;
+      LCEC_PIN_FLOAT_SET(chan->dcm_velo_fb, (double)*raw_info * 0.0001 * chan->dcm_old_scale);
       break;
 
     case INFO_SEL_MOTOR_CURR:
-      *(chan->dcm_current_fb) = (double)*raw_info * 0.001;
+      LCEC_PIN_FLOAT_SET(chan->dcm_current_fb, (double)*raw_info * 0.001);
       break;
   }
 }

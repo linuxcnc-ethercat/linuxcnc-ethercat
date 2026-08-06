@@ -190,8 +190,8 @@ static void lcec_el2564_read(lcec_slave_t *slave, long period) {
     chan = &hal_data->chans[i];
 
     // read status bits
-    *(chan->warning) = EC_READ_BIT(&pd[chan->warning_pdo_os], chan->warning_pdo_bp);
-    *(chan->error) = EC_READ_BIT(&pd[chan->error_pdo_os], chan->error_pdo_bp);
+    LCEC_PIN_BIT_SET(chan->warning, EC_READ_BIT(&pd[chan->warning_pdo_os], chan->warning_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->error, EC_READ_BIT(&pd[chan->error_pdo_os], chan->error_pdo_bp));
   }
 }
 
@@ -223,8 +223,8 @@ if (hal_data->master_gain != hal_data->master_gain_prev) {
     chan = &hal_data->chans[i];
 
     // calculate PWM value
-    if (*(chan->enable)) {
-      duty = *(chan->pwm) * chan->scale + chan->offset;
+    if (LCEC_PIN_BIT_GET(chan->enable)) {
+      duty = LCEC_PIN_FLOAT_GET(chan->pwm) * chan->scale + chan->offset;
 
       // clamp to valid range
       if (duty < 0.0) duty = 0.0;

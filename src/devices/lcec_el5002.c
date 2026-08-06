@@ -266,12 +266,12 @@ static int lcec_el5002_init(int comp_id, lcec_slave_t *slave) {
     }
 
     // initialize pins
-    *(chan->pos_scale) = 1.0;
+    LCEC_PIN_FLOAT_SET(chan->pos_scale, 1.0);
 
     // initialize variables
     chan->do_init = 1;
     chan->last_count = 0;
-    chan->old_scale = *(chan->pos_scale) + 1.0;
+    chan->old_scale = LCEC_PIN_FLOAT_GET(chan->pos_scale) + 1.0;
     chan->scale = 1.0;
   }
 
@@ -297,25 +297,25 @@ static void lcec_el5002_read(lcec_slave_t *slave, long period) {
     chan = &hal_data->chans[i];
 
     // check for change in scale value
-    if (*(chan->pos_scale) != chan->old_scale) {
+    if (LCEC_PIN_FLOAT_GET(chan->pos_scale) != chan->old_scale) {
       // scale value has changed, test and update it
-      if ((*(chan->pos_scale) < 1e-20) && (*(chan->pos_scale) > -1e-20)) {
+      if ((LCEC_PIN_FLOAT_GET(chan->pos_scale) < 1e-20) && (LCEC_PIN_FLOAT_GET(chan->pos_scale) > -1e-20)) {
         // value too small, divide by zero is a bad thing
-        *(chan->pos_scale) = 1.0;
+        LCEC_PIN_FLOAT_SET(chan->pos_scale, 1.0);
       }
       // save new scale to detect future changes
-      chan->old_scale = *(chan->pos_scale);
+      chan->old_scale = LCEC_PIN_FLOAT_GET(chan->pos_scale);
       // we actually want the reciprocal
-      chan->scale = 1.0 / *(chan->pos_scale);
+      chan->scale = 1.0 / LCEC_PIN_FLOAT_GET(chan->pos_scale);
     }
 
     // get bit states
-    *(chan->err_data) = EC_READ_BIT(&pd[chan->err_data_os], chan->err_data_bp);
-    *(chan->err_frame) = EC_READ_BIT(&pd[chan->err_frame_os], chan->err_frame_bp);
-    *(chan->err_power) = EC_READ_BIT(&pd[chan->err_power_os], chan->err_power_bp);
-    *(chan->err_sync) = EC_READ_BIT(&pd[chan->err_sync_os], chan->err_sync_bp);
-    *(chan->tx_state) = EC_READ_BIT(&pd[chan->tx_state_os], chan->tx_state_bp);
-    *(chan->tx_toggle) = EC_READ_BIT(&pd[chan->tx_toggle_os], chan->tx_toggle_bp);
+    LCEC_PIN_BIT_SET(chan->err_data, EC_READ_BIT(&pd[chan->err_data_os], chan->err_data_bp));
+    LCEC_PIN_BIT_SET(chan->err_frame, EC_READ_BIT(&pd[chan->err_frame_os], chan->err_frame_bp));
+    LCEC_PIN_BIT_SET(chan->err_power, EC_READ_BIT(&pd[chan->err_power_os], chan->err_power_bp));
+    LCEC_PIN_BIT_SET(chan->err_sync, EC_READ_BIT(&pd[chan->err_sync_os], chan->err_sync_bp));
+    LCEC_PIN_BIT_SET(chan->tx_state, EC_READ_BIT(&pd[chan->tx_state_os], chan->tx_state_bp));
+    LCEC_PIN_BIT_SET(chan->tx_toggle, EC_READ_BIT(&pd[chan->tx_toggle_os], chan->tx_toggle_bp));
 
     // read raw values
     raw_count = EC_READ_S32(&pd[chan->count_pdo_os]);
@@ -326,25 +326,25 @@ static void lcec_el5002_read(lcec_slave_t *slave, long period) {
     }
 
     // update raw values
-    *(chan->raw_count) = raw_count;
+    LCEC_PIN_S32_SET(chan->raw_count, raw_count);
 
     // handle initialization
-    if (chan->do_init || *(chan->reset)) {
+    if (chan->do_init || LCEC_PIN_BIT_GET(chan->reset)) {
       chan->do_init = 0;
       chan->last_count = raw_count;
-      *(chan->count) = 0;
+      LCEC_PIN_S32_SET(chan->count, 0);
     }
 
     // compute net counts
     raw_delta = raw_count - chan->last_count;
     chan->last_count = raw_count;
-    *(chan->count) += raw_delta;
+    LCEC_PIN_S32_SET(chan->count, LCEC_PIN_S32_GET(chan->count) + raw_delta);
 
     // scale count to make floating point position
-    if (*(chan->abs_mode)) {
-      *(chan->pos) = *(chan->raw_count) * chan->scale;
+    if (LCEC_PIN_BIT_GET(chan->abs_mode)) {
+      LCEC_PIN_FLOAT_SET(chan->pos, LCEC_PIN_S32_GET(chan->raw_count) * chan->scale);
     } else {
-      *(chan->pos) = *(chan->count) * chan->scale;
+      LCEC_PIN_FLOAT_SET(chan->pos, LCEC_PIN_S32_GET(chan->count) * chan->scale);
     }
   }
 

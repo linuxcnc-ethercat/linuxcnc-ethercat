@@ -138,8 +138,8 @@ static void lcec_el2202_write(lcec_slave_t *slave, long period) {
     chan = &hal_data->chans[i];
 
     // set output
-    EC_WRITE_BIT(&pd[chan->out_offs], chan->out_bitp, *(chan->out));
+    EC_WRITE_BIT(&pd[chan->out_offs], chan->out_bitp, LCEC_PIN_BIT_GET(chan->out));
     // set tristate
-    EC_WRITE_BIT(&pd[chan->tristate_offs], chan->tristate_bitp, *(chan->tristate));
+    EC_WRITE_BIT(&pd[chan->tristate_offs], chan->tristate_bitp, LCEC_PIN_BIT_GET(chan->tristate));
   }
 }

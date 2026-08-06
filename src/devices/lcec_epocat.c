@@ -664,23 +664,23 @@ void lcec_fr4000_write(lcec_slave_t *slave, long period) {
   EC_WRITE_BIT(&pd[hal_data->off_ENABLE_5V], 3, LCEC_PIN_BIT_GET(hal_data->ENABLE_5V_3));
   EC_WRITE_BIT(&pd[hal_data->off_ENABLE_5V], 4, LCEC_PIN_BIT_GET(hal_data->ENABLE_5V_4));
 
-  fValue = calculateFvalue(*hal_data->dac_00_value, hal_data->enc_00_scale, hal_data->dac_00_scale);
+  fValue = calculateFvalue(LCEC_PIN_FLOAT_GET(hal_data->dac_00_value), hal_data->enc_00_scale, hal_data->dac_00_scale);
   LCEC_PIN_S32_SET(hal_data->HZ_0, fabs(fValue));
   iDir0 = fValue < 0 ? 1 : 0;
 
-  fValue = calculateFvalue(*hal_data->dac_01_value, hal_data->enc_01_scale, hal_data->dac_01_scale);
+  fValue = calculateFvalue(LCEC_PIN_FLOAT_GET(hal_data->dac_01_value), hal_data->enc_01_scale, hal_data->dac_01_scale);
   LCEC_PIN_S32_SET(hal_data->HZ_1, fabs(fValue));
   iDir1 = fValue < 0 ? 1 : 0;
 
-  fValue = calculateFvalue(*hal_data->dac_02_value, hal_data->enc_02_scale, hal_data->dac_02_scale);
+  fValue = calculateFvalue(LCEC_PIN_FLOAT_GET(hal_data->dac_02_value), hal_data->enc_02_scale, hal_data->dac_02_scale);
   LCEC_PIN_S32_SET(hal_data->HZ_2, fabs(fValue));
   iDir2 = fValue < 0 ? 1 : 0;
 
-  fValue = calculateFvalue(*hal_data->dac_03_value, hal_data->enc_03_scale, hal_data->dac_03_scale);
+  fValue = calculateFvalue(LCEC_PIN_FLOAT_GET(hal_data->dac_03_value), hal_data->enc_03_scale, hal_data->dac_03_scale);
   LCEC_PIN_S32_SET(hal_data->HZ_3, fabs(fValue));
   iDir3 = fValue < 0 ? 1 : 0;
 
-  fValue = calculateFvalue(*hal_data->dac_04_value, hal_data->enc_04_scale, hal_data->dac_04_scale);
+  fValue = calculateFvalue(LCEC_PIN_FLOAT_GET(hal_data->dac_04_value), hal_data->enc_04_scale, hal_data->dac_04_scale);
   LCEC_PIN_S32_SET(hal_data->HZ_4, fabs(fValue));
   iDir4 = fValue < 0 ? 1 : 0;
 

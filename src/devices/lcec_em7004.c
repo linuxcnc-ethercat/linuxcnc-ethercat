@@ -224,12 +224,12 @@ static int lcec_em7004_init(int comp_id, lcec_slave_t *slave) {
     }
 
     // set default pin values
-    *(aout->scale) = 1.0;
-    *(aout->min_dc) = -1.0;
-    *(aout->max_dc) = 1.0;
+    LCEC_PIN_FLOAT_SET(aout->scale, 1.0);
+    LCEC_PIN_FLOAT_SET(aout->min_dc, -1.0);
+    LCEC_PIN_FLOAT_SET(aout->max_dc, 1.0);
 
     // init other fields
-    aout->old_scale = *(aout->scale) + 1.0;
+    aout->old_scale = LCEC_PIN_FLOAT_GET(aout->scale) + 1.0;
     aout->scale_recip = 1.0;
   }
 
@@ -255,12 +255,12 @@ static int lcec_em7004_init(int comp_id, lcec_slave_t *slave) {
     }
 
     // initialize pins
-    *(enc->pos_scale) = 1.0;
+    LCEC_PIN_FLOAT_SET(enc->pos_scale, 1.0);
 
     // initialize variables
     enc->do_init = 1;
     enc->last_count = 0;
-    enc->old_scale = *(enc->pos_scale) + 1.0;
+    enc->old_scale = LCEC_PIN_FLOAT_GET(enc->pos_scale) + 1.0;
     enc->scale = 1.0;
   }
 
@@ -285,31 +285,31 @@ static void lcec_em7004_read(lcec_slave_t *slave, long period) {
   // check digital inputs
   for (i = 0, din = hal_data->dins; i < LCEC_EM7004_DIN_COUNT; i++, din++) {
     s = EC_READ_BIT(&pd[din->pdo_os], din->pdo_bp);
-    *(din->in) = s;
-    *(din->in_not) = !s;
+    LCEC_PIN_BIT_SET(din->in, s);
+    LCEC_PIN_BIT_SET(din->in_not, !s);
   }
 
   // read encoder data
   for (i = 0, enc = hal_data->encs; i < LCEC_EM7004_ENC_COUNT; i++, enc++) {
     // check for change in scale value
-    if (*(enc->pos_scale) != enc->old_scale) {
+    if (LCEC_PIN_FLOAT_GET(enc->pos_scale) != enc->old_scale) {
       // scale value has changed, test and update it
-      if ((*(enc->pos_scale) < 1e-20) && (*(enc->pos_scale) > -1e-20)) {
+      if ((LCEC_PIN_FLOAT_GET(enc->pos_scale) < 1e-20) && (LCEC_PIN_FLOAT_GET(enc->pos_scale) > -1e-20)) {
         // value too small, divide by zero is a bad thing
-        *(enc->pos_scale) = 1.0;
+        LCEC_PIN_FLOAT_SET(enc->pos_scale, 1.0);
       }
       // save new scale to detect future changes
-      enc->old_scale = *(enc->pos_scale);
+      enc->old_scale = LCEC_PIN_FLOAT_GET(enc->pos_scale);
       // we actually want the reciprocal
-      enc->scale = 1.0 / *(enc->pos_scale);
+      enc->scale = 1.0 / LCEC_PIN_FLOAT_GET(enc->pos_scale);
     }
 
     // get bit states
-    *(enc->ina) = EC_READ_BIT(&pd[enc->ina_pdo_os], enc->ina_pdo_bp);
-    *(enc->inb) = EC_READ_BIT(&pd[enc->inb_pdo_os], enc->inb_pdo_bp);
-    *(enc->ingate) = EC_READ_BIT(&pd[enc->ingate_pdo_os], enc->ingate_pdo_bp);
-    *(enc->inext) = EC_READ_BIT(&pd[enc->inext_pdo_os], enc->inext_pdo_bp);
-    *(enc->latch_ext_valid) = EC_READ_BIT(&pd[enc->latch_ext_valid_pdo_os], enc->latch_ext_valid_pdo_bp);
+    LCEC_PIN_BIT_SET(enc->ina, EC_READ_BIT(&pd[enc->ina_pdo_os], enc->ina_pdo_bp));
+    LCEC_PIN_BIT_SET(enc->inb, EC_READ_BIT(&pd[enc->inb_pdo_os], enc->inb_pdo_bp));
+    LCEC_PIN_BIT_SET(enc->ingate, EC_READ_BIT(&pd[enc->ingate_pdo_os], enc->ingate_pdo_bp));
+    LCEC_PIN_BIT_SET(enc->inext, EC_READ_BIT(&pd[enc->inext_pdo_os], enc->inext_pdo_bp));
+    LCEC_PIN_BIT_SET(enc->latch_ext_valid, EC_READ_BIT(&pd[enc->latch_ext_valid_pdo_os], enc->latch_ext_valid_pdo_bp));
 
     // read raw values
     raw_count = EC_READ_S16(&pd[enc->count_pdo_os]);
@@ -323,37 +323,37 @@ static void lcec_em7004_read(lcec_slave_t *slave, long period) {
     // check for counter set done
     if (EC_READ_BIT(&pd[enc->set_count_done_pdo_os], enc->set_count_done_pdo_bp)) {
       enc->last_count = raw_count;
-      *(enc->set_raw_count) = 0;
+      LCEC_PIN_BIT_SET(enc->set_raw_count, 0);
     }
 
     // update raw values
-    if (!*(enc->set_raw_count)) {
-      *(enc->raw_count) = raw_count;
+    if (!LCEC_PIN_BIT_GET(enc->set_raw_count)) {
+      LCEC_PIN_S32_SET(enc->raw_count, raw_count);
     }
 
     // handle initialization
-    if (enc->do_init || *(enc->reset)) {
+    if (enc->do_init || LCEC_PIN_BIT_GET(enc->reset)) {
       enc->do_init = 0;
       enc->last_count = raw_count;
-      *(enc->count) = 0;
+      LCEC_PIN_S32_SET(enc->count, 0);
     }
 
     // handle index
-    if (*(enc->latch_ext_valid)) {
-      *(enc->raw_latch) = raw_latch;
+    if (LCEC_PIN_BIT_GET(enc->latch_ext_valid)) {
+      LCEC_PIN_S32_SET(enc->raw_latch, raw_latch);
       enc->last_count = raw_latch;
-      *(enc->count) = 0;
-      *(enc->ena_latch_ext_pos) = 0;
-      *(enc->ena_latch_ext_neg) = 0;
+      LCEC_PIN_S32_SET(enc->count, 0);
+      LCEC_PIN_BIT_SET(enc->ena_latch_ext_pos, 0);
+      LCEC_PIN_BIT_SET(enc->ena_latch_ext_neg, 0);
     }
 
     // compute net counts
     raw_delta = raw_count - enc->last_count;
     enc->last_count = raw_count;
-    *(enc->count) += raw_delta;
+    LCEC_PIN_S32_SET(enc->count, LCEC_PIN_S32_GET(enc->count) + raw_delta);
 
     // scale count to make floating point position
-    *(enc->pos) = *(enc->count) * enc->scale;
+    LCEC_PIN_BIT_SET(enc->pos, LCEC_PIN_S32_GET(enc->count) * enc->scale);
   }
 
   hal_data->last_operational = 1;
@@ -371,7 +371,7 @@ static void lcec_em7004_write(lcec_slave_t *slave, long period) {
 
   // set digital outputs
   for (i = 0, dout = hal_data->douts; i < LCEC_EM7004_DOUT_COUNT; i++, dout++) {
-    s = *(dout->out);
+    s = LCEC_PIN_BIT_GET(dout->out);
     if (dout->invert) {
       s = !s;
     }
@@ -382,53 +382,53 @@ static void lcec_em7004_write(lcec_slave_t *slave, long period) {
   for (i = 0, aout = hal_data->aouts; i < LCEC_EM7004_AOUT_COUNT; i++, aout++) {
     // validate duty cycle limits, both limits must be between
     // 0.0 and 1.0 (inclusive) and max must be greater then min
-    if (*(aout->max_dc) > 1.0) {
-      *(aout->max_dc) = 1.0;
+    if (LCEC_PIN_FLOAT_GET(aout->max_dc) > 1.0) {
+      LCEC_PIN_FLOAT_SET(aout->max_dc, 1.0);
     }
-    if (*(aout->min_dc) > *(aout->max_dc)) {
-      *(aout->min_dc) = *(aout->max_dc);
+    if (LCEC_PIN_FLOAT_GET(aout->min_dc) > LCEC_PIN_FLOAT_GET(aout->max_dc)) {
+      LCEC_PIN_FLOAT_SET(aout->min_dc, LCEC_PIN_FLOAT_GET(aout->max_dc));
     }
-    if (*(aout->min_dc) < -1.0) {
-      *(aout->min_dc) = -1.0;
+    if (LCEC_PIN_FLOAT_GET(aout->min_dc) < -1.0) {
+      LCEC_PIN_FLOAT_SET(aout->min_dc, -1.0);
     }
-    if (*(aout->max_dc) < *(aout->min_dc)) {
-      *(aout->max_dc) = *(aout->min_dc);
+    if (LCEC_PIN_FLOAT_GET(aout->max_dc) < LCEC_PIN_FLOAT_GET(aout->min_dc)) {
+      LCEC_PIN_FLOAT_SET(aout->max_dc, LCEC_PIN_FLOAT_GET(aout->min_dc));
     }
 
     // do scale calcs only when scale changes
-    if (*(aout->scale) != aout->old_scale) {
+    if (LCEC_PIN_FLOAT_GET(aout->scale) != aout->old_scale) {
       // validate the new scale value
-      if ((*(aout->scale) < 1e-20) && (*(aout->scale) > -1e-20)) {
+      if ((LCEC_PIN_FLOAT_GET(aout->scale) < 1e-20) && (LCEC_PIN_FLOAT_GET(aout->scale) > -1e-20)) {
         // value too small, divide by zero is a bad thing
-        *(aout->scale) = 1.0;
+        LCEC_PIN_FLOAT_SET(aout->scale, 1.0);
       }
       // get ready to detect future scale changes
-      aout->old_scale = *(aout->scale);
+      aout->old_scale = LCEC_PIN_FLOAT_GET(aout->scale);
       // we will need the reciprocal
-      aout->scale_recip = 1.0 / *(aout->scale);
+      aout->scale_recip = 1.0 / LCEC_PIN_FLOAT_GET(aout->scale);
     }
 
     // get command
-    tmpval = *(aout->value);
-    if (*(aout->absmode) && (tmpval < 0)) {
+    tmpval = LCEC_PIN_FLOAT_GET(aout->value);
+    if (LCEC_PIN_BIT_GET(aout->absmode) && (tmpval < 0)) {
       tmpval = -tmpval;
     }
 
     // convert value command to duty cycle
-    tmpdc = tmpval * aout->scale_recip + *(aout->offset);
-    if (tmpdc < *(aout->min_dc)) {
-      tmpdc = *(aout->min_dc);
+    tmpdc = tmpval * aout->scale_recip + LCEC_PIN_FLOAT_GET(aout->offset);
+    if (tmpdc < LCEC_PIN_FLOAT_GET(aout->min_dc)) {
+      tmpdc = LCEC_PIN_FLOAT_GET(aout->min_dc);
     }
-    if (tmpdc > *(aout->max_dc)) {
-      tmpdc = *(aout->max_dc);
+    if (tmpdc > LCEC_PIN_FLOAT_GET(aout->max_dc)) {
+      tmpdc = LCEC_PIN_FLOAT_GET(aout->max_dc);
     }
 
     // set output values
-    if (*(aout->enable) == 0) {
+    if (LCEC_PIN_BIT_GET(aout->enable) == 0) {
       raw_val = 0;
-      *(aout->pos) = 0;
-      *(aout->neg) = 0;
-      *(aout->curr_dc) = 0;
+      LCEC_PIN_BIT_SET(aout->pos, 0);
+      LCEC_PIN_BIT_SET(aout->neg, 0);
+      LCEC_PIN_FLOAT_SET(aout->curr_dc, 0);
     } else {
       raw_val = (double)0x7fff * tmpdc;
       if (raw_val > (double)0x7fff) {
@@ -437,21 +437,21 @@ static void lcec_em7004_write(lcec_slave_t *slave, long period) {
       if (raw_val < (double)-0x7fff) {
         raw_val = (double)-0x7fff;
       }
-      *(aout->pos) = (*(aout->value) > 0);
-      *(aout->neg) = (*(aout->value) < 0);
-      *(aout->curr_dc) = tmpdc;
+      LCEC_PIN_BIT_SET(aout->pos, (LCEC_PIN_FLOAT_GET(aout->value) > 0));
+      LCEC_PIN_BIT_SET(aout->neg, (LCEC_PIN_FLOAT_GET(aout->value) < 0));
+      LCEC_PIN_FLOAT_SET(aout->curr_dc, tmpdc);
     }
 
     // update value
     EC_WRITE_S16(&pd[aout->val_pdo_os], (int16_t)raw_val);
-    *(aout->raw_val) = (int32_t)raw_val;
+    LCEC_PIN_S32_SET(aout->raw_val, (int32_t)raw_val);
   }
 
   // write encoder data
   for (i = 0, enc = hal_data->encs; i < LCEC_EM7004_ENC_COUNT; i++, enc++) {
-    EC_WRITE_BIT(&pd[enc->set_count_pdo_os], enc->set_count_pdo_bp, *(enc->set_raw_count));
-    EC_WRITE_BIT(&pd[enc->ena_latch_ext_pos_pdo_os], enc->ena_latch_ext_pos_pdo_bp, *(enc->ena_latch_ext_pos));
-    EC_WRITE_BIT(&pd[enc->ena_latch_ext_neg_pdo_os], enc->ena_latch_ext_neg_pdo_bp, *(enc->ena_latch_ext_neg));
-    EC_WRITE_S16(&pd[enc->set_count_val_pdo_os], *(enc->set_raw_count_val));
+    EC_WRITE_BIT(&pd[enc->set_count_pdo_os], enc->set_count_pdo_bp, LCEC_PIN_BIT_GET(enc->set_raw_count));
+    EC_WRITE_BIT(&pd[enc->ena_latch_ext_pos_pdo_os], enc->ena_latch_ext_pos_pdo_bp, LCEC_PIN_BIT_GET(enc->ena_latch_ext_pos));
+    EC_WRITE_BIT(&pd[enc->ena_latch_ext_neg_pdo_os], enc->ena_latch_ext_neg_pdo_bp, LCEC_PIN_BIT_GET(enc->ena_latch_ext_neg));
+    EC_WRITE_S16(&pd[enc->set_count_val_pdo_os], LCEC_PIN_S32_GET(enc->set_raw_count_val));
   }
 }

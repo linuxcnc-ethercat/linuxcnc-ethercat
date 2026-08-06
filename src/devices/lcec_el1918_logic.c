@@ -287,26 +287,26 @@ void lcec_el1918_logic_read(lcec_slave_t *slave, long period) {
   lcec_slave_t *fsoe_slave;
   const LCEC_CONF_FSOE_T *fsoeConf;
 
-  *(hal_data->state) = EC_READ_U8(&pd[hal_data->state_os]);
-  *(hal_data->cycle_counter) = EC_READ_U8(&pd[hal_data->cycle_counter_os]);
+  LCEC_PIN_U32_SET(hal_data->state, EC_READ_U8(&pd[hal_data->state_os]));
+  LCEC_PIN_U32_SET(hal_data->cycle_counter, EC_READ_U8(&pd[hal_data->cycle_counter_os]));
 
   if (hal_data->std_out_count > 0) {
     std_out = EC_READ_U8(&pd[hal_data->std_out_os]);
     for (i = 0; i < hal_data->std_out_count; i++) {
-      *(hal_data->std_out_pins[i]) = !!(std_out & (1 << i));
+      LCEC_PIN_BIT_SET(hal_data->std_out_pins[i], !!(std_out & (1 << i)));
     }
   }
 
   for (i = 0, fsoe_data = hal_data->fsoe; i < hal_data->fsoe_count; i++, fsoe_data++) {
     fsoe_slave = fsoe_data->fsoe_slave;
     fsoeConf = fsoe_slave->fsoeConf;
-    *(fsoe_data->fsoe_master_cmd) = EC_READ_U8(&pd[fsoe_data->fsoe_master_cmd_os]);
-    *(fsoe_data->fsoe_master_connid) = EC_READ_U16(&pd[fsoe_data->fsoe_master_connid_os]);
-    *(fsoe_data->fsoe_slave_cmd) = EC_READ_U8(&pd[fsoe_data->fsoe_slave_cmd_os]);
-    *(fsoe_data->fsoe_slave_connid) = EC_READ_U16(&pd[fsoe_data->fsoe_slave_connid_os]);
+    LCEC_PIN_U32_SET(fsoe_data->fsoe_master_cmd, EC_READ_U8(&pd[fsoe_data->fsoe_master_cmd_os]));
+    LCEC_PIN_U32_SET(fsoe_data->fsoe_master_connid, EC_READ_U16(&pd[fsoe_data->fsoe_master_connid_os]));
+    LCEC_PIN_U32_SET(fsoe_data->fsoe_slave_cmd, EC_READ_U8(&pd[fsoe_data->fsoe_slave_cmd_os]));
+    LCEC_PIN_U32_SET(fsoe_data->fsoe_slave_connid, EC_READ_U16(&pd[fsoe_data->fsoe_slave_connid_os]));
     for (crc_idx = 0, crc = fsoe_data->fsoe_crc; crc_idx < fsoeConf->data_channels; crc_idx++, crc++) {
-      *(crc->fsoe_master_crc) = EC_READ_U16(&pd[crc->fsoe_master_crc_os]);
-      *(crc->fsoe_slave_crc) = EC_READ_U16(&pd[crc->fsoe_slave_crc_os]);
+      LCEC_PIN_U32_SET(crc->fsoe_master_crc, EC_READ_U16(&pd[crc->fsoe_master_crc_os]));
+      LCEC_PIN_U32_SET(crc->fsoe_slave_crc, EC_READ_U16(&pd[crc->fsoe_slave_crc_os]));
     }
   }
 }
@@ -321,7 +321,7 @@ void lcec_el1918_logic_write(lcec_slave_t *slave, long period) {
   if (hal_data->std_in_count > 0) {
     std_in = 0;
     for (i = 0; i < hal_data->std_in_count; i++) {
-      if (*(hal_data->std_in_pins[i])) std_in |= (1 << i);
+      if (LCEC_PIN_BIT_GET(hal_data->std_in_pins[i])) std_in |= (1 << i);
     }
     EC_WRITE_U8(&pd[hal_data->std_in_os], std_in);
   }
