@@ -184,7 +184,6 @@ int rtapi_app_main(void) {
   sigaction(SIGSEGV, &handler, NULL);
   sigaction(SIGBUS, &handler, NULL);
   sigaction(SIGFPE, &handler, NULL);
-  sigaction(SIGKILL, &handler, NULL);
 #endif
 
   // connect to the HAL
