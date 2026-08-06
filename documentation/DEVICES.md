@@ -212,7 +212,7 @@ Description | Driver | EtherCAT VID:PID | Device Type | Testing Status | Notes
 [Beckhoff EP1008-0001 8 Ch. Dig. Input 24V, 3ms, M8](https://www.beckhoff.com/EP1008-0001) | [el1xxx](../src/devices/lcec_el1xxx.c) | 0x2:0x03f04052 | Digital Input | Uncertain; @scottlaird has several | 
 [Beckhoff EP1018-0001 8 Ch. Dig. Input 24V, 10µs, M8](https://www.beckhoff.com/EP1018-0001) | [el1xxx](../src/devices/lcec_el1xxx.c) | 0x2:0x03fa4052 | Digital Input | Uncertain; @scottlaird has several | 
 [Beckhoff EP1122-0001 2 port EtherCAT junction](https://www.beckhoff.com/EP1122-0001) | [passive](../src/devices/lcec_passive.c) | 0x2:0x04624052 | System Terminals |  | Passive device
-[EP1809-0021 | EtherCAT Box, 16-channel digital input, 24 V DC, 3 ms, M8](https://www.beckhoff.com/EP1809) | [el1xxx](../src/devices/lcec_el1xxx.c) | 0x2:0x07114052 | Digital Input | tested and working @mintracer | 
+[Beckhoff EP1809-0021 EtherCAT Box, 16-channel digital input, 24 V DC, 3 ms, M8](https://www.beckhoff.com/EP1809) | [el1xxx](../src/devices/lcec_el1xxx.c) | 0x2:0x07114052 | Digital Input | tested and working @mintracer | 
 [Beckhoff EP1819-0005 16 Ch. Dig. Input 24V, 10µs, M8 4pol](https://www.beckhoff.com/EP1819) | [el1xxx](../src/devices/lcec_el1xxx.c) | 0x2:0x071b4052 | Digital Input |  | 
 [Beckhoff EP2008-0001 8 Ch. Dig. Output 24V, 0,5A, M8](https://www.beckhoff.com/EP2008-0001) | [el2xxx](../src/devices/lcec_el2xxx.c) | 0x2:0x07d84052 | Digital Output |  | 
 [Beckhoff EP2028-0001 8 Ch. Dig. Output 24V, 2A, M8](https://www.beckhoff.com/EP2028-0001) | [el2xxx](../src/devices/lcec_el2xxx.c) | 0x2:0x07ec4052 | Digital Output |  | 
@@ -239,6 +239,7 @@ Description | Driver | EtherCAT VID:PID | Device Type | Testing Status | Notes
 [Beckhoff EPP2349-0021 16 Ch. Dig. Input/Output 24V, 10µs, 0,5A, M8](https://www.beckhoff.com/EPP2349-0021) | [digitalcombo](../src/devices/lcec_digitalcombo.c) | 0x2:0x647658d9 | Digital Input/Output |  | 
 [Beckhoff EPX3158 8Ch. Ana. Input 4-20mA, Ex i](http://www.beckhoff.com/EPX3158) | [el3xxx](../src/devices/lcec_el3xxx.c) | 0x2:0x9809ab69 | Analog Input | New, untested. | 
 [Beckhoff EP2349-0021 16 Ch. Dig. Input/Output 24V, 10µs, 0,5A, M8](https://www.beckhoff.com/EP2349-0021) | [digitalcombo](../src/devices/lcec_digitalcombo.c) | 0x2:0x092d4052 | Digital Input/Output |  | 
+[Beckhoff IL2301-B110 Coupler Box, 4-channel digital input + 4-channel digital output, EtherCAT, 24 V DC, 3 ms, 0.5 A, M12](https://www.beckhoff.com/IL2301-B110) | [il2301-b110](../src/devices/lcec_il2301.c) | 0x2:0x08FD3094 | Coupler Box module combines four digital inputs and four digital outputs in one device | tested and working @mintracer | 
 [SMC EX260-SEC1](https://www.smcpneumatics.com/EX260-SEC1.html) | [ex260](../src/devices/lcec_ex260.c) | 0x114:0x01000001 | Valve Controller | Merged 2023-12-31, untested | by @satiowadahc
 [SMC EX260-SEC1](https://www.smcpneumatics.com/EX260-SEC2.html) | [ex260](../src/devices/lcec_ex260.c) | 0x114:0x01000002 | Valve Controller | Merged 2023-12-31, untested | by @satiowadahc
 [SMC EX260-SEC3](https://www.smcpneumatics.com/EX260-SEC3.html) | [ex260](../src/devices/lcec_ex260.c) | 0x114:0x01000003 | Valve Controller | Merged 2023-12-31, untested | by @satiowadahc
