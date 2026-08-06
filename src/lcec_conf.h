@@ -21,8 +21,8 @@
 #ifndef _LCEC_CONF_H_
 #define _LCEC_CONF_H_
 
-#include "ecrt.h"
-#include "hal.h"
+#include <ecrt.h>
+#include <hal.h>
 
 #define LCEC_MODULE_NAME "lcec"
 

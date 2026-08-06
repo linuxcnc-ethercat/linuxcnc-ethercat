@@ -29,11 +29,11 @@
 #include <sys/eventfd.h>
 #include <unistd.h>
 
-#include "hal.h"
+#include <hal.h>
 #include "lcec.h"
 #include "lcec_conf_priv.h"
 #include "lcec_rtapi.h"
-#include "rtapi.h"
+#include <rtapi.h>
 
 typedef struct {
   hal_u32_t *master_count;

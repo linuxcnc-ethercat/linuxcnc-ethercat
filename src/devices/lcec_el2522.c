@@ -25,7 +25,7 @@
 #include <stdbool.h>
 
 #include "../lcec.h"
-#include "hal.h"
+#include <hal.h>
 
 static int lcec_el2522_init(int comp_id, lcec_slave_t *slave);
 static void lcec_el2522_read(lcec_slave_t *slave, long period);

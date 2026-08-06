@@ -20,7 +20,7 @@
 /// @brief Driver for Beckhoff EL2521 pulse train output modules
 
 #include "../lcec.h"
-#include "hal.h"
+#include <hal.h>
 
 // ****************************************************************************
 // CONFIG ISSUES:

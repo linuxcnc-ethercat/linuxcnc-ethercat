@@ -27,7 +27,7 @@
 
 #include "devices/lcec_generic.h"
 #include "lcec.h"
-#include "rtapi_app.h"
+#include <rtapi_app.h>
 // #include <linuxcnc/rtapi_mutex.h>
 
 MODULE_LICENSE("GPL")

@@ -22,7 +22,7 @@
 #include "lcec_el7211.h"
 
 #include "../lcec.h"
-#include "hal.h"
+#include <hal.h>
 #include "lcec_class_enc.h"
 
 #define FAULT_RESET_PERIOD_NS 100000000
