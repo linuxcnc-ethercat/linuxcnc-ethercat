@@ -194,12 +194,12 @@ static int lcec_el5102_init(int comp_id, lcec_slave_t *slave) {
     }
 
     // initialize pins
-    *(data->pos_scale) = 1.0;
+    LCEC_PIN_FLOAT_SET(data->pos_scale, 1.0);
 
     // initialize variables
     data->do_init = 1;
     data->last_count = 0;
-    data->old_scale = *(data->pos_scale) + 1.0;
+    data->old_scale = LCEC_PIN_FLOAT_GET(data->pos_scale) + 1.0;
     data->scale = 1.0;
   }
 
@@ -226,16 +226,16 @@ static void lcec_el5102_read_channel(lcec_slave_t *slave, long period, int chann
   }
 
   // check for change in scale value
-  if (*(data->pos_scale) != data->old_scale) {
+  if (LCEC_PIN_FLOAT_GET(data->pos_scale) != data->old_scale) {
     // scale value has changed, test and update it
-    if ((*(data->pos_scale) < 1e-20) && (*(data->pos_scale) > -1e-20)) {
+    if ((LCEC_PIN_FLOAT_GET(data->pos_scale) < 1e-20) && (LCEC_PIN_FLOAT_GET(data->pos_scale) > -1e-20)) {
       // value too small, divide by zero is a bad thing
-      *(data->pos_scale) = 1.0;
+      LCEC_PIN_FLOAT_SET(data->pos_scale, 1.0);
     }
     // save new scale to detect future changes
-    data->old_scale = *(data->pos_scale);
+    data->old_scale = LCEC_PIN_FLOAT_GET(data->pos_scale);
     // we actually want the reciprocal
-    data->scale = 1.0 / *(data->pos_scale);
+    data->scale = 1.0 / LCEC_PIN_FLOAT_GET(data->pos_scale);
   }
 
   // read raw values
@@ -248,16 +248,16 @@ static void lcec_el5102_read_channel(lcec_slave_t *slave, long period, int chann
   // using 6 of them here (including "counter set done", below).
   // Someone should review which of the remaining status bits are
   // useful and add pins for them, and then delete the rest.
-  *(data->inext) = EC_READ_BIT(&pd[data->status_input_status_os], data->status_input_status_bp);
-  *(data->overflow) = EC_READ_BIT(&pd[data->status_counter_overflow_os], data->status_counter_overflow_bp);
-  *(data->underflow) = EC_READ_BIT(&pd[data->status_counter_underflow_os], data->status_counter_underflow_bp);
-  *(data->latch_ext_valid) = EC_READ_BIT(&pd[data->status_latch_extern_os], data->status_latch_extern_bp);
-  *(data->latch_c_valid) = EC_READ_BIT(&pd[data->status_latch_c_os], data->status_latch_c_bp);
+  LCEC_PIN_BIT_SET(data->inext, EC_READ_BIT(&pd[data->status_input_status_os], data->status_input_status_bp));
+  LCEC_PIN_BIT_SET(data->overflow, EC_READ_BIT(&pd[data->status_counter_overflow_os], data->status_counter_overflow_bp));
+  LCEC_PIN_BIT_SET(data->underflow, EC_READ_BIT(&pd[data->status_counter_underflow_os], data->status_counter_underflow_bp));
+  LCEC_PIN_BIT_SET(data->latch_ext_valid, EC_READ_BIT(&pd[data->status_latch_extern_os], data->status_latch_extern_bp));
+  LCEC_PIN_BIT_SET(data->latch_c_valid, EC_READ_BIT(&pd[data->status_latch_c_os], data->status_latch_c_bp));
 
   // check for counter set done
   if (EC_READ_BIT(&pd[data->status_set_counter_done_os], data->status_set_counter_done_bp)) {
     data->last_count = raw_count;
-    *(data->set_raw_count) = 0;
+    LCEC_PIN_BIT_SET(data->set_raw_count, 0);
   }
   // check for operational change of slave
   if (!data->last_operational) {
@@ -265,45 +265,45 @@ static void lcec_el5102_read_channel(lcec_slave_t *slave, long period, int chann
   }
 
   // update raw values
-  if (!*(data->set_raw_count)) {
-    *(data->raw_count) = raw_count;
-    //*(data->raw_frequency) = raw_frequency;
-    //*(data->raw_period) = raw_period;
+  if (!LCEC_PIN_BIT_GET(data->set_raw_count)) {
+    LCEC_PIN_S32_SET(data->raw_count, raw_count);
+    //LCEC_PIN_U32_SET(data->raw_frequency, raw_frequency);
+    //LCEC_PIN_U32_SET(data->raw_period, raw_period);
   }
 
   // handle initialization
-  if (data->do_init || *(data->reset)) {
+  if (data->do_init || LCEC_PIN_BIT_GET(data->reset)) {
     data->do_init = 0;
     data->last_count = raw_count;
-    *(data->count) = 0;
+    LCEC_PIN_S32_SET(data->count, 0);
   }
 
   // handle index
-  if (*(data->latch_ext_valid)) {
-    *(data->raw_latch) = raw_latch;
+  if (LCEC_PIN_BIT_GET(data->latch_ext_valid)) {
+    LCEC_PIN_S32_SET(data->raw_latch, raw_latch);
     data->last_count = raw_latch;
-    *(data->count) = 0;
-    *(data->ena_latch_ext_pos) = 0;
-    *(data->ena_latch_ext_neg) = 0;
+    LCEC_PIN_S32_SET(data->count, 0);
+    LCEC_PIN_BIT_SET(data->ena_latch_ext_pos, 0);
+    LCEC_PIN_BIT_SET(data->ena_latch_ext_neg, 0);
   }
-  if (*(data->latch_c_valid)) {
-    *(data->raw_latch) = raw_latch;
+  if (LCEC_PIN_BIT_GET(data->latch_c_valid)) {
+    LCEC_PIN_S32_SET(data->raw_latch, raw_latch);
     data->last_count = raw_latch;
-    *(data->count) = 0;
-    *(data->ena_latch_c) = 0;
+    LCEC_PIN_S32_SET(data->count, 0);
+    LCEC_PIN_BIT_SET(data->ena_latch_c, 0);
   }
 
   // compute net counts
   raw_delta = raw_count - data->last_count;
   data->last_count = raw_count;
-  *(data->count) += raw_delta;
+  LCEC_PIN_S32_SET(data->count, LCEC_PIN_S32_GET(data->count) + raw_delta);
 
   // scale count to make floating point position
-  *(data->pos) = *(data->count) * data->scale;
+  LCEC_PIN_FLOAT_SET(data->pos, LCEC_PIN_S32_GET(data->count) * data->scale);
 
   // scale period
-  //*(data->frequency) = ((double)(*(data->raw_frequency))) * LCEC_EL5102_FREQUENCY_SCALE;
-  //*(data->period) = ((double)(*(data->raw_period))) * LCEC_EL5102_PERIOD_SCALE;
+  //LCEC_PIN_FLOAT_SET(data->frequency, ((double)(LCEC_PIN_U32_GET(data->raw_frequency))) * LCEC_EL5102_FREQUENCY_SCALE);
+  //LCEC_PIN_FLOAT_SET(data->period, ((double)(LCEC_PIN_U32_GET(data->raw_period))) * LCEC_EL5102_PERIOD_SCALE);
 
   data->last_operational = 1;
 }
@@ -322,11 +322,11 @@ static void lcec_el5102_write_channel(lcec_slave_t *slave, long period, int chan
   // but we're only actually using 4 of them.  We should add the
   // remaining ones that are useful here (presumably also adding pins
   // for them), and then delete whatever is left.
-  EC_WRITE_BIT(&pd[data->control_set_counter_os], data->control_set_counter_bp, *(data->set_raw_count));
-  EC_WRITE_BIT(&pd[data->control_enable_latch_c_os], data->control_enable_latch_c_bp, *(data->ena_latch_c));
-  EC_WRITE_BIT(&pd[data->control_enable_latch_extern_pos_os], data->control_enable_latch_extern_pos_bp, *(data->ena_latch_ext_pos));
-  EC_WRITE_BIT(&pd[data->control_enable_latch_extern_neg_os], data->control_enable_latch_extern_neg_bp, *(data->ena_latch_ext_neg));
+  EC_WRITE_BIT(&pd[data->control_set_counter_os], data->control_set_counter_bp, LCEC_PIN_BIT_GET(data->set_raw_count));
+  EC_WRITE_BIT(&pd[data->control_enable_latch_c_os], data->control_enable_latch_c_bp, LCEC_PIN_BIT_GET(data->ena_latch_c));
+  EC_WRITE_BIT(&pd[data->control_enable_latch_extern_pos_os], data->control_enable_latch_extern_pos_bp, LCEC_PIN_BIT_GET(data->ena_latch_ext_pos));
+  EC_WRITE_BIT(&pd[data->control_enable_latch_extern_neg_os], data->control_enable_latch_extern_neg_bp, LCEC_PIN_BIT_GET(data->ena_latch_ext_neg));
 
   // set output data
-  EC_WRITE_S16(&pd[data->setval_pdo_os], *(data->set_raw_count_val));
+  EC_WRITE_S16(&pd[data->setval_pdo_os], LCEC_PIN_S32_GET(data->set_raw_count_val));
 }

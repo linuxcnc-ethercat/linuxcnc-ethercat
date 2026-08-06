@@ -367,17 +367,17 @@ static void lcec_el70x1_read(lcec_slave_t *slave, long period) {
   lcec_el70x1_data_t *hal_data = (lcec_el70x1_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
 
-  *(hal_data->stm_ready_to_enable) = EC_READ_BIT(&pd[hal_data->stm_ready_to_enable_pdo_os], hal_data->stm_ready_to_enable_pdo_bp);
-  *(hal_data->stm_ready) = EC_READ_BIT(&pd[hal_data->stm_ready_pdo_os], hal_data->stm_ready_pdo_bp);
-  *(hal_data->stm_warning) = EC_READ_BIT(&pd[hal_data->stm_warning_pdo_os], hal_data->stm_warning_pdo_bp);
-  *(hal_data->stm_error) = EC_READ_BIT(&pd[hal_data->stm_error_pdo_os], hal_data->stm_error_pdo_bp);
-  *(hal_data->stm_move_pos) = EC_READ_BIT(&pd[hal_data->stm_move_pos_pdo_os], hal_data->stm_move_pos_pdo_bp);
-  *(hal_data->stm_move_neg) = EC_READ_BIT(&pd[hal_data->stm_move_neg_pdo_os], hal_data->stm_move_neg_pdo_bp);
-  *(hal_data->stm_torque_reduced) = EC_READ_BIT(&pd[hal_data->stm_torque_reduced_pdo_os], hal_data->stm_torque_reduced_pdo_bp);
-  *(hal_data->stm_din1) = EC_READ_BIT(&pd[hal_data->stm_din1_pdo_os], hal_data->stm_din1_pdo_bp);
-  *(hal_data->stm_din2) = EC_READ_BIT(&pd[hal_data->stm_din2_pdo_os], hal_data->stm_din2_pdo_bp);
-  *(hal_data->stm_sync_err) = EC_READ_BIT(&pd[hal_data->stm_sync_err_pdo_os], hal_data->stm_sync_err_pdo_bp);
-  *(hal_data->stm_tx_toggle) = EC_READ_BIT(&pd[hal_data->stm_tx_toggle_pdo_os], hal_data->stm_tx_toggle_pdo_bp);
+  LCEC_PIN_BIT_SET(hal_data->stm_ready_to_enable, EC_READ_BIT(&pd[hal_data->stm_ready_to_enable_pdo_os], hal_data->stm_ready_to_enable_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->stm_ready, EC_READ_BIT(&pd[hal_data->stm_ready_pdo_os], hal_data->stm_ready_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->stm_warning, EC_READ_BIT(&pd[hal_data->stm_warning_pdo_os], hal_data->stm_warning_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->stm_error, EC_READ_BIT(&pd[hal_data->stm_error_pdo_os], hal_data->stm_error_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->stm_move_pos, EC_READ_BIT(&pd[hal_data->stm_move_pos_pdo_os], hal_data->stm_move_pos_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->stm_move_neg, EC_READ_BIT(&pd[hal_data->stm_move_neg_pdo_os], hal_data->stm_move_neg_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->stm_torque_reduced, EC_READ_BIT(&pd[hal_data->stm_torque_reduced_pdo_os], hal_data->stm_torque_reduced_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->stm_din1, EC_READ_BIT(&pd[hal_data->stm_din1_pdo_os], hal_data->stm_din1_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->stm_din2, EC_READ_BIT(&pd[hal_data->stm_din2_pdo_os], hal_data->stm_din2_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->stm_sync_err, EC_READ_BIT(&pd[hal_data->stm_sync_err_pdo_os], hal_data->stm_sync_err_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->stm_tx_toggle, EC_READ_BIT(&pd[hal_data->stm_tx_toggle_pdo_os], hal_data->stm_tx_toggle_pdo_bp));
 }
 
 static void lcec_el70x1_write(lcec_slave_t *slave, long period) {
@@ -386,17 +386,17 @@ static void lcec_el70x1_write(lcec_slave_t *slave, long period) {
   uint8_t *pd = master->process_data;
   bool enabled, reduce_tourque;
 
-  *(hal_data->stm_pos_cmd_raw) = (int32_t)(*(hal_data->stm_pos_cmd) * hal_data->stm_pos_scale);
+  LCEC_PIN_S32_SET(hal_data->stm_pos_cmd_raw, (int32_t)(LCEC_PIN_FLOAT_GET(hal_data->stm_pos_cmd) * hal_data->stm_pos_scale));
 
-  enabled = *(hal_data->stm_enable);
+  enabled = LCEC_PIN_BIT_GET(hal_data->stm_enable);
   if (!enabled) {
     hal_data->auto_reduce_tourque_timer = 0;
   }
   EC_WRITE_BIT(&pd[hal_data->stm_ena_pdo_os], hal_data->stm_ena_pdo_bp, enabled);
 
-  reduce_tourque = *(hal_data->stm_reduce_torque);
-  if (*(hal_data->stm_pos_cmd_raw) != hal_data->stm_pos_cmd_raw_last) {
-    hal_data->stm_pos_cmd_raw_last = *(hal_data->stm_pos_cmd_raw);
+  reduce_tourque = LCEC_PIN_BIT_GET(hal_data->stm_reduce_torque);
+  if (LCEC_PIN_S32_GET(hal_data->stm_pos_cmd_raw) != hal_data->stm_pos_cmd_raw_last) {
+    hal_data->stm_pos_cmd_raw_last = LCEC_PIN_S32_GET(hal_data->stm_pos_cmd_raw);
     hal_data->auto_reduce_tourque_timer = 0;
   }
   if (hal_data->auto_reduce_tourque_delay > 0.0) {
@@ -408,7 +408,7 @@ static void lcec_el70x1_write(lcec_slave_t *slave, long period) {
   }
   EC_WRITE_BIT(&pd[hal_data->stm_reduce_torque_pdo_os], hal_data->stm_reduce_torque_pdo_bp, reduce_tourque);
 
-  EC_WRITE_BIT(&pd[hal_data->stm_reset_pdo_os], hal_data->stm_reset_pdo_bp, *(hal_data->stm_reset));
+  EC_WRITE_BIT(&pd[hal_data->stm_reset_pdo_os], hal_data->stm_reset_pdo_bp, LCEC_PIN_BIT_GET(hal_data->stm_reset));
 
-  EC_WRITE_S32(&pd[hal_data->stm_pos_raw_pdo_os], *(hal_data->stm_pos_cmd_raw));
+  EC_WRITE_S32(&pd[hal_data->stm_pos_raw_pdo_os], LCEC_PIN_S32_GET(hal_data->stm_pos_cmd_raw));
 }

@@ -137,16 +137,16 @@ static void lcec_el1904_read(lcec_slave_t *slave, long period) {
 
   copy_fsoe_data(slave, hal_data->fsoe_slave_cmd_os, hal_data->fsoe_master_cmd_os);
 
-  *(hal_data->fsoe_slave_cmd) = EC_READ_U8(&pd[hal_data->fsoe_slave_cmd_os]);
-  *(hal_data->fsoe_slave_crc) = EC_READ_U16(&pd[hal_data->fsoe_slave_crc_os]);
-  *(hal_data->fsoe_slave_connid) = EC_READ_U16(&pd[hal_data->fsoe_slave_connid_os]);
+  LCEC_PIN_U32_SET(hal_data->fsoe_slave_cmd, EC_READ_U8(&pd[hal_data->fsoe_slave_cmd_os]));
+  LCEC_PIN_U32_SET(hal_data->fsoe_slave_crc, EC_READ_U16(&pd[hal_data->fsoe_slave_crc_os]));
+  LCEC_PIN_U32_SET(hal_data->fsoe_slave_connid, EC_READ_U16(&pd[hal_data->fsoe_slave_connid_os]));
 
-  *(hal_data->fsoe_master_cmd) = EC_READ_U8(&pd[hal_data->fsoe_master_cmd_os]);
-  *(hal_data->fsoe_master_crc) = EC_READ_U16(&pd[hal_data->fsoe_master_crc_os]);
-  *(hal_data->fsoe_master_connid) = EC_READ_U16(&pd[hal_data->fsoe_master_connid_os]);
+  LCEC_PIN_U32_SET(hal_data->fsoe_master_cmd, EC_READ_U8(&pd[hal_data->fsoe_master_cmd_os]));
+  LCEC_PIN_U32_SET(hal_data->fsoe_master_crc, EC_READ_U16(&pd[hal_data->fsoe_master_crc_os]));
+  LCEC_PIN_U32_SET(hal_data->fsoe_master_connid, EC_READ_U16(&pd[hal_data->fsoe_master_connid_os]));
 
   for (i = 0, in = hal_data->inputs; i < LCEC_EL1904_INPUT_COUNT; i++, in++) {
-    *(in->fsoe_in) = EC_READ_BIT(&pd[in->fsoe_in_os], in->fsoe_in_bp);
-    *(in->fsoe_in_not) = !*(in->fsoe_in);
+    LCEC_PIN_BIT_SET(in->fsoe_in, EC_READ_BIT(&pd[in->fsoe_in_os], in->fsoe_in_bp));
+    LCEC_PIN_BIT_SET(in->fsoe_in_not, !LCEC_PIN_BIT_GET(in->fsoe_in));
   }
 }

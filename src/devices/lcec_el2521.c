@@ -264,13 +264,13 @@ static void lcec_el2521_read(lcec_slave_t *slave, long period) {
 
   // read state word
   state = EC_READ_U16(&pd[hal_data->state_pdo_os]);
-  *(hal_data->ramp_active) = (state >> 1) & 1;
+  LCEC_PIN_BIT_SET(hal_data->ramp_active, (state >> 1) & 1);
   in = (state >> 5) & 1;
-  *(hal_data->in_z) = in;
-  *(hal_data->in_z_not) = !in;
+  LCEC_PIN_BIT_SET(hal_data->in_z, in);
+  LCEC_PIN_BIT_SET(hal_data->in_z_not, !in);
   in = (state >> 4) & 1;
-  *(hal_data->in_t) = in;
-  *(hal_data->in_t_not) = !in;
+  LCEC_PIN_BIT_SET(hal_data->in_t, in);
+  LCEC_PIN_BIT_SET(hal_data->in_t_not, !in);
 
   // get counter diff
   hw_count = EC_READ_S16(&pd[hal_data->count_pdo_os]);
@@ -281,10 +281,10 @@ static void lcec_el2521_read(lcec_slave_t *slave, long period) {
   }
 
   // update raw count
-  *(hal_data->count) += hw_count_diff;
+  LCEC_PIN_S32_SET(hal_data->count, LCEC_PIN_S32_GET(hal_data->count) + hw_count_diff);
 
   // scale position
-  *(hal_data->pos_fb) = (double)(*(hal_data->count)) * hal_data->scale_recip;
+  LCEC_PIN_FLOAT_SET(hal_data->pos_fb, (double)(LCEC_PIN_S32_GET(hal_data->count)) * hal_data->scale_recip);
 
   hal_data->last_operational = 1;
 }
@@ -301,14 +301,14 @@ static void lcec_el2521_write(lcec_slave_t *slave, long period) {
 
   // write control word
   ctrl = 0;
-  if (*(hal_data->ramp_disable)) {
+  if (LCEC_PIN_BIT_GET(hal_data->ramp_disable)) {
     ctrl |= (1 << 1);
   }
   EC_WRITE_S16(&pd[hal_data->ctrl_pdo_os], ctrl);
 
   // update frequency
-  if (*(hal_data->enable)) {
-    hal_data->freq = *(hal_data->vel_cmd) * hal_data->pos_scale;
+  if (LCEC_PIN_BIT_GET(hal_data->enable)) {
+    hal_data->freq = LCEC_PIN_FLOAT_GET(hal_data->vel_cmd) * hal_data->pos_scale;
   } else {
     hal_data->freq = 0;
   }

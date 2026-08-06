@@ -265,8 +265,8 @@ static void lcec_el2522_read(lcec_slave_t *slave, long period) {
       diff = 0;
     }
 
-    *(channel->count) += diff;
-    *(channel->pos_fb) += ((double)diff) * channel->pos_scale_recip;
+    LCEC_PIN_S32_SET(channel->count, LCEC_PIN_S32_GET(channel->count) + diff);
+    LCEC_PIN_FLOAT_SET(channel->pos_fb, LCEC_PIN_FLOAT_GET(channel->pos_fb) + ((double)diff) * channel->pos_scale_recip);
   }
   hal_data->last_operational = true;
 }
@@ -287,14 +287,14 @@ static void lcec_el2522_write(lcec_slave_t *slave, long period) {
         channel->pos_scale = channel->last_pos_scale;
       } else {
         channel->last_pos_scale = channel->pos_scale;
-        channel->step_offset = *(channel->count) - *(channel->pos_fb) * channel->pos_scale;
+        channel->step_offset = LCEC_PIN_S32_GET(channel->count) - LCEC_PIN_FLOAT_GET(channel->pos_fb) * channel->pos_scale;
         channel->pos_scale_recip = 1.0 / channel->pos_scale;
       }
     }
 
     // explicit conversion casts used here to ensure correct handling for negative double values
-    const uint32_t target = (uint32_t)((int32_t)round(*(channel->pos_cmd) * channel->pos_scale + channel->step_offset));
+    const uint32_t target = (uint32_t)((int32_t)round(LCEC_PIN_FLOAT_GET(channel->pos_cmd) * channel->pos_scale + channel->step_offset));
     EC_WRITE_U32(&pd[channel->target_pdo_os], target);
-    EC_WRITE_BIT(&pd[channel->enable_pdo_os], channel->enable_pdo_bp, *(channel->enable));
+    EC_WRITE_BIT(&pd[channel->enable_pdo_os], channel->enable_pdo_bp, LCEC_PIN_BIT_GET(channel->enable));
   }
 }
