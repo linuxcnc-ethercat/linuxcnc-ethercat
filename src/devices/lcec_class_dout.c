@@ -161,7 +161,7 @@ void lcec_dout_write(lcec_slave_t *slave, lcec_class_dout_channel_t *data) {
     os += data->pdo_bp_packed >> 3;  // the data in pd[] is always little-endian.
   }
 
-  s = *(data->out);
+  s = LCEC_PIN_BIT_GET(data->out);
   if (data->invert) {
     s = !s;
   }

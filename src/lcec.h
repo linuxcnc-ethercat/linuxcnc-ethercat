@@ -29,6 +29,7 @@ extern "C" {
 #include "ecrt.h"
 #include "hal.h"
 #include "lcec_conf.h"
+#include "lcec_hal_compat.h"
 #include "lcec_rtapi.h"
 #include "rtapi_ctype.h"
 #include "rtapi_math.h"
