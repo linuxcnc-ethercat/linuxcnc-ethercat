@@ -1,0 +1,73 @@
+---
+name: Build and install linuxcnc master debs
+description: >-
+  Build linuxcnc (master branch, uspace) from source as Debian packages,
+  cache them by upstream commit, and install linuxcnc-uspace and
+  linuxcnc-uspace-dev into the build container. Used to compile
+  linuxcnc-ethercat against the new HAL getter/setter API, which no public
+  apt repository carries yet.
+inputs:
+  codename:
+    description: Debian codename (bookworm, trixie)
+    required: true
+  distro:
+    description: Matrix distro label, used in the cache key
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install linuxcnc build dependencies
+      shell: bash
+      env:
+          DEBIAN_FRONTEND: noninteractive
+      run: |
+          set -e
+          echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80-retries
+          echo "deb-src http://deb.debian.org/debian ${{ inputs.codename }} main" \
+              > /etc/apt/sources.list.d/deb-src.list
+          apt-get update
+          apt-get install -y --no-install-recommends \
+              ca-certificates curl git build-essential devscripts debhelper
+          # Debian main ships linuxcnc 2.9.x; its build-deps are close
+          # enough to master's to let dpkg-buildpackage run.
+          apt-get build-dep -y linuxcnc
+
+    - name: Resolve linuxcnc master commit
+      id: sha
+      shell: bash
+      run: |
+          sha=$(git ls-remote https://github.com/LinuxCNC/linuxcnc.git refs/heads/master | cut -f1)
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+
+    - name: Cache linuxcnc master debs
+      id: cache
+      uses: actions/cache@v4
+      with:
+          path: linuxcnc-dist
+          key: linuxcnc-master-debs-${{ inputs.distro }}-${{ steps.sha.outputs.sha }}
+
+    - name: Build linuxcnc master debs
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+          set -e
+          git clone --depth 1 https://github.com/LinuxCNC/linuxcnc.git linuxcnc-master
+          cd linuxcnc-master
+          (cd debian && ./configure uspace)
+          dpkg-buildpackage -b -us -uc -j"$(nproc)"
+          mkdir -p ../linuxcnc-dist
+          # dpkg-buildpackage drops the debs next to the source tree, i.e.
+          # in the workspace root; move them aside so the later
+          # linuxcnc-ethercat build (which scans ../*.deb) never sees them.
+          mv ../*.deb ../linuxcnc-dist/
+
+    - name: Install linuxcnc master debs
+      shell: bash
+      env:
+          DEBIAN_FRONTEND: noninteractive
+      run: |
+          set -e
+          apt-get install -y \
+              ./linuxcnc-dist/linuxcnc-uspace_*.deb \
+              ./linuxcnc-dist/linuxcnc-uspace-dev_*.deb

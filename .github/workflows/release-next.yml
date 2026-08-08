@@ -1,45 +1,45 @@
 ---
-name: Release
+name: Release (HAL next API)
+
+# 2.x release line: built against linuxcnc master (new HAL getter/setter
+# API). No public apt repository ships linuxcnc 2.10 debs yet, so the
+# workflow builds linuxcnc master from source and compiles against it.
+# dpkg-shlibdeps then derives Depends: linuxcnc-uspace (>= <built version>)
+# automatically - that derived dependency IS the version gate separating
+# the 2.x debs from 2.9-era systems, and it moves on its own when upstream
+# tags the API-break version. v1.* tags keep building the legacy line via
+# release.yml.
+#
+# workflow_dispatch builds the same debs with a ~wip version suffix so the
+# pipeline can be exercised before the first v2.* tag exists.
 
 on:
     push:
-        # 1.x legacy line (builds against 2.9-era HAL). v2.* tags are
-        # handled by release-next.yml (builds against linuxcnc master).
-        tags: ['v1.*']
+        tags: ['v2.*']
+    workflow_dispatch:
 
 permissions:
     contents: write
 
 jobs:
     build:
-        name: ${{ matrix.distro }}
+        name: ${{ matrix.distro }} (HAL next)
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
-                distro: [debian-11, debian-12, debian-13]
+                # No bullseye: linuxcnc master needs newer toolchains than
+                # Debian 11 provides.
+                distro: [debian-12, debian-13]
                 include:
-                    # linuxcnc_org_repo: build against linuxcnc.org's
-                    # linuxcnc-uspace-dev instead of Debian main. Needed on
-                    # bullseye (no linuxcnc in Debian 11) and bookworm (only
-                    # a 2023 2.9.0~pre1 snapshot). Trixie builds against
-                    # Debian's own 1:2.9.4 so the generated shlibs dep is
-                    # installable on stock Debian without third-party repos.
-                    - distro: debian-11
-                      image: debian:bullseye
-                      codename: bullseye
-                      deb_rev: deb11u1
-                      linuxcnc_org_repo: true
                     - distro: debian-12
                       image: debian:bookworm
                       codename: bookworm
                       deb_rev: deb12u1
-                      linuxcnc_org_repo: true
                     - distro: debian-13
                       image: debian:trixie
                       codename: trixie
                       deb_rev: deb13u1
-                      linuxcnc_org_repo: false
 
         container:
             image: ${{ matrix.image }}
@@ -49,7 +49,6 @@ jobs:
               env:
                   DEBIAN_FRONTEND: noninteractive
                   CODENAME: ${{ matrix.codename }}
-                  LINUXCNC_ORG_REPO: ${{ matrix.linuxcnc_org_repo }}
               run: |
                   set -e
                   echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80-retries
@@ -62,20 +61,10 @@ jobs:
                       -o /usr/share/keyrings/linuxcnc-ethercat-apt.gpg
                   echo "deb [signed-by=/usr/share/keyrings/linuxcnc-ethercat-apt.gpg] https://linuxcnc-ethercat.github.io/apt/ ${CODENAME} main" \
                       > /etc/apt/sources.list.d/linuxcnc-ethercat.list
-                  if [ "${LINUXCNC_ORG_REPO}" = "true" ]; then
-                      # Two LinuxCNC signing keys are in use:
-                      # - 3CB9FD148F374FEF: old DSA key, signs bullseye/bookworm
-                      # - E43B5A8E78CC2927: 2025-10 RSA key, signs trixie
-                      { curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xEEDD0D29F81DCAA0D258661F3CB9FD148F374FEF"; \
-                        curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x0CE3E44425B11F871BBCC6F5E43B5A8E78CC2927"; } \
-                          | gpg --dearmor -o /usr/share/keyrings/linuxcnc.gpg
-                      echo "deb [signed-by=/usr/share/keyrings/linuxcnc.gpg] https://www.linuxcnc.org/ ${CODENAME} base 2.9-uspace" \
-                          > /etc/apt/sources.list.d/linuxcnc.list
-                  fi
                   apt-get update
                   apt-get install -y --no-install-recommends \
                       git build-essential devscripts debhelper \
-                      linuxcnc-uspace-dev libethercat-dev yapps2
+                      libethercat-dev libexpat1-dev yapps2
 
             - name: Checkout
               uses: actions/checkout@v5
@@ -85,20 +74,26 @@ jobs:
             - name: Mark repo as safe (container runs as root)
               run: git config --global --add safe.directory "$PWD"
 
+            - name: Build and install linuxcnc master
+              uses: ./.github/actions/linuxcnc-master-debs
+              with:
+                  codename: ${{ matrix.codename }}
+                  distro: ${{ matrix.distro }}
+
             - name: Stamp version with codename suffix
               run: |
-                  # Read the canonical version from debian/changelog so the
-                  # codename suffix lands in the Debian revision (e.g.
-                  # 1.41.0-2+deb13u1), not inside the upstream string. Using
-                  # the git tag verbatim once produced versions like
-                  # 1.41.0+deb13u1 (no debian revision), which dpkg sorts
-                  # ABOVE any later 1.41.0-N+debNNuM build. Stay consistent
-                  # with ethercat's release workflow.
-                  base_ver=$(dpkg-parsechangelog --show-field Version)
-                  new_ver="${base_ver}+${{ matrix.deb_rev }}"
+                  # Version comes from the tag (v2.0.0 -> 2.0.0-1+deb13u1)
+                  # so the 2.x line always sorts above 1.x in apt. Manual
+                  # dispatch runs get a ~wip suffix that sorts below any
+                  # real 2.x release.
+                  if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+                      new_ver="2.0.0~wip${{ github.run_number }}-1+${{ matrix.deb_rev }}"
+                  else
+                      new_ver="${GITHUB_REF_NAME#v}-1+${{ matrix.deb_rev }}"
+                  fi
                   dch --newversion "${new_ver}" \
                       --distribution stable \
-                      "Release ${GITHUB_REF_NAME} for ${{ matrix.codename }}"
+                      "HAL next API build ${GITHUB_REF_NAME} for ${{ matrix.codename }}"
 
             - name: Build deb package
               run: |
@@ -119,7 +114,7 @@ jobs:
             - name: Upload deb artifact
               uses: actions/upload-artifact@v7
               with:
-                  name: linuxcnc-ethercat-deb-${{ matrix.distro }}
+                  name: linuxcnc-ethercat-deb-next-${{ matrix.distro }}
                   path: dist/*.deb
                   if-no-files-found: error
 
@@ -127,6 +122,9 @@ jobs:
         name: Attach debs to GitHub release
         needs: build
         runs-on: ubuntu-latest
+        # Manual dispatch runs only validate the pipeline; never create a
+        # release or touch the apt repo from them.
+        if: github.event_name == 'push'
         permissions:
             contents: write
         steps:
@@ -153,6 +151,10 @@ jobs:
                       echo "APT_DISPATCH_TOKEN not set; skipping ingestion dispatch."
                       exit 0
                   fi
+                  # Safe to ingest: the shlibs-derived dependency on
+                  # linuxcnc-uspace (>= 2.10~) is unsatisfiable from any
+                  # current repository, so apt never offers these debs to
+                  # 2.9-era systems.
                   gh api \
                       -X POST \
                       -H "Accept: application/vnd.github+json" \
