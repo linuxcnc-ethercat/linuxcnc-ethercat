@@ -37,7 +37,7 @@ runs:
 
     - name: Cache linuxcnc master debs
       id: cache
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
           path: linuxcnc-dist
           key: linuxcnc-master-debs-${{ inputs.distro }}-${{ steps.sha.outputs.sha }}

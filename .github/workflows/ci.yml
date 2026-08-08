@@ -8,19 +8,29 @@ on:
     release:
         types: [published]
     workflow_dispatch:
+    schedule:
+        # Weekly, so the HAL-next side keeps tracking linuxcnc master even
+        # when nothing pushes, and the linuxcnc-master-debs cache stays warm
+        # for per-push runs.
+        - cron: '23 4 * * 1'
 
 permissions:
     contents: read
 
 jobs:
     build-deb:
-        name: ${{ matrix.distro }}
+        name: ${{ matrix.distro }}${{ matrix.hal_api == 'next' && ' (HAL next)' || '' }}
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
                 distro: [debian-11, debian-12, debian-13]
+                hal_api: [legacy, next]
                 include:
+                    # hal_api=legacy: 2.9-era HAL headers from the repos.
+                    # hal_api=next: linuxcnc master built from source (new
+                    # getter/setter API); see release.yml for the details.
+                    #
                     # linuxcnc_org_repo: build against linuxcnc.org's
                     # linuxcnc-uspace-dev instead of Debian main. Needed on
                     # bullseye (no linuxcnc in Debian 11) and bookworm (only
@@ -49,6 +59,7 @@ jobs:
                   DEBIAN_FRONTEND: noninteractive
                   CODENAME: ${{ matrix.codename }}
                   LINUXCNC_ORG_REPO: ${{ matrix.linuxcnc_org_repo }}
+                  HAL_API: ${{ matrix.hal_api }}
               run: |
                   set -e
                   echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80-retries
@@ -61,7 +72,7 @@ jobs:
                       -o /usr/share/keyrings/linuxcnc-ethercat-apt.gpg
                   echo "deb [signed-by=/usr/share/keyrings/linuxcnc-ethercat-apt.gpg] https://linuxcnc-ethercat.github.io/apt/ ${CODENAME} main" \
                       > /etc/apt/sources.list.d/linuxcnc-ethercat.list
-                  if [ "${LINUXCNC_ORG_REPO}" = "true" ]; then
+                  if [ "${HAL_API}" = "legacy" ] && [ "${LINUXCNC_ORG_REPO}" = "true" ]; then
                       # Two LinuxCNC signing keys are in use:
                       # - 3CB9FD148F374FEF: old DSA key, signs bullseye/bookworm
                       # - E43B5A8E78CC2927: 2025-10 RSA key, signs trixie
@@ -74,7 +85,10 @@ jobs:
                   apt-get update
                   apt-get install -y --no-install-recommends \
                       git build-essential devscripts debhelper \
-                      linuxcnc-uspace-dev libethercat-dev yapps2
+                      libethercat-dev libexpat1-dev yapps2
+                  if [ "${HAL_API}" = "legacy" ]; then
+                      apt-get install -y --no-install-recommends linuxcnc-uspace-dev
+                  fi
 
             - name: Checkout
               uses: actions/checkout@v5
@@ -84,14 +98,26 @@ jobs:
             - name: Mark repo as safe (container runs as root)
               run: git config --global --add safe.directory "$PWD"
 
+            - name: Build and install linuxcnc master
+              if: matrix.hal_api == 'next'
+              uses: ./.github/actions/linuxcnc-master-debs
+              with:
+                  codename: ${{ matrix.codename }}
+                  distro: ${{ matrix.distro }}
+
             - name: Stamp CI version
+              env:
+                  HAL_API: ${{ matrix.hal_api }}
               run: |
                   # CI builds aren't published to the apt repo, so we just
                   # need a parseable version. Force-bump via -b to bypass
                   # dch's monotonic check (git describe on a feature branch
                   # often sorts below the canonical changelog version).
                   ver=$(git describe --tags --always | sed 's/^v//')
-                  dch -b --newversion "${ver}+ci" --distribution stable "CI build ${ver}"
+                  if [ "${HAL_API}" = "next" ]; then
+                      ver=$(echo "${ver}" | sed 's/-/+getset-/')
+                  fi
+                  dch -b --newversion "${ver}+ci" --distribution stable "CI build ${ver} (${HAL_API} HAL)"
 
             - name: Build deb package
               run: |
@@ -104,7 +130,7 @@ jobs:
                       fname="$(basename "$src")"
                       base="${fname%_*.deb}"
                       suffix="${fname##*_}"
-                      cp "$src" "dist/${base}_${{ matrix.distro }}_${suffix}"
+                      cp "$src" "dist/${base}_${{ matrix.distro }}${{ matrix.hal_api == 'next' && '-next' || '' }}_${suffix}"
                   done
 
             - name: Run tests
@@ -115,6 +141,6 @@ jobs:
             - name: Upload deb artifact
               uses: actions/upload-artifact@v7
               with:
-                  name: linuxcnc-ethercat-deb-${{ matrix.distro }}
+                  name: linuxcnc-ethercat-deb-${{ matrix.distro }}${{ matrix.hal_api == 'next' && '-next' || '' }}
                   path: dist/*.deb
                   if-no-files-found: error

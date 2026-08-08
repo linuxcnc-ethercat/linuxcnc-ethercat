@@ -3,22 +3,34 @@ name: Release
 
 on:
     push:
-        # 1.x legacy line (builds against 2.9-era HAL). v2.* tags are
-        # handled by release-next.yml (builds against linuxcnc master).
-        tags: ['v1.*']
+        tags: ['v*']
 
 permissions:
     contents: write
 
 jobs:
     build:
-        name: ${{ matrix.distro }}
+        name: ${{ matrix.distro }}${{ matrix.hal_api == 'next' && ' (HAL next)' || '' }}
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
                 distro: [debian-11, debian-12, debian-13]
+                hal_api: [legacy, next]
                 include:
+                    # hal_api=legacy: build against 2.9-era HAL headers
+                    # (linuxcnc-uspace-dev from the repos). Covers 2.9.x and
+                    # pre-break 2.10.
+                    #
+                    # hal_api=next: build against linuxcnc master compiled
+                    # from source (new HAL getter/setter API). The produced
+                    # deb gets a +getset version suffix (sorts above the
+                    # plain build of the same base) and a shlibs-derived
+                    # Depends: linuxcnc-uspace (>= 1:2.10~) that is
+                    # unsatisfiable on 2.9-era systems, so apt auto-selects
+                    # the right flavor per system. No public repo ships
+                    # linuxcnc 2.10 debs yet, hence the source build.
+                    #
                     # linuxcnc_org_repo: build against linuxcnc.org's
                     # linuxcnc-uspace-dev instead of Debian main. Needed on
                     # bullseye (no linuxcnc in Debian 11) and bookworm (only
@@ -50,6 +62,7 @@ jobs:
                   DEBIAN_FRONTEND: noninteractive
                   CODENAME: ${{ matrix.codename }}
                   LINUXCNC_ORG_REPO: ${{ matrix.linuxcnc_org_repo }}
+                  HAL_API: ${{ matrix.hal_api }}
               run: |
                   set -e
                   echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80-retries
@@ -62,7 +75,7 @@ jobs:
                       -o /usr/share/keyrings/linuxcnc-ethercat-apt.gpg
                   echo "deb [signed-by=/usr/share/keyrings/linuxcnc-ethercat-apt.gpg] https://linuxcnc-ethercat.github.io/apt/ ${CODENAME} main" \
                       > /etc/apt/sources.list.d/linuxcnc-ethercat.list
-                  if [ "${LINUXCNC_ORG_REPO}" = "true" ]; then
+                  if [ "${HAL_API}" = "legacy" ] && [ "${LINUXCNC_ORG_REPO}" = "true" ]; then
                       # Two LinuxCNC signing keys are in use:
                       # - 3CB9FD148F374FEF: old DSA key, signs bullseye/bookworm
                       # - E43B5A8E78CC2927: 2025-10 RSA key, signs trixie
@@ -75,7 +88,10 @@ jobs:
                   apt-get update
                   apt-get install -y --no-install-recommends \
                       git build-essential devscripts debhelper \
-                      linuxcnc-uspace-dev libethercat-dev yapps2
+                      libethercat-dev libexpat1-dev yapps2
+                  if [ "${HAL_API}" = "legacy" ]; then
+                      apt-get install -y --no-install-recommends linuxcnc-uspace-dev
+                  fi
 
             - name: Checkout
               uses: actions/checkout@v5
@@ -85,7 +101,16 @@ jobs:
             - name: Mark repo as safe (container runs as root)
               run: git config --global --add safe.directory "$PWD"
 
+            - name: Build and install linuxcnc master
+              if: matrix.hal_api == 'next'
+              uses: ./.github/actions/linuxcnc-master-debs
+              with:
+                  codename: ${{ matrix.codename }}
+                  distro: ${{ matrix.distro }}
+
             - name: Stamp version with codename suffix
+              env:
+                  HAL_API: ${{ matrix.hal_api }}
               run: |
                   # Read the canonical version from debian/changelog so the
                   # codename suffix lands in the Debian revision (e.g.
@@ -94,11 +119,21 @@ jobs:
                   # 1.41.0+deb13u1 (no debian revision), which dpkg sorts
                   # ABOVE any later 1.41.0-N+debNNuM build. Stay consistent
                   # with ethercat's release workflow.
+                  #
+                  # The HAL-next flavor inserts +getset into the upstream
+                  # part (1.41.0+getset-2+deb13u1) so it always sorts above
+                  # the plain build of the same base; apt picks the highest
+                  # installable version, and the +getset deb's
+                  # linuxcnc-uspace (>= 1:2.10~) dependency is only
+                  # installable on new-API systems.
                   base_ver=$(dpkg-parsechangelog --show-field Version)
+                  if [ "${HAL_API}" = "next" ]; then
+                      base_ver=$(echo "${base_ver}" | sed 's/-/+getset-/')
+                  fi
                   new_ver="${base_ver}+${{ matrix.deb_rev }}"
                   dch --newversion "${new_ver}" \
                       --distribution stable \
-                      "Release ${GITHUB_REF_NAME} for ${{ matrix.codename }}"
+                      "Release ${GITHUB_REF_NAME} for ${{ matrix.codename }} (${HAL_API} HAL)"
 
             - name: Build deb package
               run: |
@@ -119,7 +154,7 @@ jobs:
             - name: Upload deb artifact
               uses: actions/upload-artifact@v7
               with:
-                  name: linuxcnc-ethercat-deb-${{ matrix.distro }}
+                  name: linuxcnc-ethercat-deb-${{ matrix.distro }}${{ matrix.hal_api == 'next' && '-next' || '' }}
                   path: dist/*.deb
                   if-no-files-found: error
 
@@ -143,6 +178,19 @@ jobs:
               with:
                   files: artifacts/**/*.deb
                   generate_release_notes: true
+                  body: |
+                      ## Which deb do I need?
+
+                      Each Debian flavor ships two builds of the same source:
+
+                      - **plain** (e.g. `linuxcnc-ethercat_1.42.2-1+deb13u1`): for
+                        LinuxCNC 2.9.x and pre-getter/setter 2.10 builds.
+                      - **+getset** (e.g. `linuxcnc-ethercat_1.42.2+getset-1+deb13u1`):
+                        for LinuxCNC 2.10 with the new HAL getter/setter API.
+
+                      With the apt repository enabled you do not need to choose:
+                      apt installs the highest version whose dependencies your
+                      system satisfies, which is automatically the right one.
                   prerelease: ${{ contains(github.ref_name, '~pre') || contains(github.ref_name, '-pre') }}
 
             - name: Trigger apt-repo ingestion
