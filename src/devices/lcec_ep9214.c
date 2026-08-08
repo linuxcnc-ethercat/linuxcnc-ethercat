@@ -140,14 +140,14 @@ static int lcec_ep9214_init(int comp_id, lcec_slave_t *slave) {
     lcec_read_sdo16(slave, 0x8000+16*chan, 0x13, &current_up);
     lcec_read_sdo8(slave, 0x7000+16*chan, 0x1, &enable_us);
     lcec_read_sdo8(slave, 0x7000+16*chan, 0x2, &enable_up);
-    *(c->current_limit_type) = current_type;
-    *(c->current_limit_us) = current_us / 1000.0;
-    *(c->current_limit_up) = current_up / 1000.0;
-    *(c->enable_us) = !!enable_us;
-    *(c->enable_up) = !!enable_up;
-    c->current_limit_type_old = *(c->current_limit_type);
-    c->current_limit_us_old = *(c->current_limit_us);
-    c->current_limit_up_old = *(c->current_limit_up);
+    LCEC_PIN_S32_SET(c->current_limit_type, current_type);
+    LCEC_PIN_FLOAT_SET(c->current_limit_us, current_us / 1000.0);
+    LCEC_PIN_FLOAT_SET(c->current_limit_up, current_up / 1000.0);
+    LCEC_PIN_BIT_SET(c->enable_us, !!enable_us);
+    LCEC_PIN_BIT_SET(c->enable_up, !!enable_up);
+    c->current_limit_type_old = LCEC_PIN_S32_GET(c->current_limit_type);
+    c->current_limit_us_old = LCEC_PIN_FLOAT_GET(c->current_limit_us);
+    c->current_limit_up_old = LCEC_PIN_FLOAT_GET(c->current_limit_up);
   }
 
   lcec_pdo_init(slave, 0xf607, 1, &(hal_data->warning_temp_os), &(hal_data->warning_temp_bp));
@@ -182,22 +182,22 @@ static void lcec_ep9214_read(lcec_slave_t *slave, long period) {
   for (int chan=0;chan<CHANNELS;chan++) {
     lcec_ep9214_channel_data_t *c = &(hal_data->chan[chan]);
     
-    *(c->error_us) = EC_READ_BIT(&pd[c->error_us_os], c->error_us_bp);
-    *(c->error_up) = EC_READ_BIT(&pd[c->error_up_os], c->error_up_bp);
-    *(c->warning_us) = EC_READ_BIT(&pd[c->warning_us_os], c->warning_us_bp);
-    *(c->warning_up) = EC_READ_BIT(&pd[c->warning_up_os], c->warning_up_bp);
-    *(c->poweron_us) = EC_READ_BIT(&pd[c->poweron_us_os], c->poweron_us_bp);
-    *(c->poweron_up) = EC_READ_BIT(&pd[c->poweron_up_os], c->poweron_up_bp);
-    *(c->enable_us) = EC_READ_BIT(&pd[c->enable_us_os], c->enable_us_bp);
-    *(c->enable_up) = EC_READ_BIT(&pd[c->enable_up_os], c->enable_up_bp);
+    LCEC_PIN_BIT_SET(c->error_us, EC_READ_BIT(&pd[c->error_us_os], c->error_us_bp));
+    LCEC_PIN_BIT_SET(c->error_up, EC_READ_BIT(&pd[c->error_up_os], c->error_up_bp));
+    LCEC_PIN_BIT_SET(c->warning_us, EC_READ_BIT(&pd[c->warning_us_os], c->warning_us_bp));
+    LCEC_PIN_BIT_SET(c->warning_up, EC_READ_BIT(&pd[c->warning_up_os], c->warning_up_bp));
+    LCEC_PIN_BIT_SET(c->poweron_us, EC_READ_BIT(&pd[c->poweron_us_os], c->poweron_us_bp));
+    LCEC_PIN_BIT_SET(c->poweron_up, EC_READ_BIT(&pd[c->poweron_up_os], c->poweron_up_bp));
+    LCEC_PIN_BIT_SET(c->enable_us, EC_READ_BIT(&pd[c->enable_us_os], c->enable_us_bp));
+    LCEC_PIN_BIT_SET(c->enable_up, EC_READ_BIT(&pd[c->enable_up_os], c->enable_up_bp));
   }
 
-  *(hal_data->warning_temp) = EC_READ_BIT(&pd[hal_data->warning_temp_os], hal_data->warning_temp_bp);
-  *(hal_data->error_temp) = EC_READ_BIT(&pd[hal_data->error_temp_os], hal_data->error_temp_bp);
-  *(hal_data->warning_us) = EC_READ_BIT(&pd[hal_data->warning_us_os], hal_data->warning_us_bp);
-  *(hal_data->error_us) = EC_READ_BIT(&pd[hal_data->error_us_os], hal_data->error_us_bp);
-  *(hal_data->warning_us) = EC_READ_BIT(&pd[hal_data->warning_up_os], hal_data->warning_up_bp);
-  *(hal_data->error_us) = EC_READ_BIT(&pd[hal_data->error_up_os], hal_data->error_up_bp);
+  LCEC_PIN_BIT_SET(hal_data->warning_temp, EC_READ_BIT(&pd[hal_data->warning_temp_os], hal_data->warning_temp_bp));
+  LCEC_PIN_BIT_SET(hal_data->error_temp, EC_READ_BIT(&pd[hal_data->error_temp_os], hal_data->error_temp_bp));
+  LCEC_PIN_BIT_SET(hal_data->warning_us, EC_READ_BIT(&pd[hal_data->warning_us_os], hal_data->warning_us_bp));
+  LCEC_PIN_BIT_SET(hal_data->error_us, EC_READ_BIT(&pd[hal_data->error_us_os], hal_data->error_us_bp));
+  LCEC_PIN_BIT_SET(hal_data->warning_us, EC_READ_BIT(&pd[hal_data->warning_up_os], hal_data->warning_up_bp));
+  LCEC_PIN_BIT_SET(hal_data->error_us, EC_READ_BIT(&pd[hal_data->error_up_os], hal_data->error_up_bp));
 }
 
 /// @brief Write values to the device.

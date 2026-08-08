@@ -135,7 +135,11 @@ jobs:
                   # installable on new-API systems.
                   base_ver=$(dpkg-parsechangelog --show-field Version)
                   if [ "${HAL_API}" = "next" ]; then
-                      base_ver=$(echo "${base_ver}" | sed 's/-/+getset-/')
+                      # Insert +getset after the upstream part; handles both
+                  # 1.42.2-1 -> 1.42.2+getset-1 and a revision-less
+                  # 1.42.2 -> 1.42.2+getset (plain s/-// would no-op and
+                  # collide with the legacy build's filename).
+                  base_ver=$(echo "${base_ver}" | sed 's/\(-\|$\)/+getset\1/')
                   fi
                   new_ver="${base_ver}+${{ matrix.deb_rev }}"
                   dch --newversion "${new_ver}" \

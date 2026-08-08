@@ -536,12 +536,42 @@ static int lcec_param_newfv(hal_type_t type, hal_param_dir_t dir, void *data_add
     return -ENOMEM;
   }
 
+#ifdef LCEC_HAL_NEW_API
+  // New API: typed creators. Storage is HAL-owned and the creator applies
+  // the default and writes the opaque reference into the param field (which
+  // is an lcec_param_*_t reference under the new API - see lcec_hal_compat.h).
+  switch (type) {
+    case HAL_BIT:
+      err = hal_param_new_bool(lcec_comp_id, dir, (hal_bool_t *)data_addr, 0, "%s", name);
+      break;
+    case HAL_FLOAT:
+      err = hal_param_new_real(lcec_comp_id, dir, (hal_real_t *)data_addr, 0.0, "%s", name);
+      break;
+    case HAL_S32:
+      err = hal_param_new_si32(lcec_comp_id, dir, (hal_sint_t *)data_addr, 0, "%s", name);
+      break;
+    case HAL_U32:
+      err = hal_param_new_ui32(lcec_comp_id, dir, (hal_uint_t *)data_addr, 0, "%s", name);
+      break;
+    default:
+      err = -EINVAL;
+      break;
+  }
+  if (err) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting param %s failed\n", name);
+    return err;
+  }
+#else
   err = hal_param_new(name, type, dir, data_addr, lcec_comp_id);
   if (err) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting param %s failed\n", name);
     return err;
   }
 
+  // Old API: params use caller-provided value storage (unlike pins, whose
+  // storage is HAL's 8-byte slot). Keep these writes narrow - the new-API
+  // setters always write the full 64-bit slot and would overflow the
+  // struct field (upstream's "parameter trap").
   switch (type) {
     case HAL_BIT:
       *((hal_bit_t *)data_addr) = 0;
@@ -558,6 +588,7 @@ static int lcec_param_newfv(hal_type_t type, hal_param_dir_t dir, void *data_add
     default:
       break;
   }
+#endif
 
   return 0;
 }

@@ -147,18 +147,18 @@ static void lcec_el2904_read(lcec_slave_t *slave, long period) {
 
   copy_fsoe_data(slave, hal_data->fsoe_slave_cmd_os, hal_data->fsoe_master_cmd_os);
 
-  *(hal_data->fsoe_slave_cmd) = EC_READ_U8(&pd[hal_data->fsoe_slave_cmd_os]);
-  *(hal_data->fsoe_slave_crc) = EC_READ_U16(&pd[hal_data->fsoe_slave_crc_os]);
-  *(hal_data->fsoe_slave_connid) = EC_READ_U16(&pd[hal_data->fsoe_slave_connid_os]);
+  LCEC_PIN_U32_SET(hal_data->fsoe_slave_cmd, EC_READ_U8(&pd[hal_data->fsoe_slave_cmd_os]));
+  LCEC_PIN_U32_SET(hal_data->fsoe_slave_crc, EC_READ_U16(&pd[hal_data->fsoe_slave_crc_os]));
+  LCEC_PIN_U32_SET(hal_data->fsoe_slave_connid, EC_READ_U16(&pd[hal_data->fsoe_slave_connid_os]));
 
-  *(hal_data->fsoe_master_cmd) = EC_READ_U8(&pd[hal_data->fsoe_master_cmd_os]);
-  *(hal_data->fsoe_master_crc) = EC_READ_U16(&pd[hal_data->fsoe_master_crc_os]);
-  *(hal_data->fsoe_master_connid) = EC_READ_U16(&pd[hal_data->fsoe_master_connid_os]);
+  LCEC_PIN_U32_SET(hal_data->fsoe_master_cmd, EC_READ_U8(&pd[hal_data->fsoe_master_cmd_os]));
+  LCEC_PIN_U32_SET(hal_data->fsoe_master_crc, EC_READ_U16(&pd[hal_data->fsoe_master_crc_os]));
+  LCEC_PIN_U32_SET(hal_data->fsoe_master_connid, EC_READ_U16(&pd[hal_data->fsoe_master_connid_os]));
 
-  *(hal_data->fsoe_out_0) = EC_READ_BIT(&pd[hal_data->fsoe_out_0_os], hal_data->fsoe_out_0_bp);
-  *(hal_data->fsoe_out_1) = EC_READ_BIT(&pd[hal_data->fsoe_out_1_os], hal_data->fsoe_out_1_bp);
-  *(hal_data->fsoe_out_2) = EC_READ_BIT(&pd[hal_data->fsoe_out_2_os], hal_data->fsoe_out_2_bp);
-  *(hal_data->fsoe_out_3) = EC_READ_BIT(&pd[hal_data->fsoe_out_3_os], hal_data->fsoe_out_3_bp);
+  LCEC_PIN_BIT_SET(hal_data->fsoe_out_0, EC_READ_BIT(&pd[hal_data->fsoe_out_0_os], hal_data->fsoe_out_0_bp));
+  LCEC_PIN_BIT_SET(hal_data->fsoe_out_1, EC_READ_BIT(&pd[hal_data->fsoe_out_1_os], hal_data->fsoe_out_1_bp));
+  LCEC_PIN_BIT_SET(hal_data->fsoe_out_2, EC_READ_BIT(&pd[hal_data->fsoe_out_2_os], hal_data->fsoe_out_2_bp));
+  LCEC_PIN_BIT_SET(hal_data->fsoe_out_3, EC_READ_BIT(&pd[hal_data->fsoe_out_3_os], hal_data->fsoe_out_3_bp));
 }
 
 static void lcec_el2904_write(lcec_slave_t *slave, long period) {
@@ -166,8 +166,8 @@ static void lcec_el2904_write(lcec_slave_t *slave, long period) {
   lcec_el2904_data_t *hal_data = (lcec_el2904_data_t *)slave->hal_data;
   uint8_t *pd = master->process_data;
 
-  EC_WRITE_BIT(&pd[hal_data->out_0_os], hal_data->out_0_bp, *(hal_data->out_0));
-  EC_WRITE_BIT(&pd[hal_data->out_1_os], hal_data->out_1_bp, *(hal_data->out_1));
-  EC_WRITE_BIT(&pd[hal_data->out_2_os], hal_data->out_2_bp, *(hal_data->out_2));
-  EC_WRITE_BIT(&pd[hal_data->out_3_os], hal_data->out_3_bp, *(hal_data->out_3));
+  EC_WRITE_BIT(&pd[hal_data->out_0_os], hal_data->out_0_bp, LCEC_PIN_BIT_GET(hal_data->out_0));
+  EC_WRITE_BIT(&pd[hal_data->out_1_os], hal_data->out_1_bp, LCEC_PIN_BIT_GET(hal_data->out_1));
+  EC_WRITE_BIT(&pd[hal_data->out_2_os], hal_data->out_2_bp, LCEC_PIN_BIT_GET(hal_data->out_2));
+  EC_WRITE_BIT(&pd[hal_data->out_3_os], hal_data->out_3_bp, LCEC_PIN_BIT_GET(hal_data->out_3));
 }

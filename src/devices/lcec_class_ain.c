@@ -213,10 +213,10 @@ lcec_class_ain_channel_t *lcec_ain_register_channel(lcec_slave_t *slave, int id,
   }
 
   // Set default values for scale and bias.
-  *(data->scale) = 1.0;
-  if (is_temperature) *(data->scale) = 0.1;
-  if (opt->default_scale != 0) *(data->scale) = opt->default_scale;
-  if (opt->default_bias != 0) *(data->bias) = opt->default_bias;
+  LCEC_PIN_FLOAT_SET(data->scale, 1.0);
+  if (is_temperature) LCEC_PIN_FLOAT_SET(data->scale, 0.1);
+  if (opt->default_scale != 0) LCEC_PIN_FLOAT_SET(data->scale, opt->default_scale);
+  if (opt->default_bias != 0) LCEC_PIN_FLOAT_SET(data->bias, opt->default_bias);
 
   return data;
 }
@@ -235,14 +235,14 @@ void lcec_ain_read(lcec_slave_t *slave, lcec_class_ain_channel_t *data) {
 
   // Update status bits, if enabled
   if (!data->options->valueonly) {
-    *(data->overrange) = EC_READ_BIT(&pd[data->ovr_pdo_os], data->ovr_pdo_bp);
-    *(data->underrange) = EC_READ_BIT(&pd[data->udr_pdo_os], data->udr_pdo_bp);
-    *(data->error) = EC_READ_BIT(&pd[data->error_pdo_os], data->error_pdo_bp);
+    LCEC_PIN_BIT_SET(data->overrange, EC_READ_BIT(&pd[data->ovr_pdo_os], data->ovr_pdo_bp));
+    LCEC_PIN_BIT_SET(data->underrange, EC_READ_BIT(&pd[data->udr_pdo_os], data->udr_pdo_bp));
+    LCEC_PIN_BIT_SET(data->error, EC_READ_BIT(&pd[data->error_pdo_os], data->error_pdo_bp));
   }
 
   // Update sync error, if present
   if (data->options->has_sync) {
-    *(data->sync_err) = EC_READ_BIT(&pd[data->sync_err_pdo_os], data->sync_err_pdo_bp);
+    LCEC_PIN_BIT_SET(data->sync_err, EC_READ_BIT(&pd[data->sync_err_pdo_os], data->sync_err_pdo_bp));
   }
 
   // update value
@@ -251,17 +251,17 @@ void lcec_ain_read(lcec_slave_t *slave, lcec_class_ain_channel_t *data) {
   } else {
     value = EC_READ_S16(&pd[data->val_pdo_os]);
   }
-  *(data->raw_val) = value;
+  LCEC_PIN_S32_SET(data->raw_val, value);
   if (data->options->is_temperature) {
     // Temperature uses different value calculations than regular analog sensors.
-    *(data->val) = *(data->scale) * (double)value;
+    LCEC_PIN_FLOAT_SET(data->val, LCEC_PIN_FLOAT_GET(data->scale) * (double)value);
   } else {
     // Normal analog sensors return a value between -1.0 and 1.0 (or 0
     // and 1.0, depending on the sensor type), where 1.0 is the
     // largest possible input value.
     //
     // Then, the result is multipled by `scale` (default: 1.0) and `bias` is added (default 0).
-    *(data->val) = *(data->bias) + *(data->scale) * (double)value * ((double)1 / (double)max_value);
+    LCEC_PIN_FLOAT_SET(data->val, LCEC_PIN_FLOAT_GET(data->bias) + LCEC_PIN_FLOAT_GET(data->scale) * (double)value * ((double)1 / (double)max_value));
   }
 }
 

@@ -125,8 +125,8 @@ typedef struct {
   hal_bit_t *stat_warning;
   hal_bit_t *stat_remote;
 
-  hal_float_t pos_scale;
-  hal_bit_t auto_fault_reset;
+  lcec_param_float_t pos_scale;
+  lcec_param_bit_t auto_fault_reset;
 
   hal_float_t pos_scale_old;
   double pos_scale_rcpt;
@@ -284,28 +284,28 @@ static int lcec_omrg5_init(int comp_id, lcec_slave_t *slave) {
   }
 
   // initialize variables
-  hal_data->pos_scale = (double)OMRG5_PULSES_PER_REV_DEFLT;
-  hal_data->pos_scale_old = hal_data->pos_scale + 1.0;
+  LCEC_PARAM_FLOAT_SET(hal_data->pos_scale, (double)OMRG5_PULSES_PER_REV_DEFLT);
+  hal_data->pos_scale_old = LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) + 1.0;
   hal_data->pos_scale_rcpt = 1.0;
-  hal_data->auto_fault_reset = 1;
+  LCEC_PARAM_BIT_SET(hal_data->auto_fault_reset, 1);
 
   return 0;
 }
 
 static void lcec_omrg5_check_scales(lcec_omrg5_data_t *hal_data) {
   // check for change in scale value
-  if (hal_data->pos_scale != hal_data->pos_scale_old) {
+  if (LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) != hal_data->pos_scale_old) {
     // scale value has changed, test and update it
-    if ((hal_data->pos_scale < 1e-20) && (hal_data->pos_scale > -1e-20)) {
+    if ((LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) < 1e-20) && (LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) > -1e-20)) {
       // value too small, divide by zero is a bad thing
-      hal_data->pos_scale = 1.0;
+      LCEC_PARAM_FLOAT_SET(hal_data->pos_scale, 1.0);
     }
 
     // save new scale to detect future changes
-    hal_data->pos_scale_old = hal_data->pos_scale;
+    hal_data->pos_scale_old = LCEC_PARAM_FLOAT_GET(hal_data->pos_scale);
 
     // we actually want the reciprocal
-    hal_data->pos_scale_rcpt = 1.0 / hal_data->pos_scale;
+    hal_data->pos_scale_rcpt = 1.0 / LCEC_PARAM_FLOAT_GET(hal_data->pos_scale);
   }
 }
 
@@ -321,56 +321,56 @@ static void lcec_omrg5_read(lcec_slave_t *slave, long period) {
 
   // read status
   status = EC_READ_U16(&pd[hal_data->status_pdo_os]);
-  *(hal_data->stat_switchon_ready) = (status >> 0) & 1;
-  *(hal_data->stat_switched_on) = (status >> 1) & 1;
-  *(hal_data->stat_op_enabled) = (status >> 2) & 1;
-  *(hal_data->stat_fault) = (status >> 3) & 1;
-  *(hal_data->stat_volt_enabled) = (status >> 4) & 1;
-  *(hal_data->stat_quick_stop) = (status >> 5) & 1;
-  *(hal_data->stat_switchon_disabled) = (status >> 6) & 1;
-  *(hal_data->stat_warning) = (status >> 7) & 1;
-  *(hal_data->stat_remote) = (status >> 9) & 1;
+  LCEC_PIN_BIT_SET(hal_data->stat_switchon_ready, (status >> 0) & 1);
+  LCEC_PIN_BIT_SET(hal_data->stat_switched_on, (status >> 1) & 1);
+  LCEC_PIN_BIT_SET(hal_data->stat_op_enabled, (status >> 2) & 1);
+  LCEC_PIN_BIT_SET(hal_data->stat_fault, (status >> 3) & 1);
+  LCEC_PIN_BIT_SET(hal_data->stat_volt_enabled, (status >> 4) & 1);
+  LCEC_PIN_BIT_SET(hal_data->stat_quick_stop, (status >> 5) & 1);
+  LCEC_PIN_BIT_SET(hal_data->stat_switchon_disabled, (status >> 6) & 1);
+  LCEC_PIN_BIT_SET(hal_data->stat_warning, (status >> 7) & 1);
+  LCEC_PIN_BIT_SET(hal_data->stat_remote, (status >> 9) & 1);
 
   // read digital inputs
   din = EC_READ_U32(&pd[hal_data->din_pdo_os]);
-  *(hal_data->din_not) = (din >> 0) & 1;
-  *(hal_data->din_pot) = (din >> 1) & 1;
-  *(hal_data->din_dec) = (din >> 2) & 1;
-  *(hal_data->din_pc) = (din >> 16) & 1;
-  *(hal_data->din_ext1) = (din >> 17) & 1;
-  *(hal_data->din_ext2) = (din >> 18) & 1;
-  *(hal_data->din_ext3) = (din >> 19) & 1;
-  *(hal_data->din_mon0) = (din >> 20) & 1;
-  *(hal_data->din_mon1) = (din >> 21) & 1;
-  *(hal_data->din_mon2) = (din >> 22) & 1;
-  *(hal_data->din_pcl) = (din >> 23) & 1;
-  *(hal_data->din_ncl) = (din >> 24) & 1;
-  *(hal_data->din_stop) = (din >> 25) & 1;
-  *(hal_data->din_bkir) = (din >> 26) & 1;
-  *(hal_data->din_sf1) = (din >> 27) & 1;
-  *(hal_data->din_sf2) = (din >> 28) & 1;
-  *(hal_data->din_edm) = (din >> 29) & 1;
+  LCEC_PIN_BIT_SET(hal_data->din_not, (din >> 0) & 1);
+  LCEC_PIN_BIT_SET(hal_data->din_pot, (din >> 1) & 1);
+  LCEC_PIN_BIT_SET(hal_data->din_dec, (din >> 2) & 1);
+  LCEC_PIN_BIT_SET(hal_data->din_pc, (din >> 16) & 1);
+  LCEC_PIN_BIT_SET(hal_data->din_ext1, (din >> 17) & 1);
+  LCEC_PIN_BIT_SET(hal_data->din_ext2, (din >> 18) & 1);
+  LCEC_PIN_BIT_SET(hal_data->din_ext3, (din >> 19) & 1);
+  LCEC_PIN_BIT_SET(hal_data->din_mon0, (din >> 20) & 1);
+  LCEC_PIN_BIT_SET(hal_data->din_mon1, (din >> 21) & 1);
+  LCEC_PIN_BIT_SET(hal_data->din_mon2, (din >> 22) & 1);
+  LCEC_PIN_BIT_SET(hal_data->din_pcl, (din >> 23) & 1);
+  LCEC_PIN_BIT_SET(hal_data->din_ncl, (din >> 24) & 1);
+  LCEC_PIN_BIT_SET(hal_data->din_stop, (din >> 25) & 1);
+  LCEC_PIN_BIT_SET(hal_data->din_bkir, (din >> 26) & 1);
+  LCEC_PIN_BIT_SET(hal_data->din_sf1, (din >> 27) & 1);
+  LCEC_PIN_BIT_SET(hal_data->din_sf2, (din >> 28) & 1);
+  LCEC_PIN_BIT_SET(hal_data->din_edm, (din >> 29) & 1);
 
   // read position feedback
-  *(hal_data->pos_fb_raw) = EC_READ_S32(&pd[hal_data->curr_pos_pdo_os]);
-  *(hal_data->pos_fb) = ((double)*(hal_data->pos_fb_raw)) * hal_data->pos_scale_rcpt;
+  LCEC_PIN_S32_SET(hal_data->pos_fb_raw, EC_READ_S32(&pd[hal_data->curr_pos_pdo_os]));
+  LCEC_PIN_FLOAT_SET(hal_data->pos_fb, ((double)LCEC_PIN_S32_GET(hal_data->pos_fb_raw)) * hal_data->pos_scale_rcpt);
 
   // read following error
-  *(hal_data->pos_ferr_raw) = EC_READ_S32(&pd[hal_data->curr_ferr_pdo_os]);
-  *(hal_data->pos_ferr) = ((double)*(hal_data->pos_ferr_raw)) * hal_data->pos_scale_rcpt;
+  LCEC_PIN_S32_SET(hal_data->pos_ferr_raw, EC_READ_S32(&pd[hal_data->curr_ferr_pdo_os]));
+  LCEC_PIN_FLOAT_SET(hal_data->pos_ferr, ((double)LCEC_PIN_S32_GET(hal_data->pos_ferr_raw)) * hal_data->pos_scale_rcpt);
 
   // read torque error
-  *(hal_data->torque_fb) = ((double)EC_READ_S16(&pd[hal_data->curr_torque_pdo_os])) * 0.1;
+  LCEC_PIN_FLOAT_SET(hal_data->torque_fb, ((double)EC_READ_S16(&pd[hal_data->curr_torque_pdo_os])) * 0.1);
 
   // read error code
-  *(hal_data->error_code) = EC_READ_U16(&pd[hal_data->error_pdo_os]);
+  LCEC_PIN_U32_SET(hal_data->error_code, EC_READ_U16(&pd[hal_data->error_pdo_os]));
 
   // update fault output
   if (hal_data->auto_fault_reset_delay > 0) {
     hal_data->auto_fault_reset_delay -= period;
-    *(hal_data->fault) = 0;
+    LCEC_PIN_BIT_SET(hal_data->fault, 0);
   } else {
-    *(hal_data->fault) = *(hal_data->stat_fault) && *(hal_data->enable);
+    LCEC_PIN_BIT_SET(hal_data->fault, LCEC_PIN_BIT_GET(hal_data->stat_fault) && LCEC_PIN_BIT_GET(hal_data->enable));
   }
 }
 
@@ -382,25 +382,25 @@ static void lcec_omrg5_write(lcec_slave_t *slave, long period) {
   uint16_t control;
 
   // detect enable edge
-  enable_edge = *(hal_data->enable) && !hal_data->enable_old;
-  hal_data->enable_old = *(hal_data->enable);
+  enable_edge = LCEC_PIN_BIT_GET(hal_data->enable) && !hal_data->enable_old;
+  hal_data->enable_old = LCEC_PIN_BIT_GET(hal_data->enable);
 
   // write control register
   control = (1 << 2);  // quick stop is not supported
-  if (*(hal_data->stat_fault)) {
-    if (*(hal_data->fault_reset)) {
+  if (LCEC_PIN_BIT_GET(hal_data->stat_fault)) {
+    if (LCEC_PIN_BIT_GET(hal_data->fault_reset)) {
       control |= (1 << 7);  // fault reset
     }
-    if (hal_data->auto_fault_reset && enable_edge) {
+    if (LCEC_PARAM_BIT_GET(hal_data->auto_fault_reset) && enable_edge) {
       hal_data->auto_fault_reset_delay = OMRG5_FAULT_AUTORESET_DELAY_NS;
       control |= (1 << 7);  // fault reset
     }
   } else {
-    if (*(hal_data->enable)) {
+    if (LCEC_PIN_BIT_GET(hal_data->enable)) {
       control |= (1 << 1);  // enable voltage
-      if (*(hal_data->stat_switchon_ready)) {
+      if (LCEC_PIN_BIT_GET(hal_data->stat_switchon_ready)) {
         control |= (1 << 0);  // switch on
-        if (*(hal_data->stat_switched_on)) {
+        if (LCEC_PIN_BIT_GET(hal_data->stat_switched_on)) {
           control |= (1 << 3);  // enable op
         }
       }
@@ -409,6 +409,6 @@ static void lcec_omrg5_write(lcec_slave_t *slave, long period) {
   EC_WRITE_U16(&pd[hal_data->control_pdo_os], control);
 
   // write position command
-  *(hal_data->pos_cmd_raw) = (int32_t)(*(hal_data->pos_cmd) * hal_data->pos_scale);
-  EC_WRITE_S32(&pd[hal_data->target_pos_pdo_os], *(hal_data->pos_cmd_raw));
+  LCEC_PIN_S32_SET(hal_data->pos_cmd_raw, (int32_t)(LCEC_PIN_FLOAT_GET(hal_data->pos_cmd) * LCEC_PARAM_FLOAT_GET(hal_data->pos_scale)));
+  EC_WRITE_S32(&pd[hal_data->target_pos_pdo_os], LCEC_PIN_S32_GET(hal_data->pos_cmd_raw));
 }

@@ -26,13 +26,14 @@
 extern "C" {
 #endif
 
-#include "ecrt.h"
-#include "hal.h"
+#include <ecrt.h>
+#include <hal.h>
 #include "lcec_conf.h"
+#include "lcec_hal_compat.h"
 #include "lcec_rtapi.h"
-#include "rtapi_ctype.h"
-#include "rtapi_math.h"
-#include "rtapi_string.h"
+#include <rtapi_ctype.h>
+#include <rtapi_math.h>
+#include <rtapi_string.h>
 
 #ifdef __cplusplus
 }
@@ -187,8 +188,8 @@ typedef struct lcec_master_data {
 #ifdef RTAPI_TASK_PLL_SUPPORT
   hal_s32_t *pll_err;
   hal_s32_t *pll_out;
-  hal_u32_t pll_step;
-  hal_u32_t pll_max_err;
+  lcec_param_u32_t pll_step;
+  lcec_param_u32_t pll_max_err;
   hal_u32_t *pll_reset_cnt;
   hal_u32_t dc_phase_max_err;
   hal_s32_t *app_phase;         // Our execution phase in local cycle (ns, real-time)
@@ -210,8 +211,8 @@ typedef struct lcec_master_data {
   // DC synchrony monitoring (broadcast read of 0x092C system time difference)
   hal_u32_t *dc_sync_diff;       // Output: upper estimate of max slave time diff (ns)
   hal_bit_t *dc_sync_converged;  // Output: dc_sync_diff below dc-sync-max threshold
-  hal_u32_t dc_sync_max;         // Param: convergence threshold (ns)
-  hal_bit_t dc_sync_monitor;     // Param: enable the per-cycle monitor datagram (default on)
+  lcec_param_u32_t dc_sync_max;         // Param: convergence threshold (ns)
+  lcec_param_bit_t dc_sync_monitor;     // Param: enable the per-cycle monitor datagram (default on)
   int dc_sync_miss_cnt;          // Internal: consecutive cycles without a monitor response
   // Phase calibration for sync_to_ref_clock=false mode
   int32_t phase_measure_cnt;  // Internal: measurement cycle counter

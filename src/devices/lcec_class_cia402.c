@@ -434,16 +434,16 @@ lcec_class_cia402_channel_t *lcec_cia402_register_channel(
   uint32_t modes;
   lcec_read_sdo32(slave, base_idx + 0x502, 0, &modes);
 
-  *(data->supported_modes) = modes;
-  *(data->supports_mode_pp) = modes & 1 << 0;
-  *(data->supports_mode_vl) = modes & 1 << 1;
-  *(data->supports_mode_pv) = modes & 1 << 2;
-  *(data->supports_mode_tq) = modes & 1 << 3;
-  *(data->supports_mode_hm) = modes & 1 << 5;
-  *(data->supports_mode_ip) = modes & 1 << 6;
-  *(data->supports_mode_csp) = modes & 1 << 7;
-  *(data->supports_mode_csv) = modes & 1 << 8;
-  *(data->supports_mode_cst) = modes & 1 << 9;
+  LCEC_PIN_U32_SET(data->supported_modes, modes);
+  LCEC_PIN_BIT_SET(data->supports_mode_pp, modes & 1 << 0);
+  LCEC_PIN_BIT_SET(data->supports_mode_vl, modes & 1 << 1);
+  LCEC_PIN_BIT_SET(data->supports_mode_pv, modes & 1 << 2);
+  LCEC_PIN_BIT_SET(data->supports_mode_tq, modes & 1 << 3);
+  LCEC_PIN_BIT_SET(data->supports_mode_hm, modes & 1 << 5);
+  LCEC_PIN_BIT_SET(data->supports_mode_ip, modes & 1 << 6);
+  LCEC_PIN_BIT_SET(data->supports_mode_csp, modes & 1 << 7);
+  LCEC_PIN_BIT_SET(data->supports_mode_csv, modes & 1 << 8);
+  LCEC_PIN_BIT_SET(data->supports_mode_cst, modes & 1 << 9);
 
   /// @brief Initializes a pin's defaults using the current value of the backing SDO.
   ///
@@ -484,9 +484,9 @@ void lcec_cia402_read(lcec_slave_t *slave, lcec_class_cia402_channel_t *data) {
 
 #define READ_OPT(pin_name)              \
   if (data->enabled->enable_##pin_name) \
-  *(data->pin_name) = (SUBSTJOIN3(EC_READ_, PDO_SIGN_##pin_name, PDO_BITS_##pin_name)(&pd[data->pin_name##_os]))
+  LCEC_PIN_SET(data->pin_name, (SUBSTJOIN3(EC_READ_, PDO_SIGN_##pin_name, PDO_BITS_##pin_name)(&pd[data->pin_name##_os])))
 
-  *(data->statusword) = EC_READ_U16(&pd[data->statusword_os]);
+  LCEC_PIN_U32_SET(data->statusword, EC_READ_U16(&pd[data->statusword_os]));
 
   // Read from all readable PDOs.
   FOR_ALL_READ_PDOS_DO(READ_OPT);
@@ -507,7 +507,7 @@ void lcec_cia402_read_all(lcec_slave_t *slave, lcec_class_cia402_channels_t *cha
 }
 
 #define WRITE_OPT(name) \
-  if (data->enabled->enable_##name) SUBSTJOIN3(EC_WRITE_, PDO_SIGN_##name, PDO_BITS_##name)(&pd[data->name##_os], *(data->name))
+  if (data->enabled->enable_##name) SUBSTJOIN3(EC_WRITE_, PDO_SIGN_##name, PDO_BITS_##name)(&pd[data->name##_os], LCEC_PIN_GET(data->name))
 
 /// OK, this is kind of a mess.  It presents the same interface as
 /// WRITE_OPT(), but instead of writing to a mapped PDO entry, it
@@ -527,9 +527,9 @@ void lcec_cia402_read_all(lcec_slave_t *slave, lcec_class_cia402_channels_t *cha
 #define WRITE_OPT_SDO(name)                                                                   \
   do {                                                                                        \
     if (data->enabled->enable_##name) {                                                       \
-      if (*(data->name) != data->name##_old) {                                                \
+      if (LCEC_PIN_GET(data->name) != data->name##_old) {                                                \
         if (ecrt_sdo_request_state(data->name##_sdorequest) != EC_REQUEST_BUSY) {             \
-          data->name##_old = *(data->name);                                                   \
+          data->name##_old = LCEC_PIN_GET(data->name);                                                   \
           uint8_t *sdo_tmp = ecrt_sdo_request_data(data->name##_sdorequest);                  \
           SUBSTJOIN3(EC_WRITE_, PDO_SIGN_##name, PDO_BITS_##name)(sdo_tmp, data->name##_old); \
           ecrt_sdo_request_write(data->name##_sdorequest);                                    \
@@ -541,7 +541,7 @@ void lcec_cia402_read_all(lcec_slave_t *slave, lcec_class_cia402_channels_t *cha
 void lcec_cia402_write(lcec_slave_t *slave, lcec_class_cia402_channel_t *data) {
   uint8_t *pd = slave->master->process_data;
 
-  EC_WRITE_U16(&pd[data->controlword_os], (uint16_t)(*(data->controlword)));
+  EC_WRITE_U16(&pd[data->controlword_os], (uint16_t)LCEC_PIN_GET(data->controlword));
 
   // Write PDOs (mapped, auto-synced between slaves and the master)
   FOR_ALL_WRITE_PDOS_DO(WRITE_OPT);

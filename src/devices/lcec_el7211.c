@@ -22,7 +22,7 @@
 #include "lcec_el7211.h"
 
 #include "../lcec.h"
-#include "hal.h"
+#include <hal.h>
 #include "lcec_class_enc.h"
 
 #define FAULT_RESET_PERIOD_NS 100000000
@@ -69,15 +69,15 @@ typedef struct {
   hal_float_t *vel_cmd_out;
   hal_s32_t *vel_cmd_out_raw;
 
-  hal_float_t scale;
+  lcec_param_float_t scale;
 
-  hal_u32_t vel_resolution;
-  hal_u32_t pos_resolution;
+  lcec_param_u32_t vel_resolution;
+  lcec_param_u32_t pos_resolution;
 
-  hal_float_t min_vel;
-  hal_float_t max_vel;
-  hal_float_t max_accel;
-  hal_float_t at_speed_window;
+  lcec_param_float_t min_vel;
+  lcec_param_float_t max_vel;
+  lcec_param_float_t max_accel;
+  lcec_param_float_t at_speed_window;
 
   lcec_class_enc_data_t enc;
 
@@ -242,9 +242,9 @@ static int lcec_el7211_export_pins(lcec_master_t *master, lcec_slave_t *slave, l
   }
 
   // init parameters
-  hal_data->scale = 1.0;
-  hal_data->vel_resolution = sdo_vel_resolution;
-  hal_data->pos_resolution = sdo_pos_resolution;
+  LCEC_PARAM_FLOAT_SET(hal_data->scale, 1.0);
+  LCEC_PARAM_U32_SET(hal_data->vel_resolution, sdo_vel_resolution);
+  LCEC_PARAM_U32_SET(hal_data->pos_resolution, sdo_pos_resolution);
 
   // initialize variables
   if (sdo_vel_resolution > 0) {
@@ -254,13 +254,13 @@ static int lcec_el7211_export_pins(lcec_master_t *master, lcec_slave_t *slave, l
     hal_data->vel_scale = 0.0;
     hal_data->vel_rcpt = 0.0;
   }
-  hal_data->scale_old = hal_data->scale + 1.0;
+  hal_data->scale_old = LCEC_PARAM_FLOAT_GET(hal_data->scale) + 1.0;
   hal_data->scale_rcpt = 0.0;
   hal_data->vel_out_scale = 0.0;
   hal_data->fault_reset_timer = 0;
-  hal_data->min_vel = -1e20;
-  hal_data->max_vel = 1e20;
-  hal_data->max_accel = 1e20;
+  LCEC_PARAM_FLOAT_SET(hal_data->min_vel, -1e20);
+  LCEC_PARAM_FLOAT_SET(hal_data->max_vel, 1e20);
+  LCEC_PARAM_FLOAT_SET(hal_data->max_accel, 1e20);
 
   return 0;
 }
@@ -340,27 +340,27 @@ static int lcec_el7201_9014_init(int comp_id, lcec_slave_t *slave) {
   }
 
   // initialize extra variables
-  *(hal_data->input_0) = 0;
-  *(hal_data->input_1) = 0;
-  *(hal_data->input_sto) = 0;
+  LCEC_PIN_BIT_SET(hal_data->input_0, 0);
+  LCEC_PIN_BIT_SET(hal_data->input_1, 0);
+  LCEC_PIN_BIT_SET(hal_data->input_sto, 0);
 
   return 0;
 }
 
 static void lcec_el7211_check_scales(lcec_el7211_data_t *hal_data) {
   // check for change in scale value
-  if (hal_data->scale != hal_data->scale_old) {
+  if (LCEC_PARAM_FLOAT_GET(hal_data->scale) != hal_data->scale_old) {
     // scale value has changed, test and update it
-    if ((hal_data->scale < 1e-20) && (hal_data->scale > -1e-20)) {
+    if ((LCEC_PARAM_FLOAT_GET(hal_data->scale) < 1e-20) && (LCEC_PARAM_FLOAT_GET(hal_data->scale) > -1e-20)) {
       // value too small, divide by zero is a bad thing
-      hal_data->scale = 1.0;
+      LCEC_PARAM_FLOAT_SET(hal_data->scale, 1.0);
     }
     // save new scale to detect future changes
-    hal_data->scale_old = hal_data->scale;
+    hal_data->scale_old = LCEC_PARAM_FLOAT_GET(hal_data->scale);
     // we actually want the reciprocal
-    hal_data->scale_rcpt = 1.0 / hal_data->scale;
+    hal_data->scale_rcpt = 1.0 / LCEC_PARAM_FLOAT_GET(hal_data->scale);
     // calculate velo output scale
-    hal_data->vel_out_scale = hal_data->vel_scale * hal_data->scale;
+    hal_data->vel_out_scale = hal_data->vel_scale * LCEC_PARAM_FLOAT_GET(hal_data->scale);
   }
 }
 
@@ -375,14 +375,14 @@ static void lcec_el7211_read(lcec_slave_t *slave, long period) {
 
   // wait for slave to be operational
   if (!slave->state.operational) {
-    *(hal_data->status_ready) = 0;
-    *(hal_data->status_switched_on) = 0;
-    *(hal_data->status_operation) = 0;
-    *(hal_data->status_fault) = 1;
-    *(hal_data->status_disabled) = 0;
-    *(hal_data->status_warning) = 0;
-    *(hal_data->status_limit_active) = 0;
-    *(hal_data->enabled) = 0;
+    LCEC_PIN_BIT_SET(hal_data->status_ready, 0);
+    LCEC_PIN_BIT_SET(hal_data->status_switched_on, 0);
+    LCEC_PIN_BIT_SET(hal_data->status_operation, 0);
+    LCEC_PIN_BIT_SET(hal_data->status_fault, 1);
+    LCEC_PIN_BIT_SET(hal_data->status_disabled, 0);
+    LCEC_PIN_BIT_SET(hal_data->status_warning, 0);
+    LCEC_PIN_BIT_SET(hal_data->status_limit_active, 0);
+    LCEC_PIN_BIT_SET(hal_data->enabled, 0);
     return;
   }
 
@@ -391,21 +391,21 @@ static void lcec_el7211_read(lcec_slave_t *slave, long period) {
 
   // read status word
   status = EC_READ_U16(&pd[hal_data->status_pdo_os]);
-  *(hal_data->status_ready) = (status >> 0) & 0x01;
-  *(hal_data->status_switched_on) = (status >> 1) & 0x01;
-  *(hal_data->status_operation) = (status >> 2) & 0x01;
-  *(hal_data->status_fault) = (status >> 3) & 0x01;
-  *(hal_data->status_disabled) = (status >> 6) & 0x01;
-  *(hal_data->status_warning) = (status >> 7) & 0x01;
-  *(hal_data->status_limit_active) = (status >> 11) & 0x01;
+  LCEC_PIN_BIT_SET(hal_data->status_ready, (status >> 0) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->status_switched_on, (status >> 1) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->status_operation, (status >> 2) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->status_fault, (status >> 3) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->status_disabled, (status >> 6) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->status_warning, (status >> 7) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->status_limit_active, (status >> 11) & 0x01);
 
-  *(hal_data->enabled) = *(hal_data->status_ready) && *(hal_data->status_switched_on) && *(hal_data->status_operation);
-  *(hal_data->fault) = 0;
-  if (*(hal_data->enable) && *(hal_data->status_fault)) {
+  LCEC_PIN_BIT_SET(hal_data->enabled, LCEC_PIN_BIT_GET(hal_data->status_ready) && LCEC_PIN_BIT_GET(hal_data->status_switched_on) && LCEC_PIN_BIT_GET(hal_data->status_operation));
+  LCEC_PIN_BIT_SET(hal_data->fault, 0);
+  if (LCEC_PIN_BIT_GET(hal_data->enable) && LCEC_PIN_BIT_GET(hal_data->status_fault)) {
     if (hal_data->fault_reset_timer > 0) {
       hal_data->fault_reset_timer -= period;
     } else {
-      *(hal_data->fault) = 1;
+      LCEC_PIN_BIT_SET(hal_data->fault, 1);
     }
   } else {
     hal_data->fault_reset_timer = FAULT_RESET_PERIOD_NS;
@@ -413,20 +413,20 @@ static void lcec_el7211_read(lcec_slave_t *slave, long period) {
 
   // read velocity
   vel_raw = EC_READ_S32(&pd[hal_data->vel_fb_pdo_os]);
-  *(hal_data->vel_fb_raw) = vel_raw;
+  LCEC_PIN_S32_SET(hal_data->vel_fb_raw, vel_raw);
   vel = ((double)vel_raw) * hal_data->vel_rcpt;
-  *(hal_data->vel_fb) = vel * hal_data->scale_rcpt;
+  LCEC_PIN_FLOAT_SET(hal_data->vel_fb, vel * hal_data->scale_rcpt);
   vel = vel * 60.0;
-  *(hal_data->vel_fb_rpm) = vel;
-  *(hal_data->vel_fb_rpm_abs) = fabs(vel);
+  LCEC_PIN_FLOAT_SET(hal_data->vel_fb_rpm, vel);
+  LCEC_PIN_FLOAT_SET(hal_data->vel_fb_rpm_abs, fabs(vel));
 
   // update at-speed
-  *(hal_data->at_speed) = *(hal_data->vel_fb) >= (*(hal_data->vel_cmd) - hal_data->at_speed_window) &&
-                          *(hal_data->vel_fb) <= (*(hal_data->vel_cmd) + hal_data->at_speed_window);
+  LCEC_PIN_BIT_SET(hal_data->at_speed, LCEC_PIN_FLOAT_GET(hal_data->vel_fb) >= (LCEC_PIN_FLOAT_GET(hal_data->vel_cmd) - LCEC_PARAM_FLOAT_GET(hal_data->at_speed_window)) &&
+                          LCEC_PIN_FLOAT_GET(hal_data->vel_fb) <= (LCEC_PIN_FLOAT_GET(hal_data->vel_cmd) + LCEC_PARAM_FLOAT_GET(hal_data->at_speed_window)));
 
   // update position feedback
   pos_cnt = EC_READ_U32(&pd[hal_data->pos_fb_pdo_os]);
-  class_enc_update(&hal_data->enc, hal_data->pos_resolution, hal_data->scale_rcpt, pos_cnt, 0, 0);
+  class_enc_update(&hal_data->enc, LCEC_PARAM_U32_GET(hal_data->pos_resolution), hal_data->scale_rcpt, pos_cnt, 0, 0);
 }
 
 static void lcec_el7201_9014_read(lcec_slave_t *slave, long period) {
@@ -439,11 +439,11 @@ static void lcec_el7201_9014_read(lcec_slave_t *slave, long period) {
 
   // read info1
   info1 = EC_READ_U16(&pd[hal_data->info1_pdo_os]);
-  *(hal_data->input_0) = (info1 >> 0) & 0x01;
-  *(hal_data->input_0_not) = !*(hal_data->input_0);
-  *(hal_data->input_1) = (info1 >> 1) & 0x01;
-  *(hal_data->input_1_not) = !*(hal_data->input_1);
-  *(hal_data->input_sto) = (info1 >> 8) & 0x01;
+  LCEC_PIN_BIT_SET(hal_data->input_0, (info1 >> 0) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->input_0_not, !LCEC_PIN_BIT_GET(hal_data->input_0));
+  LCEC_PIN_BIT_SET(hal_data->input_1, (info1 >> 1) & 0x01);
+  LCEC_PIN_BIT_SET(hal_data->input_1_not, !LCEC_PIN_BIT_GET(hal_data->input_1));
+  LCEC_PIN_BIT_SET(hal_data->input_sto, (info1 >> 8) & 0x01);
 }
 
 static inline double clamp(double v, double sub, double sup) {
@@ -463,21 +463,21 @@ static void lcec_el7211_write(lcec_slave_t *slave, long period) {
   lcec_el7211_check_scales(hal_data);
 
   velo_cmd = 0.0;
-  if (*(hal_data->enable)) {
-    velo_cmd = clamp(*(hal_data->vel_cmd), hal_data->min_vel, hal_data->max_vel);
+  if (LCEC_PIN_BIT_GET(hal_data->enable)) {
+    velo_cmd = clamp(LCEC_PIN_FLOAT_GET(hal_data->vel_cmd), LCEC_PARAM_FLOAT_GET(hal_data->min_vel), LCEC_PARAM_FLOAT_GET(hal_data->max_vel));
   }
-  velo_maxdelta = hal_data->max_accel * (double)period * 1e-9;
-  *(hal_data->vel_cmd_out) = clamp(velo_cmd, *(hal_data->vel_cmd_out) - velo_maxdelta, *(hal_data->vel_cmd_out) + velo_maxdelta);
+  velo_maxdelta = LCEC_PARAM_FLOAT_GET(hal_data->max_accel) * (double)period * 1e-9;
+  LCEC_PIN_FLOAT_SET(hal_data->vel_cmd_out, clamp(velo_cmd, LCEC_PIN_FLOAT_GET(hal_data->vel_cmd_out) - velo_maxdelta, LCEC_PIN_FLOAT_GET(hal_data->vel_cmd_out) + velo_maxdelta));
 
   control = 0;
-  if (*(hal_data->enable) || *(hal_data->vel_cmd_out) != 0) {
-    if (*(hal_data->status_fault)) {
+  if (LCEC_PIN_BIT_GET(hal_data->enable) || LCEC_PIN_FLOAT_GET(hal_data->vel_cmd_out) != 0) {
+    if (LCEC_PIN_BIT_GET(hal_data->status_fault)) {
       control = 0x80;
-    } else if (*(hal_data->status_disabled)) {
+    } else if (LCEC_PIN_BIT_GET(hal_data->status_disabled)) {
       control = 0x06;
-    } else if (*(hal_data->status_ready)) {
+    } else if (LCEC_PIN_BIT_GET(hal_data->status_ready)) {
       control = 0x07;
-      if (*(hal_data->status_switched_on)) {
+      if (LCEC_PIN_BIT_GET(hal_data->status_switched_on)) {
         control = 0x0f;
       }
     }
@@ -485,13 +485,13 @@ static void lcec_el7211_write(lcec_slave_t *slave, long period) {
   EC_WRITE_U16(&pd[hal_data->ctrl_pdo_os], control);
 
   // set velocity
-  velo_raw = *(hal_data->vel_cmd_out) * hal_data->vel_out_scale;
+  velo_raw = LCEC_PIN_FLOAT_GET(hal_data->vel_cmd_out) * hal_data->vel_out_scale;
   if (velo_raw > (double)0x7fffffff) {
     velo_raw = (double)0x7fffffff;
   }
   if (velo_raw < (double)-0x7fffffff) {
     velo_raw = (double)-0x7fffffff;
   }
-  *(hal_data->vel_cmd_out_raw) = (int32_t)velo_raw;
-  EC_WRITE_S32(&pd[hal_data->vel_cmd_pdo_os], *(hal_data->vel_cmd_out_raw));
+  LCEC_PIN_S32_SET(hal_data->vel_cmd_out_raw, (int32_t)velo_raw);
+  EC_WRITE_S32(&pd[hal_data->vel_cmd_pdo_os], LCEC_PIN_S32_GET(hal_data->vel_cmd_out_raw));
 }

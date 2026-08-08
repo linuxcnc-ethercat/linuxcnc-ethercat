@@ -30,11 +30,11 @@
 #include <string.h>
 #include <strings.h>
 
-#include "hal.h"
+#include <hal.h>
 #include "lcec.h"
 #include "lcec_conf.h"
 #include "lcec_rtapi.h"
-#include "rtapi.h"
+#include <rtapi.h>
 
 extern lcec_typelinkedlist_t *typeslist;
 

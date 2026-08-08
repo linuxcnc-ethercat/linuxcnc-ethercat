@@ -22,7 +22,7 @@
 #include "lcec_el7411.h"
 
 #include "../lcec.h"
-#include "hal.h"
+#include <hal.h>
 
 static int lcec_el7411_init(int comp_id, lcec_slave_t *slave);
 

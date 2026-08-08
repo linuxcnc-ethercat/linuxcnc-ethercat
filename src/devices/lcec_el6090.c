@@ -297,15 +297,15 @@ static int lcec_el6090_init(int comp_id, lcec_slave_t *slave) {
   hal_data->last_operational = 0;
 
   // initialize Pins
-  *(hal_data->button_up) = 0;
-  *(hal_data->button_down) = 0;
-  *(hal_data->button_left) = 0;
-  *(hal_data->button_right) = 0;
-  *(hal_data->button_enter) = 0;
-  *(hal_data->button_toggle) = 0;
+  LCEC_PIN_BIT_SET(hal_data->button_up, 0);
+  LCEC_PIN_BIT_SET(hal_data->button_down, 0);
+  LCEC_PIN_BIT_SET(hal_data->button_left, 0);
+  LCEC_PIN_BIT_SET(hal_data->button_right, 0);
+  LCEC_PIN_BIT_SET(hal_data->button_enter, 0);
+  LCEC_PIN_BIT_SET(hal_data->button_toggle, 0);
 
-  *(hal_data->value_1) = 0;
-  *(hal_data->value_2) = 0;
+  LCEC_PIN_U32_SET(hal_data->value_1, 0);
+  LCEC_PIN_U32_SET(hal_data->value_2, 0);
 
   // initialize Channel 1/2/3/4
   for (i = 0; i < LCEC_EL6090_CHANS; i++) {
@@ -330,10 +330,10 @@ static int lcec_el6090_init(int comp_id, lcec_slave_t *slave) {
     }
 
     // initialize Pins
-    *(chan->timer_start) = 0;
-    *(chan->timer_reset) = 0;
-    *(chan->counter_clock) = 0;
-    *(chan->counter_reset) = 0;
+    LCEC_PIN_BIT_SET(chan->timer_start, 0);
+    LCEC_PIN_BIT_SET(chan->timer_reset, 0);
+    LCEC_PIN_BIT_SET(chan->counter_clock, 0);
+    LCEC_PIN_BIT_SET(chan->counter_reset, 0);
   }
 
   return 0;
@@ -355,25 +355,25 @@ static void lcec_el6090_read(lcec_slave_t *slave, long period) {
   }
 
   // Read Keyboard
-  *(hal_data->button_up) = EC_READ_BIT(&pd[hal_data->button_up_pdo_os], hal_data->button_up_pdo_bp);
-  *(hal_data->button_down) = EC_READ_BIT(&pd[hal_data->button_down_pdo_os], hal_data->button_down_pdo_bp);
-  *(hal_data->button_left) = EC_READ_BIT(&pd[hal_data->button_left_pdo_os], hal_data->button_left_pdo_bp);
-  *(hal_data->button_right) = EC_READ_BIT(&pd[hal_data->button_right_pdo_os], hal_data->button_right_pdo_bp);
-  *(hal_data->button_enter) = EC_READ_BIT(&pd[hal_data->button_enter_pdo_os], hal_data->button_enter_pdo_bp);
-  *(hal_data->button_toggle) = EC_READ_BIT(&pd[hal_data->button_toggle_pdo_os], hal_data->button_toggle_pdo_bp);
+  LCEC_PIN_BIT_SET(hal_data->button_up, EC_READ_BIT(&pd[hal_data->button_up_pdo_os], hal_data->button_up_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->button_down, EC_READ_BIT(&pd[hal_data->button_down_pdo_os], hal_data->button_down_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->button_left, EC_READ_BIT(&pd[hal_data->button_left_pdo_os], hal_data->button_left_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->button_right, EC_READ_BIT(&pd[hal_data->button_right_pdo_os], hal_data->button_right_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->button_enter, EC_READ_BIT(&pd[hal_data->button_enter_pdo_os], hal_data->button_enter_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->button_toggle, EC_READ_BIT(&pd[hal_data->button_toggle_pdo_os], hal_data->button_toggle_pdo_bp));
 
   // Read Operating Hours Counter (second)
   operating_time = EC_READ_U32(&pd[hal_data->operating_time_pdo_os]);
-  *(hal_data->operating_time) = operating_time;
-  *(hal_data->operating_time_hour) = operating_time / EL6090_HOUR_SCALE;
+  LCEC_PIN_U32_SET(hal_data->operating_time, operating_time);
+  LCEC_PIN_U32_SET(hal_data->operating_time_hour, operating_time / EL6090_HOUR_SCALE);
 
   // Read Channel 1/2/3/4
   for (i = 0; i < LCEC_EL6090_CHANS; i++) {
     chan = &hal_data->chans[i];
 
     // Read Channel
-    *(chan->timer) = EC_READ_U32(&pd[chan->timer_channel_pdo_os]);
-    *(chan->counter) = EC_READ_U32(&pd[chan->counter_channel_pdo_os]);
+    LCEC_PIN_U32_SET(chan->timer, EC_READ_U32(&pd[chan->timer_channel_pdo_os]));
+    LCEC_PIN_U32_SET(chan->counter, EC_READ_U32(&pd[chan->counter_channel_pdo_os]));
   }
 
   hal_data->last_operational = 1;
@@ -388,16 +388,16 @@ static void lcec_el6090_write(lcec_slave_t *slave, long period) {
   int i;
 
   // Write Value LCD
-  EC_WRITE_U16(&pd[hal_data->value_row1_pdo_os], *(hal_data->value_1));
-  EC_WRITE_U16(&pd[hal_data->value_row2_pdo_os], *(hal_data->value_2));
+  EC_WRITE_U16(&pd[hal_data->value_row1_pdo_os], LCEC_PIN_U32_GET(hal_data->value_1));
+  EC_WRITE_U16(&pd[hal_data->value_row2_pdo_os], LCEC_PIN_U32_GET(hal_data->value_2));
 
   // Write Channel 1/2/3/4
   for (i = 0; i < LCEC_EL6090_CHANS; i++) {
     chan = &hal_data->chans[i];
 
-    EC_WRITE_BIT(&pd[chan->timer_start_channel_pdo_os], chan->timer_start_channel_pdo_bp, *(chan->timer_start));
-    EC_WRITE_BIT(&pd[chan->timer_reset_channel_pdo_os], chan->timer_reset_channel_pdo_bp, *(chan->timer_reset));
-    EC_WRITE_BIT(&pd[chan->counter_clock_channel_pdo_os], chan->counter_clock_channel_pdo_bp, *(chan->counter_clock));
-    EC_WRITE_BIT(&pd[chan->counter_reset_channel_pdo_os], chan->counter_reset_channel_pdo_bp, *(chan->counter_reset));
+    EC_WRITE_BIT(&pd[chan->timer_start_channel_pdo_os], chan->timer_start_channel_pdo_bp, LCEC_PIN_BIT_GET(chan->timer_start));
+    EC_WRITE_BIT(&pd[chan->timer_reset_channel_pdo_os], chan->timer_reset_channel_pdo_bp, LCEC_PIN_BIT_GET(chan->timer_reset));
+    EC_WRITE_BIT(&pd[chan->counter_clock_channel_pdo_os], chan->counter_clock_channel_pdo_bp, LCEC_PIN_BIT_GET(chan->counter_clock));
+    EC_WRITE_BIT(&pd[chan->counter_reset_channel_pdo_os], chan->counter_reset_channel_pdo_bp, LCEC_PIN_BIT_GET(chan->counter_reset));
   }
 }

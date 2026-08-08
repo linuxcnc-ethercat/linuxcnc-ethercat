@@ -66,8 +66,8 @@ typedef struct {
   hal_u32_t *vel_ramp_up;
   hal_u32_t *vel_ramp_down;
 
-  hal_bit_t auto_fault_reset;
-  hal_float_t vel_scale;
+  lcec_param_bit_t auto_fault_reset;
+  lcec_param_float_t vel_scale;
 
   double vel_scale_old;
   double vel_scale_rcpt;
@@ -217,9 +217,9 @@ static int lcec_dems300_init(int comp_id, lcec_slave_t *slave) {
   hal_data->enable_old = 0;
   hal_data->internal_fault = 0;
 
-  hal_data->auto_fault_reset = 1;
-  hal_data->vel_scale = 1.0;
-  hal_data->vel_scale_old = hal_data->vel_scale + 1.0;
+  LCEC_PARAM_BIT_SET(hal_data->auto_fault_reset, 1);
+  LCEC_PARAM_FLOAT_SET(hal_data->vel_scale, 1.0);
+  hal_data->vel_scale_old = LCEC_PARAM_FLOAT_GET(hal_data->vel_scale) + 1.0;
   hal_data->vel_scale_rcpt = 1.0;
 
   return 0;
@@ -227,16 +227,16 @@ static int lcec_dems300_init(int comp_id, lcec_slave_t *slave) {
 
 static void lcec_dems300_check_scales(lcec_dems300_data_t *hal_data) {
   // check for change in scale value
-  if (hal_data->vel_scale != hal_data->vel_scale_old) {
+  if (LCEC_PARAM_FLOAT_GET(hal_data->vel_scale) != hal_data->vel_scale_old) {
     // scale value has changed, test and update it
-    if ((hal_data->vel_scale < 1e-20) && (hal_data->vel_scale > -1e-20)) {
+    if ((LCEC_PARAM_FLOAT_GET(hal_data->vel_scale) < 1e-20) && (LCEC_PARAM_FLOAT_GET(hal_data->vel_scale) > -1e-20)) {
       // value too small, divide by zero is a bad thing
-      hal_data->vel_scale = 1.0;
+      LCEC_PARAM_FLOAT_SET(hal_data->vel_scale, 1.0);
     }
     // save new scale to detect future changes
-    hal_data->vel_scale_old = hal_data->vel_scale;
+    hal_data->vel_scale_old = LCEC_PARAM_FLOAT_GET(hal_data->vel_scale);
     // we actually want the reciprocal
-    hal_data->vel_scale_rcpt = 1.0 / hal_data->vel_scale;
+    hal_data->vel_scale_rcpt = 1.0 / LCEC_PARAM_FLOAT_GET(hal_data->vel_scale);
   }
 }
 
@@ -253,26 +253,26 @@ static void lcec_dems300_read(lcec_slave_t *slave, long period) {
   lcec_dems300_check_scales(hal_data);
 
   // read current
-  *(hal_data->act_current) = (double)EC_READ_U16(&pd[hal_data->current_pdo_os]) / 100.0;
+  LCEC_PIN_FLOAT_SET(hal_data->act_current, (double)EC_READ_U16(&pd[hal_data->current_pdo_os]) / 100.0);
   // read temp
-  *(hal_data->drive_temp) = (double)EC_READ_U16(&pd[hal_data->temp_pdo_os]) / 10.0;
+  LCEC_PIN_FLOAT_SET(hal_data->drive_temp, (double)EC_READ_U16(&pd[hal_data->temp_pdo_os]) / 10.0);
   // read warn and error code
   error = EC_READ_U16(&pd[hal_data->warn_err_pdo_os]);
-  *(hal_data->error_code) = error & 0xff;  // low byte
-  *(hal_data->warn_code) = error >> 8;     // high byte
+  LCEC_PIN_U32_SET(hal_data->error_code, error & 0xff);  // low byte
+  LCEC_PIN_U32_SET(hal_data->warn_code, error >> 8);     // high byte
 
   // wait for slave to be operational
   if (!slave->state.operational) {
-    *(hal_data->stat_switch_on_ready) = 0;
-    *(hal_data->stat_switched_on) = 0;
-    *(hal_data->stat_op_enabled) = 0;
-    *(hal_data->stat_fault) = 1;
-    *(hal_data->stat_volt_enabled) = 0;
-    *(hal_data->stat_quick_stoped) = 0;
-    *(hal_data->stat_switch_on_disabled) = 0;
-    *(hal_data->stat_warning) = 0;
-    *(hal_data->stat_remote) = 0;
-    *(hal_data->stat_at_speed) = 0;
+    LCEC_PIN_BIT_SET(hal_data->stat_switch_on_ready, 0);
+    LCEC_PIN_BIT_SET(hal_data->stat_switched_on, 0);
+    LCEC_PIN_BIT_SET(hal_data->stat_op_enabled, 0);
+    LCEC_PIN_BIT_SET(hal_data->stat_fault, 1);
+    LCEC_PIN_BIT_SET(hal_data->stat_volt_enabled, 0);
+    LCEC_PIN_BIT_SET(hal_data->stat_quick_stoped, 0);
+    LCEC_PIN_BIT_SET(hal_data->stat_switch_on_disabled, 0);
+    LCEC_PIN_BIT_SET(hal_data->stat_warning, 0);
+    LCEC_PIN_BIT_SET(hal_data->stat_remote, 0);
+    LCEC_PIN_BIT_SET(hal_data->stat_at_speed, 0);
     return;
   }
 
@@ -281,17 +281,17 @@ static void lcec_dems300_read(lcec_slave_t *slave, long period) {
 
   // read status word
   status = EC_READ_U16(&pd[hal_data->status_pdo_os]);
-  *(hal_data->stat_switch_on_ready) = (status >> 0) & 1;
-  *(hal_data->stat_switched_on) = (status >> 1) & 1;
-  *(hal_data->stat_op_enabled) = (status >> 2) & 1;
-  //  *(hal_data->stat_fault)             = (status >> 3) & 1;
+  LCEC_PIN_BIT_SET(hal_data->stat_switch_on_ready, (status >> 0) & 1);
+  LCEC_PIN_BIT_SET(hal_data->stat_switched_on, (status >> 1) & 1);
+  LCEC_PIN_BIT_SET(hal_data->stat_op_enabled, (status >> 2) & 1);
+  //  LCEC_PIN_BIT_SET(hal_data->stat_fault, (status >> 3) & 1);
   hal_data->internal_fault = (status >> 3) & 0x01;
-  *(hal_data->stat_volt_enabled) = (status >> 4) & 1;
-  *(hal_data->stat_quick_stoped) = (status >> 5) & 1;
-  *(hal_data->stat_switch_on_disabled) = (status >> 6) & 1;
-  *(hal_data->stat_warning) = (status >> 7) & 1;
-  *(hal_data->stat_remote) = (status >> 9) & 1;
-  *(hal_data->stat_at_speed) = (status >> 10) & 0x01;
+  LCEC_PIN_BIT_SET(hal_data->stat_volt_enabled, (status >> 4) & 1);
+  LCEC_PIN_BIT_SET(hal_data->stat_quick_stoped, (status >> 5) & 1);
+  LCEC_PIN_BIT_SET(hal_data->stat_switch_on_disabled, (status >> 6) & 1);
+  LCEC_PIN_BIT_SET(hal_data->stat_warning, (status >> 7) & 1);
+  LCEC_PIN_BIT_SET(hal_data->stat_remote, (status >> 9) & 1);
+  LCEC_PIN_BIT_SET(hal_data->stat_at_speed, (status >> 10) & 0x01);
 
   // set fault if op mode is wrong
   if (opmode_in != 2) {
@@ -302,16 +302,16 @@ static void lcec_dems300_read(lcec_slave_t *slave, long period) {
   // update fault output
   if (hal_data->auto_fault_reset_delay > 0) {
     hal_data->auto_fault_reset_delay -= period;
-    *(hal_data->stat_fault) = 0;
+    LCEC_PIN_BIT_SET(hal_data->stat_fault, 0);
   } else {
-    *(hal_data->stat_fault) = hal_data->internal_fault;
+    LCEC_PIN_BIT_SET(hal_data->stat_fault, hal_data->internal_fault);
   }
 
   // read current speed
   speed_raw = EC_READ_S16(&pd[hal_data->currvel_pdo_os]);
   rpm = (double)speed_raw * hal_data->vel_scale_rcpt;
-  *(hal_data->vel_fb_rpm) = rpm;
-  *(hal_data->vel_fb_rpm_abs) = fabs(rpm);
+  LCEC_PIN_FLOAT_SET(hal_data->vel_fb_rpm, rpm);
+  LCEC_PIN_FLOAT_SET(hal_data->vel_fb_rpm_abs, fabs(rpm));
 }
 
 static void lcec_dems300_write(lcec_slave_t *slave, long period) {
@@ -331,32 +331,32 @@ static void lcec_dems300_write(lcec_slave_t *slave, long period) {
   EC_WRITE_S8(&pd[hal_data->mode_op_pdo_os], (int8_t)opmode);
 
   // check for enable edge
-  enable_edge = *(hal_data->enable) && !hal_data->enable_old;
-  hal_data->enable_old = *(hal_data->enable);
+  enable_edge = LCEC_PIN_BIT_GET(hal_data->enable) && !hal_data->enable_old;
+  hal_data->enable_old = LCEC_PIN_BIT_GET(hal_data->enable);
 
   // write control register
-  control = (!*(hal_data->fault_reset) << 2);  // quick stop
+  control = (!LCEC_PIN_BIT_GET(hal_data->fault_reset) << 2);  // quick stop
 
-  if (*(hal_data->stat_fault)) {
-    if (*(hal_data->fault_reset)) {
+  if (LCEC_PIN_BIT_GET(hal_data->stat_fault)) {
+    if (LCEC_PIN_BIT_GET(hal_data->fault_reset)) {
       control |= (1 << 7);  // fault reset
     }
-    if (hal_data->auto_fault_reset && enable_edge) {
+    if (LCEC_PARAM_BIT_GET(hal_data->auto_fault_reset) && enable_edge) {
       hal_data->auto_fault_reset_delay = MS300_FAULT_AUTORESET_DELAY_NS;
       control |= (1 << 7);  // fault reset
     }
   } else {
-    if (*(hal_data->enable)) {
+    if (LCEC_PIN_BIT_GET(hal_data->enable)) {
       control |= (1 << 1);  // enable voltage
-      if (*(hal_data->stat_switch_on_ready)) {
+      if (LCEC_PIN_BIT_GET(hal_data->stat_switch_on_ready)) {
         control |= (1 << 0);  // switch on
-        if (*(hal_data->stat_switched_on)) {
+        if (LCEC_PIN_BIT_GET(hal_data->stat_switched_on)) {
           control |= (1 << 3);  // enable op
         }
       }
     }
     // set velo control bits
-    if (*(hal_data->stat_op_enabled)) {
+    if (LCEC_PIN_BIT_GET(hal_data->stat_op_enabled)) {
       control |= (1 << 4);  // rfg enable
       control |= (1 << 5);  // rfg unlock
       control |= (1 << 6);  // rfg use ref
@@ -364,16 +364,16 @@ static void lcec_dems300_write(lcec_slave_t *slave, long period) {
   }
 
   // halt
-  control |= (*(hal_data->halt) << 8);  // halt
+  control |= (LCEC_PIN_BIT_GET(hal_data->halt) << 8);  // halt
 
   EC_WRITE_U16(&pd[hal_data->control_pdo_os], control);
 
   // write ramp times
-  EC_WRITE_U32(&pd[hal_data->ramp_up_pdo_os], *(hal_data->vel_ramp_up));
-  EC_WRITE_U32(&pd[hal_data->ramp_down_pdo_os], *(hal_data->vel_ramp_down));
+  EC_WRITE_U32(&pd[hal_data->ramp_up_pdo_os], LCEC_PIN_U32_GET(hal_data->vel_ramp_up));
+  EC_WRITE_U32(&pd[hal_data->ramp_down_pdo_os], LCEC_PIN_U32_GET(hal_data->vel_ramp_down));
 
   // set RPM
-  speed_raw = *(hal_data->vel_rpm_cmd) * hal_data->vel_scale;
+  speed_raw = LCEC_PIN_FLOAT_GET(hal_data->vel_rpm_cmd) * LCEC_PARAM_FLOAT_GET(hal_data->vel_scale);
   if (speed_raw > (double)0x7fff) {
     speed_raw = (double)0x7fff;
   }
