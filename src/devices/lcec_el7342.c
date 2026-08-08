@@ -690,13 +690,13 @@ static void lcec_el7342_write(lcec_slave_t *slave, long period) {
 }
 
 static void lcec_el7342_set_info(lcec_el7342_chan_t *chan, hal_s32_t *raw_info, hal_u32_t *sel_info) {
-  switch (*sel_info) {
+  switch (LCEC_PIN_U32_GET(sel_info)) {
     case INFO_SEL_MOTOR_VELO:
-      LCEC_PIN_FLOAT_SET(chan->dcm_velo_fb, (double)*raw_info * 0.0001 * chan->dcm_old_scale);
+      LCEC_PIN_FLOAT_SET(chan->dcm_velo_fb, (double)LCEC_PIN_S32_GET(raw_info) * 0.0001 * chan->dcm_old_scale);
       break;
 
     case INFO_SEL_MOTOR_CURR:
-      LCEC_PIN_FLOAT_SET(chan->dcm_current_fb, (double)*raw_info * 0.001);
+      LCEC_PIN_FLOAT_SET(chan->dcm_current_fb, (double)LCEC_PIN_S32_GET(raw_info) * 0.001);
       break;
   }
 }

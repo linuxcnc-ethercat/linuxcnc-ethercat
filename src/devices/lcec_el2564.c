@@ -36,9 +36,9 @@ typedef struct {
   hal_bit_t *error;
 
   lcec_param_float_t scale;
-  hal_float_t offset;
-  hal_float_t gamma;
-  hal_float_t ramp_time;
+  lcec_param_float_t offset;
+  lcec_param_float_t gamma;
+  lcec_param_float_t ramp_time;
 
   unsigned int pwm_pdo_os;
   unsigned int warning_pdo_os;
@@ -51,8 +51,8 @@ typedef struct {
 typedef struct {
   lcec_el2564_chan_t chans[LCEC_EL2564_CHANS];
 
-  hal_u32_t frequency;
-  hal_s32_t master_gain;
+  lcec_param_u32_t frequency;
+  lcec_param_s32_t master_gain;
   int32_t   master_gain_prev;
 } lcec_el2564_data_t;
 
@@ -120,9 +120,9 @@ static int lcec_el2564_init(int comp_id, lcec_slave_t *slave) {
 
     // initialize parameters
     LCEC_PARAM_FLOAT_SET(chan->scale, 0.5);
-    chan->offset = 0.0;
-    chan->gamma = 1.0;     
-    chan->ramp_time = 0.0; 
+    LCEC_PARAM_FLOAT_SET(chan->offset, 0.0);
+    LCEC_PARAM_FLOAT_SET(chan->gamma, 1.0);
+    LCEC_PARAM_FLOAT_SET(chan->ramp_time, 0.0);
   }
 
   // export global parameters
@@ -137,18 +137,18 @@ static int lcec_el2564_init(int comp_id, lcec_slave_t *slave) {
 
   // Read frequency (0xf819:11, uint32)
   if (lcec_read_sdo(slave, 0xf819, 0x11, sdo_buf, 4) == 0) {
-    hal_data->frequency = EC_READ_U32(sdo_buf);
+    LCEC_PARAM_U32_SET(hal_data->frequency, EC_READ_U32(sdo_buf));
   } else {
-    hal_data->frequency = 5000;    // Default: 5kHz
+    LCEC_PARAM_U32_SET(hal_data->frequency, 5000);    // Default: 5kHz
   }
 
   // Read master gain (0xf819:12, int16)
   if (lcec_read_sdo(slave, 0xf819, 0x12, sdo_buf, 2) == 0) {
-    hal_data->master_gain = EC_READ_S16(sdo_buf);
+    LCEC_PARAM_S32_SET(hal_data->master_gain, EC_READ_S16(sdo_buf));
   } else {
-    hal_data->master_gain = 32767; // Default: 100%
+    LCEC_PARAM_S32_SET(hal_data->master_gain, 32767); // Default: 100%
   }
-  hal_data->master_gain_prev = hal_data->master_gain;
+  hal_data->master_gain_prev = LCEC_PARAM_S32_GET(hal_data->master_gain);
   // Read per-channel parameters
   for (i = 0; i < LCEC_EL2564_CHANS; i++) {
     chan = &hal_data->chans[i];
@@ -160,13 +160,13 @@ static int lcec_el2564_init(int comp_id, lcec_slave_t *slave) {
     if (lcec_read_sdo(slave, sdo_index, 0x24, sdo_buf, 4) == 0) {
       float f;
       memcpy(&f, sdo_buf, 4);
-      chan->gamma = f;
+      LCEC_PARAM_FLOAT_SET(chan->gamma, f);
     }
     // Read ramp time (0x800x:25, float)
     if (lcec_read_sdo(slave, sdo_index, 0x25, sdo_buf, 4) == 0) {
       float f;
       memcpy(&f, sdo_buf, 4);
-      chan->ramp_time = f;
+      LCEC_PARAM_FLOAT_SET(chan->ramp_time, f);
     }
   }
 
@@ -206,8 +206,8 @@ static void lcec_el2564_write(lcec_slave_t *slave, long period) {
   uint8_t sdo_buf[4];
 
   // Check if master_gain changed and write via SDO
-if (hal_data->master_gain != hal_data->master_gain_prev) {
-    int16_t gain = hal_data->master_gain;
+if (LCEC_PARAM_S32_GET(hal_data->master_gain) != hal_data->master_gain_prev) {
+    int16_t gain = LCEC_PARAM_S32_GET(hal_data->master_gain);
     if (gain < 0) gain = 0;
     if (gain > 32767) gain = 32767;
 
@@ -215,7 +215,7 @@ if (hal_data->master_gain != hal_data->master_gain_prev) {
     if (lcec_write_sdo(slave, 0xf819, 0x12, sdo_buf, 2) == 0) {
         hal_data->master_gain_prev = gain;  // only remember on success
     }
-    hal_data->master_gain = gain;  // make the clamp visible on the HAL pin
+    LCEC_PARAM_S32_SET(hal_data->master_gain, gain);  // make the clamp visible on the HAL param
 }
 
   // write all channels
@@ -224,7 +224,7 @@ if (hal_data->master_gain != hal_data->master_gain_prev) {
 
     // calculate PWM value
     if (LCEC_PIN_BIT_GET(chan->enable)) {
-      duty = LCEC_PIN_FLOAT_GET(chan->pwm) * LCEC_PARAM_FLOAT_GET(chan->scale) + chan->offset;
+      duty = LCEC_PIN_FLOAT_GET(chan->pwm) * LCEC_PARAM_FLOAT_GET(chan->scale) + LCEC_PARAM_FLOAT_GET(chan->offset);
 
       // clamp to valid range
       if (duty < 0.0) duty = 0.0;
