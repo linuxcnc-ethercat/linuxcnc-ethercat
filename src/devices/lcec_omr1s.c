@@ -94,8 +94,8 @@ typedef struct {
   hal_bit_t *stat_warning;
   hal_bit_t *stat_remote;
 
-  hal_float_t pos_scale;
-  hal_bit_t auto_fault_reset;
+  lcec_param_float_t pos_scale;
+  lcec_param_bit_t auto_fault_reset;
 
   hal_float_t pos_scale_old;
   double pos_scale_rcpt;
@@ -253,28 +253,28 @@ static int lcec_omr1s_init(int comp_id, lcec_slave_t *slave) {
   }
 
   // initialize variables
-  hal_data->pos_scale = (double)OMR1S_PULSES_PER_REV_DEFLT;
-  hal_data->pos_scale_old = hal_data->pos_scale + 1.0;
+  LCEC_PARAM_FLOAT_SET(hal_data->pos_scale, (double)OMR1S_PULSES_PER_REV_DEFLT);
+  hal_data->pos_scale_old = LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) + 1.0;
   hal_data->pos_scale_rcpt = 1.0;
-  hal_data->auto_fault_reset = 1;
+  LCEC_PARAM_BIT_SET(hal_data->auto_fault_reset, 1);
 
   return 0;
 }
 
 static void lcec_omr1s_check_scales(lcec_omr1s_data_t *hal_data) {
   // check for change in scale value
-  if (hal_data->pos_scale != hal_data->pos_scale_old) {
+  if (LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) != hal_data->pos_scale_old) {
     // scale value has changed, test and update it
-    if ((hal_data->pos_scale < 1e-20) && (hal_data->pos_scale > -1e-20)) {
+    if ((LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) < 1e-20) && (LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) > -1e-20)) {
       // value too small, divide by zero is a bad thing
-      hal_data->pos_scale = 1.0;
+      LCEC_PARAM_FLOAT_SET(hal_data->pos_scale, 1.0);
     }
 
     // save new scale to detect future changes
-    hal_data->pos_scale_old = hal_data->pos_scale;
+    hal_data->pos_scale_old = LCEC_PARAM_FLOAT_GET(hal_data->pos_scale);
 
     // we actually want the reciprocal
-    hal_data->pos_scale_rcpt = 1.0 / hal_data->pos_scale;
+    hal_data->pos_scale_rcpt = 1.0 / LCEC_PARAM_FLOAT_GET(hal_data->pos_scale);
   }
 }
 
@@ -360,7 +360,7 @@ static void lcec_omr1s_write(lcec_slave_t *slave, long period) {
     if (LCEC_PIN_BIT_GET(hal_data->fault_reset)) {
       control |= (1 << 7);  // fault reset
     }
-    if (hal_data->auto_fault_reset && enable_edge) {
+    if (LCEC_PARAM_BIT_GET(hal_data->auto_fault_reset) && enable_edge) {
       hal_data->auto_fault_reset_delay = OMR1S_FAULT_AUTORESET_DELAY_NS;
       control |= (1 << 7);  // fault reset
     }
@@ -378,6 +378,6 @@ static void lcec_omr1s_write(lcec_slave_t *slave, long period) {
   EC_WRITE_U16(&pd[hal_data->control_pdo_os], control);
 
   // write position command
-  LCEC_PIN_S32_SET(hal_data->pos_cmd_raw, (int32_t)(LCEC_PIN_FLOAT_GET(hal_data->pos_cmd) * hal_data->pos_scale));
+  LCEC_PIN_S32_SET(hal_data->pos_cmd_raw, (int32_t)(LCEC_PIN_FLOAT_GET(hal_data->pos_cmd) * LCEC_PARAM_FLOAT_GET(hal_data->pos_scale)));
   EC_WRITE_S32(&pd[hal_data->target_pos_pdo_os], LCEC_PIN_S32_GET(hal_data->pos_cmd_raw));
 }

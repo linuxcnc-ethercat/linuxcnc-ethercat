@@ -42,7 +42,7 @@ typedef struct {
   hal_bit_t *latch_state;
   hal_bit_t *latch_state_not;
 
-  hal_float_t scale;
+  lcec_param_float_t scale;
 
   lcec_class_enc_data_t enc;
 
@@ -68,8 +68,8 @@ typedef struct {
   hal_bit_t *signal_level_warn;
   hal_bit_t *signal_level_err;
 
-  hal_u32_t signal_level_warn_val;
-  hal_u32_t signal_level_err_val;
+  lcec_param_u32_t signal_level_warn_val;
+  lcec_param_u32_t signal_level_err_val;
 
   unsigned int signal_level_os;
 } lcec_ph3lm2rm_lm_data_t;
@@ -204,7 +204,7 @@ static int lcec_ph3lm2rm_enc_init(lcec_slave_t *slave, lcec_ph3lm2rm_enc_data_t 
   }
 
   // initialize variables
-  hal_data->scale = scale;
+  LCEC_PARAM_FLOAT_SET(hal_data->scale, scale);
 
   return 0;
 }
@@ -281,8 +281,8 @@ static void lcec_ph3lm2rm_read(lcec_slave_t *slave, long period) {
   for (i = 0, lm = hal_data->lms; i < LCEC_PH3LM2RM_LM_COUNT; i++, lm++) {
     lcec_ph3lm2rm_enc_read(pd, &lm->ch);
     LCEC_PIN_U32_SET(lm->signal_level, EC_READ_U32(&pd[lm->signal_level_os]));
-    LCEC_PIN_BIT_SET(lm->signal_level_warn, lm->signal_level_warn_val > 0 && LCEC_PIN_U32_GET(lm->signal_level) < lm->signal_level_warn_val);
-    LCEC_PIN_BIT_SET(lm->signal_level_err, lm->signal_level_err_val > 0 && LCEC_PIN_U32_GET(lm->signal_level) < lm->signal_level_err_val);
+    LCEC_PIN_BIT_SET(lm->signal_level_warn, lm->signal_level_warn_val > 0 && LCEC_PIN_U32_GET(lm->signal_level) < LCEC_PARAM_U32_GET(lm->signal_level_warn_val));
+    LCEC_PIN_BIT_SET(lm->signal_level_err, lm->signal_level_err_val > 0 && LCEC_PIN_U32_GET(lm->signal_level) < LCEC_PARAM_U32_GET(lm->signal_level_err_val));
   }
 
   for (i = 0, rm = hal_data->rms; i < LCEC_PH3LM2RM_RM_COUNT; i++, rm++) {
@@ -304,7 +304,7 @@ static void lcec_ph3lm2rm_enc_read(uint8_t *pd, lcec_ph3lm2rm_enc_data_t *ch) {
   latch = EC_READ_U32(&pd[ch->latch_os]);
 
   // update encoder
-  class_enc_update(&ch->enc, 0, ch->scale, counter, latch, LCEC_PIN_BIT_GET(ch->latch_valid));
+  class_enc_update(&ch->enc, 0, LCEC_PARAM_FLOAT_GET(ch->scale), counter, latch, LCEC_PIN_BIT_GET(ch->latch_valid));
 
   // reset latch enable, if captured
   if (LCEC_PIN_BIT_GET(ch->latch_valid)) {

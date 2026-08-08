@@ -107,11 +107,11 @@ typedef struct {
   hal_bit_t *fast_ramp;
   hal_bit_t *brake;
 
-  hal_float_t speed_max_rpm;
-  hal_float_t speed_max_rpm_sp;
-  hal_float_t torque_reference;
-  hal_float_t pos_scale;
-  hal_float_t extenc_scale;
+  lcec_param_float_t speed_max_rpm;
+  lcec_param_float_t speed_max_rpm_sp;
+  lcec_param_float_t torque_reference;
+  lcec_param_float_t pos_scale;
+  lcec_param_float_t extenc_scale;
   double speed_max_rpm_sp_rcpt;
 
   double pos_scale_old;
@@ -363,15 +363,15 @@ static int lcec_stmds5k_init(int comp_id, lcec_slave_t *slave) {
   LCEC_PIN_FLOAT_SET(hal_data->torque_lim, 1.0);
 
   // initialize variables
-  hal_data->torque_reference = sdo_torque_reference;
-  hal_data->speed_max_rpm = sdo_speed_max_rpm;
-  hal_data->speed_max_rpm_sp = sdo_speed_max_rpm_sp;
-  hal_data->pos_scale = 1.0;
-  hal_data->pos_scale_old = hal_data->pos_scale + 1.0;
+  LCEC_PARAM_FLOAT_SET(hal_data->torque_reference, sdo_torque_reference);
+  LCEC_PARAM_FLOAT_SET(hal_data->speed_max_rpm, sdo_speed_max_rpm);
+  LCEC_PARAM_FLOAT_SET(hal_data->speed_max_rpm_sp, sdo_speed_max_rpm_sp);
+  LCEC_PARAM_FLOAT_SET(hal_data->pos_scale, 1.0);
+  hal_data->pos_scale_old = LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) + 1.0;
   hal_data->pos_scale_rcpt = 1.0;
   hal_data->extenc_conf = extenc_conf;
-  hal_data->extenc_scale = 1.0;
-  hal_data->extenc_scale_old = hal_data->extenc_scale + 1.0;
+  LCEC_PARAM_FLOAT_SET(hal_data->extenc_scale, 1.0);
+  hal_data->extenc_scale_old = LCEC_PARAM_FLOAT_GET(hal_data->extenc_scale) + 1.0;
   hal_data->extenc_scale_rcpt = 1.0;
 
   return 0;
@@ -387,28 +387,28 @@ static const lcec_stmds5k_extenc_conf_t *lcec_stmds5k_get_extenc_conf(uint32_t t
 
 static void lcec_stmds5k_check_scales(lcec_stmds5k_data_t *hal_data) {
   // check for change in scale value
-  if (hal_data->pos_scale != hal_data->pos_scale_old) {
+  if (LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) != hal_data->pos_scale_old) {
     // scale value has changed, test and update it
-    if ((hal_data->pos_scale < 1e-20) && (hal_data->pos_scale > -1e-20)) {
+    if ((LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) < 1e-20) && (LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) > -1e-20)) {
       // value too small, divide by zero is a bad thing
-      hal_data->pos_scale = 1.0;
+      LCEC_PARAM_FLOAT_SET(hal_data->pos_scale, 1.0);
     }
     // save new scale to detect future changes
-    hal_data->pos_scale_old = hal_data->pos_scale;
+    hal_data->pos_scale_old = LCEC_PARAM_FLOAT_GET(hal_data->pos_scale);
     // we actually want the reciprocal
-    hal_data->pos_scale_rcpt = 1.0 / hal_data->pos_scale;
+    hal_data->pos_scale_rcpt = 1.0 / LCEC_PARAM_FLOAT_GET(hal_data->pos_scale);
   }
 
-  if (hal_data->extenc_scale != hal_data->extenc_scale_old) {
+  if (LCEC_PARAM_FLOAT_GET(hal_data->extenc_scale) != hal_data->extenc_scale_old) {
     // scale value has changed, test and update it
-    if ((hal_data->extenc_scale < 1e-20) && (hal_data->extenc_scale > -1e-20)) {
+    if ((LCEC_PARAM_FLOAT_GET(hal_data->extenc_scale) < 1e-20) && (LCEC_PARAM_FLOAT_GET(hal_data->extenc_scale) > -1e-20)) {
       // value too small, divide by zero is a bad thing
-      hal_data->extenc_scale = 1.0;
+      LCEC_PARAM_FLOAT_SET(hal_data->extenc_scale, 1.0);
     }
     // save new scale to detect future changes
-    hal_data->extenc_scale_old = hal_data->extenc_scale;
+    hal_data->extenc_scale_old = LCEC_PARAM_FLOAT_GET(hal_data->extenc_scale);
     // we actually want the reciprocal
-    hal_data->extenc_scale_rcpt = 1.0 / hal_data->extenc_scale;
+    hal_data->extenc_scale_rcpt = 1.0 / LCEC_PARAM_FLOAT_GET(hal_data->extenc_scale);
   }
 }
 
@@ -452,7 +452,7 @@ static void lcec_stmds5k_read(lcec_slave_t *slave, long period) {
 
   // read current speed
   speed_raw = EC_READ_S16(&pd[hal_data->speed_mot_pdo_os]);
-  rpm = hal_data->speed_max_rpm * (double)speed_raw * STMDS5K_PCT_REG_DIV;
+  rpm = LCEC_PARAM_FLOAT_GET(hal_data->speed_max_rpm) * (double)speed_raw * STMDS5K_PCT_REG_DIV;
   LCEC_PIN_FLOAT_SET(hal_data->vel_fb_rpm, rpm);
   LCEC_PIN_FLOAT_SET(hal_data->vel_fb_rpm_abs, fabs(rpm));
   LCEC_PIN_FLOAT_SET(hal_data->vel_fb, rpm * STMDS5K_RPM_DIV * hal_data->pos_scale_rcpt);
@@ -462,7 +462,7 @@ static void lcec_stmds5k_read(lcec_slave_t *slave, long period) {
   torque_raw = EC_READ_S16(&pd[hal_data->torque_mot_pdo_os]);
   torque = (double)torque_raw * STMDS5K_TORQUE_DIV;
   LCEC_PIN_FLOAT_SET(hal_data->torque_fb_pct, fabs(torque * 100.0));
-  torque = torque * hal_data->torque_reference;
+  torque = torque * LCEC_PARAM_FLOAT_GET(hal_data->torque_reference);
   LCEC_PIN_FLOAT_SET(hal_data->torque_fb, torque);
   LCEC_PIN_FLOAT_SET(hal_data->torque_fb_abs, fabs(torque));
 
@@ -522,14 +522,14 @@ static void lcec_stmds5k_write(lcec_slave_t *slave, long period) {
   EC_WRITE_S16(&pd[hal_data->torque_max_pdo_os], (int16_t)torque_raw);
 
   // calculate rpm command
-  LCEC_PIN_FLOAT_SET(hal_data->vel_rpm, LCEC_PIN_FLOAT_GET(hal_data->vel_cmd) * hal_data->pos_scale * STMDS5K_RPM_FACTOR);
+  LCEC_PIN_FLOAT_SET(hal_data->vel_rpm, LCEC_PIN_FLOAT_GET(hal_data->vel_cmd) * LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) * STMDS5K_RPM_FACTOR);
 
   // set RPM
-  if (LCEC_PIN_FLOAT_GET(hal_data->vel_rpm) > hal_data->speed_max_rpm) {
-    LCEC_PIN_FLOAT_SET(hal_data->vel_rpm, hal_data->speed_max_rpm);
+  if (LCEC_PIN_FLOAT_GET(hal_data->vel_rpm) > LCEC_PARAM_FLOAT_GET(hal_data->speed_max_rpm)) {
+    LCEC_PIN_FLOAT_SET(hal_data->vel_rpm, LCEC_PARAM_FLOAT_GET(hal_data->speed_max_rpm));
   }
-  if (LCEC_PIN_FLOAT_GET(hal_data->vel_rpm) < -hal_data->speed_max_rpm) {
-    LCEC_PIN_FLOAT_SET(hal_data->vel_rpm, -hal_data->speed_max_rpm);
+  if (LCEC_PIN_FLOAT_GET(hal_data->vel_rpm) < -LCEC_PARAM_FLOAT_GET(hal_data->speed_max_rpm)) {
+    LCEC_PIN_FLOAT_SET(hal_data->vel_rpm, -LCEC_PARAM_FLOAT_GET(hal_data->speed_max_rpm));
   }
   speed_raw = LCEC_PIN_FLOAT_GET(hal_data->vel_rpm) * hal_data->speed_max_rpm_sp_rcpt * STMDS5K_PCT_REG_FACTOR;
   if (speed_raw > (double)0x7fff) {

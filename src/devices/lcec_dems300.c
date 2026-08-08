@@ -66,8 +66,8 @@ typedef struct {
   hal_u32_t *vel_ramp_up;
   hal_u32_t *vel_ramp_down;
 
-  hal_bit_t auto_fault_reset;
-  hal_float_t vel_scale;
+  lcec_param_bit_t auto_fault_reset;
+  lcec_param_float_t vel_scale;
 
   double vel_scale_old;
   double vel_scale_rcpt;
@@ -217,9 +217,9 @@ static int lcec_dems300_init(int comp_id, lcec_slave_t *slave) {
   hal_data->enable_old = 0;
   hal_data->internal_fault = 0;
 
-  hal_data->auto_fault_reset = 1;
-  hal_data->vel_scale = 1.0;
-  hal_data->vel_scale_old = hal_data->vel_scale + 1.0;
+  LCEC_PARAM_BIT_SET(hal_data->auto_fault_reset, 1);
+  LCEC_PARAM_FLOAT_SET(hal_data->vel_scale, 1.0);
+  hal_data->vel_scale_old = LCEC_PARAM_FLOAT_GET(hal_data->vel_scale) + 1.0;
   hal_data->vel_scale_rcpt = 1.0;
 
   return 0;
@@ -227,16 +227,16 @@ static int lcec_dems300_init(int comp_id, lcec_slave_t *slave) {
 
 static void lcec_dems300_check_scales(lcec_dems300_data_t *hal_data) {
   // check for change in scale value
-  if (hal_data->vel_scale != hal_data->vel_scale_old) {
+  if (LCEC_PARAM_FLOAT_GET(hal_data->vel_scale) != hal_data->vel_scale_old) {
     // scale value has changed, test and update it
-    if ((hal_data->vel_scale < 1e-20) && (hal_data->vel_scale > -1e-20)) {
+    if ((LCEC_PARAM_FLOAT_GET(hal_data->vel_scale) < 1e-20) && (LCEC_PARAM_FLOAT_GET(hal_data->vel_scale) > -1e-20)) {
       // value too small, divide by zero is a bad thing
-      hal_data->vel_scale = 1.0;
+      LCEC_PARAM_FLOAT_SET(hal_data->vel_scale, 1.0);
     }
     // save new scale to detect future changes
-    hal_data->vel_scale_old = hal_data->vel_scale;
+    hal_data->vel_scale_old = LCEC_PARAM_FLOAT_GET(hal_data->vel_scale);
     // we actually want the reciprocal
-    hal_data->vel_scale_rcpt = 1.0 / hal_data->vel_scale;
+    hal_data->vel_scale_rcpt = 1.0 / LCEC_PARAM_FLOAT_GET(hal_data->vel_scale);
   }
 }
 
@@ -341,7 +341,7 @@ static void lcec_dems300_write(lcec_slave_t *slave, long period) {
     if (LCEC_PIN_BIT_GET(hal_data->fault_reset)) {
       control |= (1 << 7);  // fault reset
     }
-    if (hal_data->auto_fault_reset && enable_edge) {
+    if (LCEC_PARAM_BIT_GET(hal_data->auto_fault_reset) && enable_edge) {
       hal_data->auto_fault_reset_delay = MS300_FAULT_AUTORESET_DELAY_NS;
       control |= (1 << 7);  // fault reset
     }
@@ -373,7 +373,7 @@ static void lcec_dems300_write(lcec_slave_t *slave, long period) {
   EC_WRITE_U32(&pd[hal_data->ramp_down_pdo_os], LCEC_PIN_U32_GET(hal_data->vel_ramp_down));
 
   // set RPM
-  speed_raw = LCEC_PIN_FLOAT_GET(hal_data->vel_rpm_cmd) * hal_data->vel_scale;
+  speed_raw = LCEC_PIN_FLOAT_GET(hal_data->vel_rpm_cmd) * LCEC_PARAM_FLOAT_GET(hal_data->vel_scale);
   if (speed_raw > (double)0x7fff) {
     speed_raw = (double)0x7fff;
   }

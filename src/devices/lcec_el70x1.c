@@ -46,12 +46,12 @@ static lcec_typelist_t types[] = {
 ADD_TYPES(types);
 
 typedef struct {
-  hal_bit_t auto_fault_reset;
+  lcec_param_bit_t auto_fault_reset;
 
-  hal_float_t stm_pos_scale;
+  lcec_param_float_t stm_pos_scale;
   hal_float_t *stm_pos_cmd;
 
-  hal_float_t auto_reduce_tourque_delay;
+  lcec_param_float_t auto_reduce_tourque_delay;
   long long auto_reduce_tourque_timer;
 
   hal_bit_t *stm_ready_to_enable;
@@ -353,9 +353,9 @@ static int lcec_el70x1_init(int comp_id, lcec_slave_t *slave) {
   }
 
   // initialize variables
-  hal_data->stm_pos_scale = 1.0;
-  hal_data->auto_fault_reset = 1;
-  hal_data->auto_reduce_tourque_delay = 0.0;
+  LCEC_PARAM_FLOAT_SET(hal_data->stm_pos_scale, 1.0);
+  LCEC_PARAM_BIT_SET(hal_data->auto_fault_reset, 1);
+  LCEC_PARAM_FLOAT_SET(hal_data->auto_reduce_tourque_delay, 0.0);
   hal_data->auto_reduce_tourque_timer = 0;
   hal_data->stm_pos_cmd_raw_last = 0;
 
@@ -386,7 +386,7 @@ static void lcec_el70x1_write(lcec_slave_t *slave, long period) {
   uint8_t *pd = master->process_data;
   bool enabled, reduce_tourque;
 
-  LCEC_PIN_S32_SET(hal_data->stm_pos_cmd_raw, (int32_t)(LCEC_PIN_FLOAT_GET(hal_data->stm_pos_cmd) * hal_data->stm_pos_scale));
+  LCEC_PIN_S32_SET(hal_data->stm_pos_cmd_raw, (int32_t)(LCEC_PIN_FLOAT_GET(hal_data->stm_pos_cmd) * LCEC_PARAM_FLOAT_GET(hal_data->stm_pos_scale)));
 
   enabled = LCEC_PIN_BIT_GET(hal_data->stm_enable);
   if (!enabled) {
@@ -399,8 +399,8 @@ static void lcec_el70x1_write(lcec_slave_t *slave, long period) {
     hal_data->stm_pos_cmd_raw_last = LCEC_PIN_S32_GET(hal_data->stm_pos_cmd_raw);
     hal_data->auto_reduce_tourque_timer = 0;
   }
-  if (hal_data->auto_reduce_tourque_delay > 0.0) {
-    if (hal_data->auto_reduce_tourque_timer < (long long)(hal_data->auto_reduce_tourque_delay * 1e9)) {
+  if (LCEC_PARAM_FLOAT_GET(hal_data->auto_reduce_tourque_delay) > 0.0) {
+    if (hal_data->auto_reduce_tourque_timer < (long long)(LCEC_PARAM_FLOAT_GET(hal_data->auto_reduce_tourque_delay) * 1e9)) {
       hal_data->auto_reduce_tourque_timer += period;
     } else {
       reduce_tourque = true;

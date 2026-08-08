@@ -54,10 +54,10 @@ typedef struct {
   unsigned int ctrl_pdo_os;
   unsigned int vel_cmd_pdo_os;
 
-  hal_float_t scale;
-  hal_float_t scale_fb2;
-  hal_float_t vel_scale;
-  hal_u32_t pos_resolution;
+  lcec_param_float_t scale;
+  lcec_param_float_t scale_fb2;
+  lcec_param_float_t vel_scale;
+  lcec_param_u32_t pos_resolution;
 
   lcec_class_enc_data_t enc;
   lcec_class_enc_data_t enc_fb2;

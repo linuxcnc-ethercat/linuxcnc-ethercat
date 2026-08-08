@@ -366,18 +366,18 @@ int rtapi_app_main(void) {
 
 #ifdef RTAPI_TASK_PLL_SUPPORT
     // set default PLL_STEP: use +/-0.1% of period
-    master->hal_data->pll_step = master->app_time_period / 1000;
+    LCEC_PARAM_U32_SET(master->hal_data->pll_step, master->app_time_period / 1000);
     // set default PLL_MAX_ERR: one period
-    master->hal_data->pll_max_err = master->app_time_period;
+    LCEC_PARAM_U32_SET(master->hal_data->pll_max_err, master->app_time_period);
     // Initialize auto-drift delay counter (wait 100 cycles before applying)
     master->hal_data->auto_drift_delay = 100;
 #endif
     // DC synchrony convergence threshold: 4% of period (10 us at 4 kHz);
     // app_time_period can be 0 here when the XML omits appTimePeriod.
-    master->hal_data->dc_sync_max = (master->app_time_period != 0) ? master->app_time_period / 25 : 10000;
+    LCEC_PARAM_U32_SET(master->hal_data->dc_sync_max, (master->app_time_period != 0) ? master->app_time_period / 25 : 10000);
     // Monitor on by default (one broadcast datagram per cycle); setp to 0
     // for zero overhead when the dc-sync pins are unused.
-    master->hal_data->dc_sync_monitor = 1;
+    LCEC_PARAM_BIT_SET(master->hal_data->dc_sync_monitor, 1);
 
     // Activate master (only when initf is unavailable; otherwise lcec.activate
     // funct does it from RT context after the user's `initf lcec.activate <thread>`).
@@ -1328,7 +1328,7 @@ void lcec_read_master(void *arg, long period) {
     }
   }
   domain_state.wc_state = all_domains_complete ? EC_WC_COMPLETE : (all_domains_zero ? EC_WC_ZERO : EC_WC_INCOMPLETE);
-  dc_sync_diff = master->hal_data->dc_sync_monitor ? ecrt_master_sync_monitor_process(master->master) : 0xffffffffu;
+  dc_sync_diff = LCEC_PARAM_BIT_GET(master->hal_data->dc_sync_monitor) ? ecrt_master_sync_monitor_process(master->master) : 0xffffffffu;
   if (check_states) {
     ecrt_master_state(master->master, &master->ms);
   }
@@ -1380,11 +1380,11 @@ void lcec_read_master(void *arg, long period) {
     // 0xffffffff means the monitor datagram was not received this cycle.
     // Tolerate a few consecutive misses (startup, single datagram timeouts),
     // then invalidate so a dead bus cannot keep showing stale-converged.
-    if (hd->dc_sync_monitor) {
+    if (LCEC_PARAM_BIT_GET(hd->dc_sync_monitor)) {
       if (dc_sync_diff != 0xffffffffu) {
         hd->dc_sync_miss_cnt = 0;
         LCEC_PIN_U32_SET(hd->dc_sync_diff, dc_sync_diff);
-        LCEC_PIN_BIT_SET(hd->dc_sync_converged, (dc_sync_diff < hd->dc_sync_max));
+        LCEC_PIN_BIT_SET(hd->dc_sync_converged, (dc_sync_diff < LCEC_PARAM_U32_GET(hd->dc_sync_max)));
       } else if (hd->dc_sync_miss_cnt < LCEC_DC_SYNC_MISS_MAX) {
         hd->dc_sync_miss_cnt++;
       } else {
@@ -1539,7 +1539,7 @@ void lcec_write_master(void *arg, long period) {
 
   // queue DC synchrony monitor datagram (broadcast read of 0x092C),
   // processed next cycle in lcec_read_master
-  if (master->hal_data->dc_sync_monitor) {
+  if (LCEC_PARAM_BIT_GET(master->hal_data->dc_sync_monitor)) {
     ecrt_master_sync_monitor_queue(master->master);
   }
 
@@ -1639,9 +1639,9 @@ void lcec_write_master(void *arg, long period) {
       if (lock_threshold < app_period / 100) {
         lock_threshold = app_period / 100;
       }
-      if (abs(phase_error) < abs(hal_data->pll_step) * 3) {
+      if (abs(phase_error) < abs(LCEC_PARAM_U32_GET(hal_data->pll_step)) * 3) {
         LCEC_PIN_BIT_SET(hal_data->dc_phased, 1);
-      } else if (abs(phase_error) > abs(hal_data->pll_step) * 20) {
+      } else if (abs(phase_error) > abs(LCEC_PARAM_U32_GET(hal_data->pll_step)) * 20) {
         LCEC_PIN_BIT_SET(hal_data->dc_phased, 0);
       }
 
@@ -1652,9 +1652,9 @@ void lcec_write_master(void *arg, long period) {
         LCEC_PIN_S32_SET(hal_data->pll_out, 0);
       } else {
         if (phase_error > 0) {
-          LCEC_PIN_S32_SET(hal_data->pll_out, -(hal_data->pll_step));  // Speed up to reduce app_phase
+          LCEC_PIN_S32_SET(hal_data->pll_out, -(LCEC_PARAM_U32_GET(hal_data->pll_step)));  // Speed up to reduce app_phase
         } else if (phase_error < 0) {
-          LCEC_PIN_S32_SET(hal_data->pll_out, hal_data->pll_step);  // Slow down to increase app_phase
+          LCEC_PIN_S32_SET(hal_data->pll_out, LCEC_PARAM_U32_GET(hal_data->pll_step));  // Slow down to increase app_phase
         }
       }
 
@@ -1724,7 +1724,7 @@ void lcec_write_master(void *arg, long period) {
       // |pll_err| <= period/2 could never reach the default threshold, and
       // a whole-period displacement would go undetected. Remove only whole
       // periods; the controller drives the remainder to zero.
-      if (abs(raw_offset) > hal_data->pll_max_err) {
+      if (abs(raw_offset) > LCEC_PARAM_U32_GET(hal_data->pll_max_err)) {
         int32_t resync_corr = raw_offset;
         if (raw_offset >= app_period || raw_offset <= -app_period) {
           // the division runs only on the cycle a resync fires
@@ -1741,7 +1741,7 @@ void lcec_write_master(void *arg, long period) {
           hal_data->auto_drift_delay = 100;
         }
       } else {
-        LCEC_PIN_S32_SET(hal_data->pll_out, (pll_err < 0) ? -(hal_data->pll_step) : (hal_data->pll_step));
+        LCEC_PIN_S32_SET(hal_data->pll_out, (pll_err < 0) ? -(LCEC_PARAM_U32_GET(hal_data->pll_step)) : (LCEC_PARAM_U32_GET(hal_data->pll_step)));
       }
     }
     // Note: When sync_to_ref_clock = false, pll_out is set in the phase calibration code above

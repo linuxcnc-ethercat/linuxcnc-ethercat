@@ -79,11 +79,11 @@ typedef struct {
   hal_s32_t *enc_03_count;
   hal_s32_t *enc_04_count;
 
-  hal_float_t enc_00_scale;
-  hal_float_t enc_01_scale;
-  hal_float_t enc_02_scale;
-  hal_float_t enc_03_scale;
-  hal_float_t enc_04_scale;
+  lcec_param_float_t enc_00_scale;
+  lcec_param_float_t enc_01_scale;
+  lcec_param_float_t enc_02_scale;
+  lcec_param_float_t enc_03_scale;
+  lcec_param_float_t enc_04_scale;
 
   hal_bit_t *enc_00_index_enable;
   hal_bit_t *enc_01_index_enable;
@@ -101,11 +101,11 @@ typedef struct {
   hal_bit_t *inverter_forward;
   hal_bit_t *inverter_reverse;
 
-  hal_float_t dac_00_scale;
-  hal_float_t dac_01_scale;
-  hal_float_t dac_02_scale;
-  hal_float_t dac_03_scale;
-  hal_float_t dac_04_scale;
+  lcec_param_float_t dac_00_scale;
+  lcec_param_float_t dac_01_scale;
+  lcec_param_float_t dac_02_scale;
+  lcec_param_float_t dac_03_scale;
+  lcec_param_float_t dac_04_scale;
 
   hal_float_t *adc1;
   hal_float_t *adc2;
@@ -126,17 +126,17 @@ typedef struct {
   unsigned int off_FLAG;
   unsigned int off_RESET_FLAG;
 
-  hal_float_t set_00_position;
-  hal_float_t set_01_position;
-  hal_float_t set_02_position;
-  hal_float_t set_03_position;
-  hal_float_t set_04_position;
+  lcec_param_float_t set_00_position;
+  lcec_param_float_t set_01_position;
+  lcec_param_float_t set_02_position;
+  lcec_param_float_t set_03_position;
+  lcec_param_float_t set_04_position;
 
-  hal_bit_t update_00_position;
-  hal_bit_t update_01_position;
-  hal_bit_t update_02_position;
-  hal_bit_t update_03_position;
-  hal_bit_t update_04_position;
+  lcec_param_bit_t update_00_position;
+  lcec_param_bit_t update_01_position;
+  lcec_param_bit_t update_02_position;
+  lcec_param_bit_t update_03_position;
+  lcec_param_bit_t update_04_position;
 } lcec_fr4000_data_t;
 
 static const lcec_pindesc_t slave_pins[] = {
@@ -425,29 +425,29 @@ int lcec_fr4000_init(int comp_id, lcec_slave_t *slave) {
   counts[3] = 0;
   counts[4] = 0;
 
-  hal_data->enc_00_scale = 1;
-  hal_data->enc_01_scale = 1;
-  hal_data->enc_02_scale = 1;
-  hal_data->enc_03_scale = 1;
-  hal_data->enc_04_scale = 1;
+  LCEC_PARAM_FLOAT_SET(hal_data->enc_00_scale, 1);
+  LCEC_PARAM_FLOAT_SET(hal_data->enc_01_scale, 1);
+  LCEC_PARAM_FLOAT_SET(hal_data->enc_02_scale, 1);
+  LCEC_PARAM_FLOAT_SET(hal_data->enc_03_scale, 1);
+  LCEC_PARAM_FLOAT_SET(hal_data->enc_04_scale, 1);
 
-  hal_data->dac_00_scale = 1;
-  hal_data->dac_01_scale = 1;
-  hal_data->dac_02_scale = 1;
-  hal_data->dac_03_scale = 1;
-  hal_data->dac_04_scale = 1;
+  LCEC_PARAM_FLOAT_SET(hal_data->dac_00_scale, 1);
+  LCEC_PARAM_FLOAT_SET(hal_data->dac_01_scale, 1);
+  LCEC_PARAM_FLOAT_SET(hal_data->dac_02_scale, 1);
+  LCEC_PARAM_FLOAT_SET(hal_data->dac_03_scale, 1);
+  LCEC_PARAM_FLOAT_SET(hal_data->dac_04_scale, 1);
 
-  hal_data->set_00_position = 0;
-  hal_data->set_01_position = 0;
-  hal_data->set_02_position = 0;
-  hal_data->set_03_position = 0;
-  hal_data->set_04_position = 0;
+  LCEC_PARAM_FLOAT_SET(hal_data->set_00_position, 0);
+  LCEC_PARAM_FLOAT_SET(hal_data->set_01_position, 0);
+  LCEC_PARAM_FLOAT_SET(hal_data->set_02_position, 0);
+  LCEC_PARAM_FLOAT_SET(hal_data->set_03_position, 0);
+  LCEC_PARAM_FLOAT_SET(hal_data->set_04_position, 0);
 
-  hal_data->update_00_position = false;
-  hal_data->update_01_position = false;
-  hal_data->update_02_position = false;
-  hal_data->update_03_position = false;
-  hal_data->update_04_position = false;
+  LCEC_PARAM_BIT_SET(hal_data->update_00_position, false);
+  LCEC_PARAM_BIT_SET(hal_data->update_01_position, false);
+  LCEC_PARAM_BIT_SET(hal_data->update_02_position, false);
+  LCEC_PARAM_BIT_SET(hal_data->update_03_position, false);
+  LCEC_PARAM_BIT_SET(hal_data->update_04_position, false);
 
   return 0;
 }
@@ -520,38 +520,38 @@ void lcec_fr4000_read(lcec_slave_t *slave, long period) {
     counts[4] = 0;
   }
 
-  if (hal_data->update_00_position == true) {
-    hal_data->update_00_position = false;
+  if (LCEC_PARAM_BIT_GET(hal_data->update_00_position) == true) {
+    LCEC_PARAM_BIT_SET(hal_data->update_00_position, false);
 
-    raw_forced_counts[0] = hal_data->set_00_position / hal_data->enc_00_scale;
+    raw_forced_counts[0] = LCEC_PARAM_FLOAT_GET(hal_data->set_00_position) / LCEC_PARAM_FLOAT_GET(hal_data->enc_00_scale);
 
     counts[0] = (int32_t)raw_forced_counts[0];
   }
-  if (hal_data->update_01_position == true) {
-    hal_data->update_01_position = false;
+  if (LCEC_PARAM_BIT_GET(hal_data->update_01_position) == true) {
+    LCEC_PARAM_BIT_SET(hal_data->update_01_position, false);
 
-    raw_forced_counts[1] = hal_data->set_01_position / hal_data->enc_01_scale;
+    raw_forced_counts[1] = LCEC_PARAM_FLOAT_GET(hal_data->set_01_position) / LCEC_PARAM_FLOAT_GET(hal_data->enc_01_scale);
 
     counts[1] = (int32_t)raw_forced_counts[1];
   }
-  if (hal_data->update_02_position == true) {
-    hal_data->update_02_position = false;
+  if (LCEC_PARAM_BIT_GET(hal_data->update_02_position) == true) {
+    LCEC_PARAM_BIT_SET(hal_data->update_02_position, false);
 
-    raw_forced_counts[2] = hal_data->set_02_position / hal_data->enc_02_scale;
+    raw_forced_counts[2] = LCEC_PARAM_FLOAT_GET(hal_data->set_02_position) / LCEC_PARAM_FLOAT_GET(hal_data->enc_02_scale);
 
     counts[2] = (int32_t)raw_forced_counts[2];
   }
-  if (hal_data->update_03_position == true) {
-    hal_data->update_03_position = false;
+  if (LCEC_PARAM_BIT_GET(hal_data->update_03_position) == true) {
+    LCEC_PARAM_BIT_SET(hal_data->update_03_position, false);
 
-    raw_forced_counts[3] = hal_data->set_03_position / hal_data->enc_03_scale;
+    raw_forced_counts[3] = LCEC_PARAM_FLOAT_GET(hal_data->set_03_position) / LCEC_PARAM_FLOAT_GET(hal_data->enc_03_scale);
 
     counts[3] = (int32_t)raw_forced_counts[3];
   }
-  if (hal_data->update_04_position == true) {
-    hal_data->update_04_position = false;
+  if (LCEC_PARAM_BIT_GET(hal_data->update_04_position) == true) {
+    LCEC_PARAM_BIT_SET(hal_data->update_04_position, false);
 
-    raw_forced_counts[4] = hal_data->set_04_position / hal_data->enc_04_scale;
+    raw_forced_counts[4] = LCEC_PARAM_FLOAT_GET(hal_data->set_04_position) / LCEC_PARAM_FLOAT_GET(hal_data->enc_04_scale);
 
     counts[4] = (int32_t)raw_forced_counts[4];
   }
@@ -571,11 +571,11 @@ void lcec_fr4000_read(lcec_slave_t *slave, long period) {
   counts[4] += (int16_t)(raw_counts[4] - raw_counts_old[4]);
   raw_counts_old[4] = raw_counts[4];
 
-  LCEC_PIN_FLOAT_SET(hal_data->enc_00_position, counts[0] * hal_data->enc_00_scale);
-  LCEC_PIN_FLOAT_SET(hal_data->enc_01_position, counts[1] * hal_data->enc_01_scale);
-  LCEC_PIN_FLOAT_SET(hal_data->enc_02_position, counts[2] * hal_data->enc_02_scale);
-  LCEC_PIN_FLOAT_SET(hal_data->enc_03_position, counts[3] * hal_data->enc_03_scale);
-  LCEC_PIN_FLOAT_SET(hal_data->enc_04_position, counts[4] * hal_data->enc_04_scale);
+  LCEC_PIN_FLOAT_SET(hal_data->enc_00_position, counts[0] * LCEC_PARAM_FLOAT_GET(hal_data->enc_00_scale));
+  LCEC_PIN_FLOAT_SET(hal_data->enc_01_position, counts[1] * LCEC_PARAM_FLOAT_GET(hal_data->enc_01_scale));
+  LCEC_PIN_FLOAT_SET(hal_data->enc_02_position, counts[2] * LCEC_PARAM_FLOAT_GET(hal_data->enc_02_scale));
+  LCEC_PIN_FLOAT_SET(hal_data->enc_03_position, counts[3] * LCEC_PARAM_FLOAT_GET(hal_data->enc_03_scale));
+  LCEC_PIN_FLOAT_SET(hal_data->enc_04_position, counts[4] * LCEC_PARAM_FLOAT_GET(hal_data->enc_04_scale));
 
   LCEC_PIN_S32_SET(hal_data->enc_00_count, counts[0]);
   LCEC_PIN_S32_SET(hal_data->enc_01_count, counts[1]);
@@ -664,23 +664,23 @@ void lcec_fr4000_write(lcec_slave_t *slave, long period) {
   EC_WRITE_BIT(&pd[hal_data->off_ENABLE_5V], 3, LCEC_PIN_BIT_GET(hal_data->ENABLE_5V_3));
   EC_WRITE_BIT(&pd[hal_data->off_ENABLE_5V], 4, LCEC_PIN_BIT_GET(hal_data->ENABLE_5V_4));
 
-  fValue = calculateFvalue(LCEC_PIN_FLOAT_GET(hal_data->dac_00_value), hal_data->enc_00_scale, hal_data->dac_00_scale);
+  fValue = calculateFvalue(LCEC_PIN_FLOAT_GET(hal_data->dac_00_value), LCEC_PARAM_FLOAT_GET(hal_data->enc_00_scale), LCEC_PARAM_FLOAT_GET(hal_data->dac_00_scale));
   LCEC_PIN_S32_SET(hal_data->HZ_0, fabs(fValue));
   iDir0 = fValue < 0 ? 1 : 0;
 
-  fValue = calculateFvalue(LCEC_PIN_FLOAT_GET(hal_data->dac_01_value), hal_data->enc_01_scale, hal_data->dac_01_scale);
+  fValue = calculateFvalue(LCEC_PIN_FLOAT_GET(hal_data->dac_01_value), LCEC_PARAM_FLOAT_GET(hal_data->enc_01_scale), LCEC_PARAM_FLOAT_GET(hal_data->dac_01_scale));
   LCEC_PIN_S32_SET(hal_data->HZ_1, fabs(fValue));
   iDir1 = fValue < 0 ? 1 : 0;
 
-  fValue = calculateFvalue(LCEC_PIN_FLOAT_GET(hal_data->dac_02_value), hal_data->enc_02_scale, hal_data->dac_02_scale);
+  fValue = calculateFvalue(LCEC_PIN_FLOAT_GET(hal_data->dac_02_value), LCEC_PARAM_FLOAT_GET(hal_data->enc_02_scale), LCEC_PARAM_FLOAT_GET(hal_data->dac_02_scale));
   LCEC_PIN_S32_SET(hal_data->HZ_2, fabs(fValue));
   iDir2 = fValue < 0 ? 1 : 0;
 
-  fValue = calculateFvalue(LCEC_PIN_FLOAT_GET(hal_data->dac_03_value), hal_data->enc_03_scale, hal_data->dac_03_scale);
+  fValue = calculateFvalue(LCEC_PIN_FLOAT_GET(hal_data->dac_03_value), LCEC_PARAM_FLOAT_GET(hal_data->enc_03_scale), LCEC_PARAM_FLOAT_GET(hal_data->dac_03_scale));
   LCEC_PIN_S32_SET(hal_data->HZ_3, fabs(fValue));
   iDir3 = fValue < 0 ? 1 : 0;
 
-  fValue = calculateFvalue(LCEC_PIN_FLOAT_GET(hal_data->dac_04_value), hal_data->enc_04_scale, hal_data->dac_04_scale);
+  fValue = calculateFvalue(LCEC_PIN_FLOAT_GET(hal_data->dac_04_value), LCEC_PARAM_FLOAT_GET(hal_data->enc_04_scale), LCEC_PARAM_FLOAT_GET(hal_data->dac_04_scale));
   LCEC_PIN_S32_SET(hal_data->HZ_4, fabs(fValue));
   iDir4 = fValue < 0 ? 1 : 0;
 

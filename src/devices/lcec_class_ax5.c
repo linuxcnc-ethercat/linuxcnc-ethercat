@@ -148,13 +148,13 @@ int lcec_class_ax5_init(lcec_slave_t *slave, lcec_class_ax5_chan_t *chan, int in
   }
 
   // init parameters
-  chan->scale = 1.0;
-  chan->scale_fb2 = 1.0;
-  chan->vel_scale = ((double)idn_vel_scale) * pow(10.0, (double)idn_vel_exp);
-  chan->pos_resolution = idn_pos_resolution;
+  LCEC_PARAM_FLOAT_SET(chan->scale, 1.0);
+  LCEC_PARAM_FLOAT_SET(chan->scale_fb2, 1.0);
+  LCEC_PARAM_FLOAT_SET(chan->vel_scale, ((double)idn_vel_scale) * pow(10.0, (double)idn_vel_exp));
+  LCEC_PARAM_U32_SET(chan->pos_resolution, idn_pos_resolution);
 
-  if (chan->vel_scale > 0.0) {
-    chan->vel_output_scale = 60.0 / chan->vel_scale;
+  if (LCEC_PARAM_FLOAT_GET(chan->vel_scale) > 0.0) {
+    chan->vel_output_scale = 60.0 / LCEC_PARAM_FLOAT_GET(chan->vel_scale);
   } else {
     chan->vel_output_scale = 0.0;
   }
@@ -164,29 +164,29 @@ int lcec_class_ax5_init(lcec_slave_t *slave, lcec_class_ax5_chan_t *chan, int in
 
 void lcec_class_ax5_check_scales(lcec_class_ax5_chan_t *chan) {
   // check for change in scale value
-  if (chan->scale != chan->scale_old) {
+  if (LCEC_PARAM_FLOAT_GET(chan->scale) != chan->scale_old) {
     // scale value has changed, test and update it
-    if ((chan->scale < 1e-20) && (chan->scale > -1e-20)) {
+    if ((LCEC_PARAM_FLOAT_GET(chan->scale) < 1e-20) && (LCEC_PARAM_FLOAT_GET(chan->scale) > -1e-20)) {
       // value too small, divide by zero is a bad thing
-      chan->scale = 1.0;
+      LCEC_PARAM_FLOAT_SET(chan->scale, 1.0);
     }
     // save new scale to detect future changes
-    chan->scale_old = chan->scale;
+    chan->scale_old = LCEC_PARAM_FLOAT_GET(chan->scale);
     // we actually want the reciprocal
-    chan->scale_rcpt = 1.0 / chan->scale;
+    chan->scale_rcpt = 1.0 / LCEC_PARAM_FLOAT_GET(chan->scale);
   }
 
   // check fb2 for change in scale value
-  if (chan->scale_fb2 != chan->scale_fb2_old) {
+  if (LCEC_PARAM_FLOAT_GET(chan->scale_fb2) != chan->scale_fb2_old) {
     // scale value has changed, test and update it
-    if ((chan->scale_fb2 < 1e-20) && (chan->scale_fb2 > -1e-20)) {
+    if ((LCEC_PARAM_FLOAT_GET(chan->scale_fb2) < 1e-20) && (LCEC_PARAM_FLOAT_GET(chan->scale_fb2) > -1e-20)) {
       // value too small, divide by zero is a bad thing
-      chan->scale_fb2 = 1.0;
+      LCEC_PARAM_FLOAT_SET(chan->scale_fb2, 1.0);
     }
     // save new scale to detect future changes
-    chan->scale_fb2_old = chan->scale_fb2;
+    chan->scale_fb2_old = LCEC_PARAM_FLOAT_GET(chan->scale_fb2);
     // we actually want the reciprocal
-    chan->scale_fb2_rcpt = 1.0 / chan->scale_fb2;
+    chan->scale_fb2_rcpt = 1.0 / LCEC_PARAM_FLOAT_GET(chan->scale_fb2);
   }
 }
 
@@ -227,7 +227,7 @@ void lcec_class_ax5_read(lcec_slave_t *slave, lcec_class_ax5_chan_t *chan) {
 
   // update position feedback
   pos_cnt = EC_READ_U32(&pd[chan->pos_fb_pdo_os]);
-  class_enc_update(&chan->enc, chan->pos_resolution, chan->scale_rcpt, pos_cnt, 0, 0);
+  class_enc_update(&chan->enc, LCEC_PARAM_U32_GET(chan->pos_resolution), chan->scale_rcpt, pos_cnt, 0, 0);
 
   if (chan->fb2_enabled) {
     pos_cnt = EC_READ_U32(&pd[chan->pos_fb2_pdo_os]);
@@ -264,7 +264,7 @@ void lcec_class_ax5_write(lcec_slave_t *slave, lcec_class_ax5_chan_t *chan) {
   EC_WRITE_U16(&pd[chan->ctrl_pdo_os], ctrl);
 
   // set velo command
-  velo_cmd_raw = LCEC_PIN_FLOAT_GET(chan->velo_cmd) * chan->scale * chan->vel_output_scale;
+  velo_cmd_raw = LCEC_PIN_FLOAT_GET(chan->velo_cmd) * LCEC_PARAM_FLOAT_GET(chan->scale) * chan->vel_output_scale;
   if (velo_cmd_raw > (double)0x7fffffff) {
     velo_cmd_raw = (double)0x7fffffff;
   }

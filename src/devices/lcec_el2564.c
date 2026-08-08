@@ -35,7 +35,7 @@ typedef struct {
   hal_bit_t *warning;
   hal_bit_t *error;
 
-  hal_float_t scale;
+  lcec_param_float_t scale;
   hal_float_t offset;
   hal_float_t gamma;
   hal_float_t ramp_time;
@@ -119,7 +119,7 @@ static int lcec_el2564_init(int comp_id, lcec_slave_t *slave) {
     }
 
     // initialize parameters
-    chan->scale = 0.5;
+    LCEC_PARAM_FLOAT_SET(chan->scale, 0.5);
     chan->offset = 0.0;
     chan->gamma = 1.0;     
     chan->ramp_time = 0.0; 
@@ -224,7 +224,7 @@ if (hal_data->master_gain != hal_data->master_gain_prev) {
 
     // calculate PWM value
     if (LCEC_PIN_BIT_GET(chan->enable)) {
-      duty = LCEC_PIN_FLOAT_GET(chan->pwm) * chan->scale + chan->offset;
+      duty = LCEC_PIN_FLOAT_GET(chan->pwm) * LCEC_PARAM_FLOAT_GET(chan->scale) + chan->offset;
 
       // clamp to valid range
       if (duty < 0.0) duty = 0.0;

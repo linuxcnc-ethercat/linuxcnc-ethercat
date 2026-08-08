@@ -107,11 +107,11 @@ typedef struct {
   hal_u32_t *operation_mode;
   hal_float_t *cmd_value;
 
-  hal_float_t pos_scale;
-  hal_float_t extenc_scale;
-  hal_u32_t pprev;
-  hal_u32_t fault_autoreset_cycles;
-  hal_u32_t fault_autoreset_retries;
+  lcec_param_float_t pos_scale;
+  lcec_param_float_t extenc_scale;
+  lcec_param_u32_t pprev;
+  lcec_param_u32_t fault_autoreset_cycles;
+  lcec_param_u32_t fault_autoreset_retries;
 
   hal_float_t *torque;
   hal_bit_t *neg_lim_switch;
@@ -393,20 +393,20 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
   if ((err = class_enc_init(slave, &hal_data->extenc, 32, "extenc")) != 0) return err;
 
   // initialize variables
-  hal_data->pos_scale = 1.0;
-  hal_data->extenc_scale = 1.0;
-  hal_data->fault_autoreset_cycles = DEASDA_FAULT_AUTORESET_CYCLES;
-  hal_data->fault_autoreset_retries = DEASDA_FAULT_AUTORESET_RETRIES;
-  hal_data->pos_scale_old = hal_data->pos_scale + 1.0;
+  LCEC_PARAM_FLOAT_SET(hal_data->pos_scale, 1.0);
+  LCEC_PARAM_FLOAT_SET(hal_data->extenc_scale, 1.0);
+  LCEC_PARAM_U32_SET(hal_data->fault_autoreset_cycles, DEASDA_FAULT_AUTORESET_CYCLES);
+  LCEC_PARAM_U32_SET(hal_data->fault_autoreset_retries, DEASDA_FAULT_AUTORESET_RETRIES);
+  hal_data->pos_scale_old = LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) + 1.0;
   hal_data->pos_scale_rcpt = 1.0;
 
   // change based on FLAG_LOWRES_ENC/FLAG_HIGHRES_ENC
   if (flags & FLAG_LOWRES_ENC) {
-    hal_data->pprev = DEASDA_PULSES_PER_REV_DEFLT_LOWRES;
+    LCEC_PARAM_U32_SET(hal_data->pprev, DEASDA_PULSES_PER_REV_DEFLT_LOWRES);
     rtapi_print_msg(
         RTAPI_MSG_DBG, LCEC_MSG_PFX "Setting pprev to Low Res Encoder (1,280,000) for device %s.%s.\n", master->name, slave->name);
   } else if (flags & FLAG_HIGHRES_ENC) {
-    hal_data->pprev = DEASDA_PULSES_PER_REV_DEFLT_HIGHRES;
+    LCEC_PARAM_U32_SET(hal_data->pprev, DEASDA_PULSES_PER_REV_DEFLT_HIGHRES);
     rtapi_print_msg(
         RTAPI_MSG_DBG, LCEC_MSG_PFX "Setting pprev to High Res Encoder (16,777,216) for device %s.%s.\n", master->name, slave->name);
   }
@@ -425,14 +425,14 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
 
 void lcec_deasda_check_scales(lcec_deasda_data_t *hal_data) {
   // check for change in scale value
-  if (hal_data->pos_scale != hal_data->pos_scale_old) {
+  if (LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) != hal_data->pos_scale_old) {
     // scale value has changed, test and update it
-    if ((hal_data->pos_scale < 1e-20) && (hal_data->pos_scale > -1e-20)) hal_data->pos_scale = 1.0;
+    if ((LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) < 1e-20) && (LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) > -1e-20)) LCEC_PARAM_FLOAT_SET(hal_data->pos_scale, 1.0);
 
     // save new scale to detect future changes
-    hal_data->pos_scale_old = hal_data->pos_scale;
+    hal_data->pos_scale_old = LCEC_PARAM_FLOAT_GET(hal_data->pos_scale);
     // we actually want the reciprocal
-    hal_data->pos_scale_rcpt = 1.0 / hal_data->pos_scale;
+    hal_data->pos_scale_rcpt = 1.0 / LCEC_PARAM_FLOAT_GET(hal_data->pos_scale);
   }
 }
 
@@ -485,7 +485,7 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
 
   // generate gated fault
   if (hal_data->fault_reset_retry > 0) {
-    if (hal_data->fault_reset_cycle < hal_data->fault_autoreset_cycles) {
+    if (hal_data->fault_reset_cycle < LCEC_PARAM_U32_GET(hal_data->fault_autoreset_cycles)) {
       hal_data->fault_reset_cycle++;
     } else {
       hal_data->fault_reset_cycle = 0;
@@ -504,15 +504,15 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
   rpm = (double)speed_raw * DEASDA_RPM_FACTOR;
   LCEC_PIN_FLOAT_SET(hal_data->vel_fb_rpm, rpm);
   LCEC_PIN_FLOAT_SET(hal_data->vel_fb_rpm_abs, fabs(rpm));
-  LCEC_PIN_FLOAT_SET(hal_data->vel_fb, rpm * DEASDA_RPM_DIV * hal_data->pos_scale);
+  LCEC_PIN_FLOAT_SET(hal_data->vel_fb, rpm * DEASDA_RPM_DIV * LCEC_PARAM_FLOAT_GET(hal_data->pos_scale));
 
   // update raw position counter
   pos_cnt = EC_READ_U32(&pd[hal_data->currpos_pdo_os]);
-  class_enc_update(&hal_data->enc, hal_data->pprev, hal_data->pos_scale, pos_cnt, 0, 0);
+  class_enc_update(&hal_data->enc, LCEC_PARAM_U32_GET(hal_data->pprev), LCEC_PARAM_FLOAT_GET(hal_data->pos_scale), pos_cnt, 0, 0);
 
   // update external encoder counter
   pos_cnt = EC_READ_U32(&pd[hal_data->extenc_pdo_os]);
-  class_enc_update(&hal_data->extenc, 1, hal_data->extenc_scale, pos_cnt, 0, 0);
+  class_enc_update(&hal_data->extenc, 1, LCEC_PARAM_FLOAT_GET(hal_data->extenc_scale), pos_cnt, 0, 0);
 
   // read current
   LCEC_PIN_FLOAT_SET(hal_data->torque, (double)EC_READ_S16(&pd[hal_data->torque_pdo_os]) * 0.1);
@@ -548,8 +548,8 @@ static void lcec_deasda_write_csv(lcec_slave_t *slave, long period) {
   hal_data->last_switch_on = LCEC_PIN_BIT_GET(hal_data->switch_on);
 
   // check for autoreset
-  if (hal_data->fault_autoreset_retries > 0 && hal_data->fault_autoreset_cycles > 0 && switch_on_edge && hal_data->internal_fault) {
-    hal_data->fault_reset_retry = hal_data->fault_autoreset_retries;
+  if (LCEC_PARAM_U32_GET(hal_data->fault_autoreset_retries) > 0 && LCEC_PARAM_U32_GET(hal_data->fault_autoreset_cycles) > 0 && switch_on_edge && hal_data->internal_fault) {
+    hal_data->fault_reset_retry = LCEC_PARAM_U32_GET(hal_data->fault_autoreset_retries);
     hal_data->fault_reset_state = 1;
     hal_data->fault_reset_cycle = 0;
   }
@@ -601,8 +601,8 @@ static void lcec_deasda_write_csp(lcec_slave_t *slave, long period) {
   hal_data->last_switch_on = LCEC_PIN_BIT_GET(hal_data->switch_on);
 
   // check for autoreset
-  if (hal_data->fault_autoreset_retries > 0 && hal_data->fault_autoreset_cycles > 0 && switch_on_edge && hal_data->internal_fault) {
-    hal_data->fault_reset_retry = hal_data->fault_autoreset_retries;
+  if (LCEC_PARAM_U32_GET(hal_data->fault_autoreset_retries) > 0 && LCEC_PARAM_U32_GET(hal_data->fault_autoreset_cycles) > 0 && switch_on_edge && hal_data->internal_fault) {
+    hal_data->fault_reset_retry = LCEC_PARAM_U32_GET(hal_data->fault_autoreset_retries);
     hal_data->fault_reset_state = 1;
     hal_data->fault_reset_cycle = 0;
   }
@@ -628,7 +628,7 @@ static void lcec_deasda_write_csp(lcec_slave_t *slave, long period) {
   // ASDA Drives expect target Position in PUU (Pulse per User Unit)
   // See https://www.deltaww.com/en-US/FAQ/228
   // Calculation accordingly based on pprev and pos_scale (i.e. pitch of ball screw)
-  pos_puu = (int32_t)(LCEC_PIN_FLOAT_GET(hal_data->cmd_value) * hal_data->pprev / hal_data->pos_scale);
+  pos_puu = (int32_t)(LCEC_PIN_FLOAT_GET(hal_data->cmd_value) * LCEC_PARAM_U32_GET(hal_data->pprev) / LCEC_PARAM_FLOAT_GET(hal_data->pos_scale));
   EC_WRITE_S32(&pd[hal_data->cmdvalue_pdo_os], pos_puu);
 }
 

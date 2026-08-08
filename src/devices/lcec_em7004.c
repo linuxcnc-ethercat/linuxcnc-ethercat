@@ -42,7 +42,7 @@ typedef struct {
 
 typedef struct {
   hal_bit_t *out;
-  hal_bit_t invert;
+  lcec_param_bit_t invert;
   unsigned int pdo_os;
   unsigned int pdo_bp;
 } lcec_em7004_dout_t;
@@ -353,7 +353,7 @@ static void lcec_em7004_read(lcec_slave_t *slave, long period) {
     LCEC_PIN_S32_SET(enc->count, LCEC_PIN_S32_GET(enc->count) + raw_delta);
 
     // scale count to make floating point position
-    LCEC_PIN_BIT_SET(enc->pos, LCEC_PIN_S32_GET(enc->count) * enc->scale);
+    LCEC_PIN_FLOAT_SET(enc->pos, LCEC_PIN_S32_GET(enc->count) * enc->scale);
   }
 
   hal_data->last_operational = 1;
@@ -372,7 +372,7 @@ static void lcec_em7004_write(lcec_slave_t *slave, long period) {
   // set digital outputs
   for (i = 0, dout = hal_data->douts; i < LCEC_EM7004_DOUT_COUNT; i++, dout++) {
     s = LCEC_PIN_BIT_GET(dout->out);
-    if (dout->invert) {
+    if (LCEC_PARAM_BIT_GET(dout->invert)) {
       s = !s;
     }
     EC_WRITE_BIT(&pd[dout->pdo_os], dout->pdo_bp, s);

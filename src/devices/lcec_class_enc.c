@@ -68,11 +68,11 @@ int class_enc_init(lcec_slave_t *slave, lcec_class_enc_data_t *hal_data, int raw
   hal_data->index_sign = 0;
 
   hal_data->pprev_last = 0;
-  hal_data->pprev_scale = 1.0;
+  LCEC_PARAM_FLOAT_SET(hal_data->pprev_scale, 1.0);
 
-  hal_data->raw_bits = raw_bits;
-  hal_data->raw_shift = 32 - hal_data->raw_bits;
-  hal_data->raw_mask = (1LL << hal_data->raw_bits) - 1;
+  LCEC_PARAM_U32_SET(hal_data->raw_bits, raw_bits);
+  hal_data->raw_shift = 32 - LCEC_PARAM_U32_GET(hal_data->raw_bits);
+  hal_data->raw_mask = (1LL << LCEC_PARAM_U32_GET(hal_data->raw_bits)) - 1;
 
   return 0;
 }
@@ -87,10 +87,10 @@ void class_enc_update(
   // calculate pos scale
   if (pprev > 0) {
     if (hal_data->do_init || hal_data->pprev_last != pprev) {
-      hal_data->pprev_scale = 1.0 / ((double)pprev);
+      LCEC_PARAM_FLOAT_SET(hal_data->pprev_scale, 1.0 / ((double)pprev));
       hal_data->index_sign = 0;
     }
-    pos_scale = hal_data->pprev_scale * scale;
+    pos_scale = LCEC_PARAM_FLOAT_GET(hal_data->pprev_scale) * scale;
   } else {
     pos_scale = scale;
   }
@@ -114,7 +114,7 @@ void class_enc_update(
   LCEC_PIN_FLOAT_SET(hal_data->pos_enc, ((double)pos) * pos_scale);
 
   // calculate home based abs pos
-  pos += raw_diff(hal_data->raw_shift, 0, hal_data->raw_home);
+  pos += raw_diff(hal_data->raw_shift, 0, LCEC_PARAM_U32_GET(hal_data->raw_home));
   LCEC_PIN_FLOAT_SET(hal_data->pos_abs, ((double)pos) * pos_scale);
   LCEC_PIN_BIT_SET(hal_data->on_home_neg, (pos <= 0));
   LCEC_PIN_BIT_SET(hal_data->on_home_pos, (pos >= 0));

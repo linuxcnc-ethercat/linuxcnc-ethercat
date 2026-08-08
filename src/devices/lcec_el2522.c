@@ -75,7 +75,7 @@ typedef struct {
   hal_s32_t *count;      // pin: raw count output (steps), useful for commissioning
 
   // HAL parameters
-  hal_float_t pos_scale;  // param: pos scaling factor (steps/unit)
+  lcec_param_float_t pos_scale;  // param: pos scaling factor (steps/unit)
 
   // PDO offsets and bit positions
   unsigned int target_pdo_os;
@@ -232,7 +232,7 @@ static int lcec_el2522_init(int comp_id, lcec_slave_t *slave) {
       return err;
     }
 
-    channel->pos_scale = LCEC_EL2522_POS_SCALE_DEFAULT;
+    LCEC_PARAM_FLOAT_SET(channel->pos_scale, LCEC_EL2522_POS_SCALE_DEFAULT);
     channel->pos_scale_recip = 1.0 / LCEC_EL2522_POS_SCALE_DEFAULT;
     channel->last_pos_scale = LCEC_EL2522_POS_SCALE_DEFAULT;
     channel->last_count = 0;
@@ -280,20 +280,20 @@ static void lcec_el2522_write(lcec_slave_t *slave, long period) {
     lcec_el2522_channel_t *channel = &hal_data->channels[i];
 
     // Check for scale change, and adjust offset to avoid position discontinuity
-    if (channel->pos_scale != channel->last_pos_scale) {
-      if ((channel->pos_scale < 1e-20) && (channel->pos_scale > -1e-20)) {
+    if (LCEC_PARAM_FLOAT_GET(channel->pos_scale) != channel->last_pos_scale) {
+      if ((LCEC_PARAM_FLOAT_GET(channel->pos_scale) < 1e-20) && (LCEC_PARAM_FLOAT_GET(channel->pos_scale) > -1e-20)) {
         rtapi_print_msg(
             RTAPI_MSG_ERR, "Requested pos-scale for %s.%s.ch%i is too small, dropping\n", slave->master->name, slave->name, i+1);
-        channel->pos_scale = channel->last_pos_scale;
+        LCEC_PARAM_FLOAT_SET(channel->pos_scale, channel->last_pos_scale);
       } else {
-        channel->last_pos_scale = channel->pos_scale;
-        channel->step_offset = LCEC_PIN_S32_GET(channel->count) - LCEC_PIN_FLOAT_GET(channel->pos_fb) * channel->pos_scale;
-        channel->pos_scale_recip = 1.0 / channel->pos_scale;
+        channel->last_pos_scale = LCEC_PARAM_FLOAT_GET(channel->pos_scale);
+        channel->step_offset = LCEC_PIN_S32_GET(channel->count) - LCEC_PIN_FLOAT_GET(channel->pos_fb) * LCEC_PARAM_FLOAT_GET(channel->pos_scale);
+        channel->pos_scale_recip = 1.0 / LCEC_PARAM_FLOAT_GET(channel->pos_scale);
       }
     }
 
     // explicit conversion casts used here to ensure correct handling for negative double values
-    const uint32_t target = (uint32_t)((int32_t)round(LCEC_PIN_FLOAT_GET(channel->pos_cmd) * channel->pos_scale + channel->step_offset));
+    const uint32_t target = (uint32_t)((int32_t)round(LCEC_PIN_FLOAT_GET(channel->pos_cmd) * LCEC_PARAM_FLOAT_GET(channel->pos_scale) + channel->step_offset));
     EC_WRITE_U32(&pd[channel->target_pdo_os], target);
     EC_WRITE_BIT(&pd[channel->enable_pdo_os], channel->enable_pdo_bp, LCEC_PIN_BIT_GET(channel->enable));
   }

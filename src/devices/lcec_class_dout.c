@@ -162,7 +162,7 @@ void lcec_dout_write(lcec_slave_t *slave, lcec_class_dout_channel_t *data) {
   }
 
   s = LCEC_PIN_BIT_GET(data->out);
-  if (data->invert) {
+  if (LCEC_PARAM_BIT_GET(data->invert)) {
     s = !s;
   }
 

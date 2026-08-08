@@ -25,9 +25,9 @@
 #include "../lcec.h"
 
 typedef struct {
-  hal_s32_t raw_home;
-  hal_u32_t raw_bits;
-  hal_float_t pprev_scale;
+  lcec_param_u32_t raw_home;
+  lcec_param_u32_t raw_bits;
+  lcec_param_float_t pprev_scale;
 
   hal_s32_t *raw;
   hal_u32_t *ext_lo;

@@ -51,11 +51,11 @@ typedef struct {
   hal_bit_t *enable;     // pin for enable stepgen
   hal_float_t *vel_cmd;  // pin: velocity command (pos units/sec)
 
-  hal_float_t pos_scale;      // param: steps per position unit
-  hal_float_t freq;           // param: current frequency
-  hal_float_t maxvel;         // param: max velocity, (pos units/sec)
-  hal_float_t maxaccel_rise;  // param: max accel (pos units/sec^2)
-  hal_float_t maxaccel_fall;  // param: max accel (pos units/sec^2)
+  lcec_param_float_t pos_scale;      // param: steps per position unit
+  lcec_param_float_t freq;           // param: current frequency
+  lcec_param_float_t maxvel;         // param: max velocity, (pos units/sec)
+  lcec_param_float_t maxaccel_rise;  // param: max accel (pos units/sec^2)
+  lcec_param_float_t maxaccel_fall;  // param: max accel (pos units/sec^2)
 
   int last_operational;
   int16_t last_hw_count;  // last hw counter value
@@ -191,7 +191,7 @@ static int lcec_el2521_init(int comp_id, lcec_slave_t *slave) {
   }
 
   // init parameters
-  hal_data->pos_scale = 1.0;
+  LCEC_PARAM_FLOAT_SET(hal_data->pos_scale, 1.0);
 
   // init other fields
   hal_data->last_operational = 0;
@@ -227,16 +227,16 @@ static int lcec_el2521_init(int comp_id, lcec_slave_t *slave) {
 
 static void lcec_el2521_check_scale(lcec_el2521_data_t *hal_data) {
   // check for change in scale value
-  if (hal_data->pos_scale != hal_data->old_scale) {
+  if (LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) != hal_data->old_scale) {
     // validate the new scale value
-    if ((hal_data->pos_scale < 1e-20) && (hal_data->pos_scale > -1e-20)) {
+    if ((LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) < 1e-20) && (LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) > -1e-20)) {
       // value too small, divide by zero is a bad thing
-      hal_data->pos_scale = 1.0;
+      LCEC_PARAM_FLOAT_SET(hal_data->pos_scale, 1.0);
     }
     // get ready to detect future scale changes
-    hal_data->old_scale = hal_data->pos_scale;
+    hal_data->old_scale = LCEC_PARAM_FLOAT_GET(hal_data->pos_scale);
     // we will need the reciprocal
-    hal_data->scale_recip = 1.0 / hal_data->pos_scale;
+    hal_data->scale_recip = 1.0 / LCEC_PARAM_FLOAT_GET(hal_data->pos_scale);
   }
 }
 
@@ -258,9 +258,9 @@ static void lcec_el2521_read(lcec_slave_t *slave, long period) {
   lcec_el2521_check_scale(hal_data);
 
   // calculate scaled limits
-  hal_data->maxvel = hal_data->max_freq * hal_data->scale_recip;
-  hal_data->maxaccel_rise = hal_data->max_ac_rise * hal_data->scale_recip;
-  hal_data->maxaccel_fall = hal_data->max_ac_fall * hal_data->scale_recip;
+  LCEC_PARAM_FLOAT_SET(hal_data->maxvel, hal_data->max_freq * hal_data->scale_recip);
+  LCEC_PARAM_FLOAT_SET(hal_data->maxaccel_rise, hal_data->max_ac_rise * hal_data->scale_recip);
+  LCEC_PARAM_FLOAT_SET(hal_data->maxaccel_fall, hal_data->max_ac_fall * hal_data->scale_recip);
 
   // read state word
   state = EC_READ_U16(&pd[hal_data->state_pdo_os]);
@@ -308,13 +308,13 @@ static void lcec_el2521_write(lcec_slave_t *slave, long period) {
 
   // update frequency
   if (LCEC_PIN_BIT_GET(hal_data->enable)) {
-    hal_data->freq = LCEC_PIN_FLOAT_GET(hal_data->vel_cmd) * hal_data->pos_scale;
+    LCEC_PARAM_FLOAT_SET(hal_data->freq, LCEC_PIN_FLOAT_GET(hal_data->vel_cmd) * LCEC_PARAM_FLOAT_GET(hal_data->pos_scale));
   } else {
-    hal_data->freq = 0;
+    LCEC_PARAM_FLOAT_SET(hal_data->freq, 0);
   }
 
   // output frequency
-  freq_raw = hal_data->freq * hal_data->freqscale;
+  freq_raw = LCEC_PARAM_FLOAT_GET(hal_data->freq) * hal_data->freqscale;
   if (freq_raw > 0x7fff) {
     freq_raw = 0x7fff;
   }

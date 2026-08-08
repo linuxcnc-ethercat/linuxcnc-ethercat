@@ -65,6 +65,23 @@
 #define LCEC_PIN_S32_GET(p) hal_get_si32((hal_sint_t)(p))
 #define LCEC_PIN_U32_SET(p, v) hal_set_ui32((hal_uint_t)(p), (v))
 #define LCEC_PIN_U32_GET(p) hal_get_ui32((hal_uint_t)(p))
+
+// Params. Storage is HAL-owned on the new API (the creators return an
+// opaque reference), but caller-provided struct fields on the old API.
+// The typedefs below make param fields a reference on the new API and a
+// value on the old API; all access must go through LCEC_PARAM_*.
+typedef hal_bool_t lcec_param_bit_t;
+typedef hal_real_t lcec_param_float_t;
+typedef hal_sint_t lcec_param_s32_t;
+typedef hal_uint_t lcec_param_u32_t;
+#define LCEC_PARAM_BIT_SET(f, v) hal_set_bool((f), (v))
+#define LCEC_PARAM_BIT_GET(f) hal_get_bool((f))
+#define LCEC_PARAM_FLOAT_SET(f, v) hal_set_real((f), (v))
+#define LCEC_PARAM_FLOAT_GET(f) hal_get_real((f))
+#define LCEC_PARAM_S32_SET(f, v) hal_set_si32((f), (v))
+#define LCEC_PARAM_S32_GET(f) hal_get_si32((f))
+#define LCEC_PARAM_U32_SET(f, v) hal_set_ui32((f), (v))
+#define LCEC_PARAM_U32_GET(f) hal_get_ui32((f))
 #else
 // Old API (LinuxCNC 2.9.x): direct dereference.
 #define LCEC_PIN_BIT_SET(p, v) (*(p) = (v))
@@ -75,6 +92,20 @@
 #define LCEC_PIN_S32_GET(p) (*(p))
 #define LCEC_PIN_U32_SET(p, v) (*(p) = (v))
 #define LCEC_PIN_U32_GET(p) (*(p))
+
+// Old API: params are plain value fields in the component's hal_data.
+typedef hal_bit_t lcec_param_bit_t;
+typedef hal_float_t lcec_param_float_t;
+typedef hal_s32_t lcec_param_s32_t;
+typedef hal_u32_t lcec_param_u32_t;
+#define LCEC_PARAM_BIT_SET(f, v) ((f) = (v))
+#define LCEC_PARAM_BIT_GET(f) (f)
+#define LCEC_PARAM_FLOAT_SET(f, v) ((f) = (v))
+#define LCEC_PARAM_FLOAT_GET(f) (f)
+#define LCEC_PARAM_S32_SET(f, v) ((f) = (v))
+#define LCEC_PARAM_S32_GET(f) (f)
+#define LCEC_PARAM_U32_SET(f, v) ((f) = (v))
+#define LCEC_PARAM_U32_GET(f) (f)
 #endif
 
 // Type-dispatching variants for macro-generated code where the pin type
