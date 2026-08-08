@@ -39,9 +39,9 @@ typedef struct {
   hal_bit_t *ready;
   hal_bit_t *diag;
   hal_bit_t *tx_state;
-  hal_u32_t *cyc_cnt;
-  hal_u32_t *raw_count_lo;
-  hal_u32_t *raw_count_hi;
+  hal_s32_t *cyc_cnt;
+  hal_s32_t *raw_count_lo;
+  hal_s32_t *raw_count_hi;
   hal_s32_t *count;
   hal_float_t *pos;
   hal_float_t *pos_scale;
@@ -217,7 +217,7 @@ static void lcec_el5032_read(lcec_slave_t *slave, long period) {
     LCEC_PIN_BIT_SET(chan->tx_state, EC_READ_BIT(&pd[chan->tx_state_os], chan->tx_state_bp));
 
     // get cycle counter
-    LCEC_PIN_U32_SET(chan->cyc_cnt, (EC_READ_U8(&pd[chan->cyc_cnt_os]) >> chan->cyc_cnt_bp) & 0x03);
+    LCEC_PIN_S32_SET(chan->cyc_cnt, (EC_READ_U8(&pd[chan->cyc_cnt_os]) >> chan->cyc_cnt_bp) & 0x03);
 
     // read raw values
     raw_count = EC_READ_S64(&pd[chan->count_pdo_os]);
@@ -228,8 +228,8 @@ static void lcec_el5032_read(lcec_slave_t *slave, long period) {
     }
 
     // update raw values
-    LCEC_PIN_U32_SET(chan->raw_count_lo, raw_count);
-    LCEC_PIN_U32_SET(chan->raw_count_hi, raw_count >> 32);
+    LCEC_PIN_S32_SET(chan->raw_count_lo, (int32_t)raw_count);
+    LCEC_PIN_S32_SET(chan->raw_count_hi, (int32_t)(raw_count >> 32));
 
     // handle initialization
     if (chan->do_init || LCEC_PIN_BIT_GET(chan->reset)) {

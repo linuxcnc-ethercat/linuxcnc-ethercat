@@ -122,7 +122,7 @@ jobs:
                   # often sorts below the canonical changelog version).
                   ver=$(git describe --tags --always | sed 's/^v//')
                   if [ "${HAL_API}" = "next" ]; then
-                      ver=$(echo "${ver}" | sed 's/-/+getset-/')
+                      ver=$(echo "${ver}" | sed 's/\(-\|$\)/+getset\1/')
                   fi
                   dch -b --newversion "${ver}+ci" --distribution stable "CI build ${ver} (${HAL_API} HAL)"
 

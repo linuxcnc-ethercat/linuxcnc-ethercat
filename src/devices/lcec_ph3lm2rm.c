@@ -281,8 +281,8 @@ static void lcec_ph3lm2rm_read(lcec_slave_t *slave, long period) {
   for (i = 0, lm = hal_data->lms; i < LCEC_PH3LM2RM_LM_COUNT; i++, lm++) {
     lcec_ph3lm2rm_enc_read(pd, &lm->ch);
     LCEC_PIN_U32_SET(lm->signal_level, EC_READ_U32(&pd[lm->signal_level_os]));
-    LCEC_PIN_BIT_SET(lm->signal_level_warn, lm->signal_level_warn_val > 0 && LCEC_PIN_U32_GET(lm->signal_level) < LCEC_PARAM_U32_GET(lm->signal_level_warn_val));
-    LCEC_PIN_BIT_SET(lm->signal_level_err, lm->signal_level_err_val > 0 && LCEC_PIN_U32_GET(lm->signal_level) < LCEC_PARAM_U32_GET(lm->signal_level_err_val));
+    LCEC_PIN_BIT_SET(lm->signal_level_warn, LCEC_PARAM_U32_GET(lm->signal_level_warn_val) > 0 && LCEC_PIN_U32_GET(lm->signal_level) < LCEC_PARAM_U32_GET(lm->signal_level_warn_val));
+    LCEC_PIN_BIT_SET(lm->signal_level_err, LCEC_PARAM_U32_GET(lm->signal_level_err_val) > 0 && LCEC_PIN_U32_GET(lm->signal_level) < LCEC_PARAM_U32_GET(lm->signal_level_err_val));
   }
 
   for (i = 0, rm = hal_data->rms; i < LCEC_PH3LM2RM_RM_COUNT; i++, rm++) {

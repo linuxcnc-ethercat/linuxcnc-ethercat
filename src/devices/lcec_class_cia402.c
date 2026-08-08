@@ -434,7 +434,7 @@ lcec_class_cia402_channel_t *lcec_cia402_register_channel(
   uint32_t modes;
   lcec_read_sdo32(slave, base_idx + 0x502, 0, &modes);
 
-  LCEC_PIN_S32_SET(data->supported_modes, modes);
+  LCEC_PIN_U32_SET(data->supported_modes, modes);
   LCEC_PIN_BIT_SET(data->supports_mode_pp, modes & 1 << 0);
   LCEC_PIN_BIT_SET(data->supports_mode_vl, modes & 1 << 1);
   LCEC_PIN_BIT_SET(data->supports_mode_pv, modes & 1 << 2);
