@@ -34,17 +34,22 @@
 /// the full 64-bit storage slot (sign-extended), and both reader styles use
 /// the low bytes of the same little-endian slot.
 ///
-/// Detection: post-#4099 hal.h moved `HAL_COMP_TYPE_*` from hal_priv.h and
-/// added `#define COMPONENT_TYPE_*` aliases (see upstream discussion; the
-/// `HAL_BOOL` define was explicitly marked as temporary).  Pre-#4099 hal.h
-/// defines neither, so either marker means the new API is present.
+/// Detection: upstream will add `#define HAL_API_VERSION 1` to hal.h once the
+/// getter/setter + query API are in place (per B. Stultiens).  Until that
+/// lands, fall back to COMPONENT_TYPE_* (define aliases added to hal.h with
+/// the query API) or HAL_BOOL (temporary, will become an enum entry).
+/// Pre-#4099 hal.h defines none of these.
 
 #ifndef _LCEC_HAL_COMPAT_H_
 #define _LCEC_HAL_COMPAT_H_
 
 #include <hal.h>
 
-#if defined(COMPONENT_TYPE_USER) || defined(HAL_BOOL)
+#if defined(HAL_API_VERSION) && HAL_API_VERSION != 1
+#error "Unsupported HAL_API_VERSION detected"
+#endif
+
+#if defined(HAL_API_VERSION) || defined(COMPONENT_TYPE_USER) || defined(HAL_BOOL)
 #define LCEC_HAL_NEW_API 1
 
 // New API: access through the typed inline accessors.  Pin storage pointers

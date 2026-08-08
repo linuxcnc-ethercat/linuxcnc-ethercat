@@ -542,18 +542,23 @@ static int lcec_param_newfv(hal_type_t type, hal_param_dir_t dir, void *data_add
     return err;
   }
 
+  // Note: params use caller-provided value storage (unlike pins, whose
+  // storage is HAL's 8-byte slot). Keep these writes narrow - the new-API
+  // setters always write the full 64-bit slot and would overflow the
+  // struct field (upstream's "parameter trap"). Param creation moves to
+  // the new API at stage 2, then this becomes a non-issue.
   switch (type) {
     case HAL_BIT:
-      LCEC_PIN_BIT_SET((hal_bit_t *)data_addr, 0);
+      *((hal_bit_t *)data_addr) = 0;
       break;
     case HAL_FLOAT:
-      LCEC_PIN_FLOAT_SET((hal_float_t *)data_addr, 0.0);
+      *((hal_float_t *)data_addr) = 0.0;
       break;
     case HAL_S32:
-      LCEC_PIN_S32_SET((hal_s32_t *)data_addr, 0);
+      *((hal_s32_t *)data_addr) = 0;
       break;
     case HAL_U32:
-      LCEC_PIN_U32_SET((hal_u32_t *)data_addr, 0);
+      *((hal_u32_t *)data_addr) = 0;
       break;
     default:
       break;
