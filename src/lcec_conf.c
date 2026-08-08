@@ -131,6 +131,18 @@ int main(int argc, char **argv) {
   }
 
   // register pins
+#ifdef LCEC_HAL_NEW_API
+  if (hal_pin_new_ui32(hal_comp_id, HAL_OUT, (hal_uint_t *)&(conf_hal_data->master_count), 0, "%s.conf.master-count",
+          LCEC_MODULE_NAME) != 0) {
+    fprintf(stderr, "%s: ERROR: unable to register pin %s.conf.master-count\n", modname, LCEC_MODULE_NAME);
+    goto fail1;
+  }
+  if (hal_pin_new_ui32(hal_comp_id, HAL_OUT, (hal_uint_t *)&(conf_hal_data->slave_count), 0, "%s.conf.slave-count",
+          LCEC_MODULE_NAME) != 0) {
+    fprintf(stderr, "%s: ERROR: unable to register pin %s.conf.slave-count\n", modname, LCEC_MODULE_NAME);
+    goto fail1;
+  }
+#else
   if (hal_pin_u32_newf(HAL_OUT, &(conf_hal_data->master_count), hal_comp_id, "%s.conf.master-count", LCEC_MODULE_NAME) != 0) {
     fprintf(stderr, "%s: ERROR: unable to register pin %s.conf.master-count\n", modname, LCEC_MODULE_NAME);
     goto fail1;
@@ -139,8 +151,9 @@ int main(int argc, char **argv) {
     fprintf(stderr, "%s: ERROR: unable to register pin %s.conf.slave-count\n", modname, LCEC_MODULE_NAME);
     goto fail1;
   }
-  *(conf_hal_data->master_count) = 0;
-  *(conf_hal_data->slave_count) = 0;
+#endif
+  LCEC_PIN_U32_SET(conf_hal_data->master_count, 0);
+  LCEC_PIN_U32_SET(conf_hal_data->slave_count, 0);
 
   // initialize signal handling
   exitEvent = eventfd(0, 0);
@@ -361,7 +374,7 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
     snprintf(p->name, LCEC_CONF_STR_MAXLEN, "%d", p->index);
   }
 
-  (*(conf_hal_data->master_count))++;
+  LCEC_PIN_U32_SET(conf_hal_data->master_count, LCEC_PIN_U32_GET(conf_hal_data->master_count) + 1);
   state->currMaster = p;
 }
 
@@ -501,7 +514,7 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
     return;
   }
 
-  (*(conf_hal_data->slave_count))++;
+  LCEC_PIN_U32_SET(conf_hal_data->slave_count, LCEC_PIN_U32_GET(conf_hal_data->slave_count) + 1);
   state->currSlaveType = slaveType;
   state->currSlave = p;
 }

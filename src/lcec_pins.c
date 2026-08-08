@@ -36,6 +36,34 @@ static int lcec_pin_newfv(hal_type_t type, hal_pin_dir_t dir, void **data_ptr_ad
     return -ENOMEM;
   }
 
+#ifdef LCEC_HAL_NEW_API
+  // New API: typed creators, which also apply the default. Pin storage is
+  // HAL's 8-byte slot, so the full-width default write is safe here (unlike
+  // for params - see lcec_ethercat.c). The si32/ui32 creators keep 32-bit
+  // pin types pre-break and become 64-bit aliases at the API break, so a
+  // single build spans the break.
+  switch (type) {
+    case HAL_BIT:
+      err = hal_pin_new_bool(lcec_comp_id, dir, (hal_bool_t *)data_ptr_addr, 0, "%s", name);
+      break;
+    case HAL_FLOAT:
+      err = hal_pin_new_real(lcec_comp_id, dir, (hal_real_t *)data_ptr_addr, 0.0, "%s", name);
+      break;
+    case HAL_S32:
+      err = hal_pin_new_si32(lcec_comp_id, dir, (hal_sint_t *)data_ptr_addr, 0, "%s", name);
+      break;
+    case HAL_U32:
+      err = hal_pin_new_ui32(lcec_comp_id, dir, (hal_uint_t *)data_ptr_addr, 0, "%s", name);
+      break;
+    default:
+      err = -EINVAL;
+      break;
+  }
+  if (err) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
+    return err;
+  }
+#else
   err = hal_pin_new(name, type, dir, data_ptr_addr, lcec_comp_id);
   if (err) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting pin %s failed\n", name);
@@ -58,6 +86,7 @@ static int lcec_pin_newfv(hal_type_t type, hal_pin_dir_t dir, void **data_ptr_ad
     default:
       break;
   }
+#endif
 
   return 0;
 }
