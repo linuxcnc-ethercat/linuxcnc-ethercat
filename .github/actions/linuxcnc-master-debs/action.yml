@@ -51,14 +51,17 @@ runs:
           set -e
           git clone --depth 1 https://github.com/LinuxCNC/linuxcnc.git linuxcnc-master
           cd linuxcnc-master
-          (cd debian && ./configure uspace)
+          # no-docs: drop the documentation toolchain (asciidoctor-pdf,
+          # fonts-noto-cjk, ...) from both the build-deps and the build.
+          # We only need linuxcnc-uspace and linuxcnc-uspace-dev.
+          (cd debian && ./configure no-docs)
           # Install master's own build-deps (the archive's linuxcnc 2.9.x
-          # build-deps lag master's debian/control, e.g. asciidoctor and
-          # the pyqt5 stack). mk-build-deps generates and installs a
-          # linuxcnc-build-deps package from the cloned control file.
+          # build-deps lag master's debian/control, e.g. the pyqt5 stack).
+          # mk-build-deps generates and installs a linuxcnc-build-deps
+          # package from the generated control file.
           mk-build-deps --install --remove \
               --tool "apt-get -y --no-install-recommends" debian/control
-          dpkg-buildpackage -b -us -uc -j"$(nproc)"
+          dpkg-buildpackage -B -us -uc -j"$(nproc)"
           mkdir -p ../linuxcnc-dist
           # dpkg-buildpackage drops the debs next to the source tree, i.e.
           # in the workspace root; move them aside so the later
