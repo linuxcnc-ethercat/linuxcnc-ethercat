@@ -17,21 +17,16 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Install linuxcnc build dependencies
+    - name: Install build tooling
       shell: bash
       env:
           DEBIAN_FRONTEND: noninteractive
       run: |
           set -e
           echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80-retries
-          echo "deb-src http://deb.debian.org/debian ${{ inputs.codename }} main" \
-              > /etc/apt/sources.list.d/deb-src.list
           apt-get update
           apt-get install -y --no-install-recommends \
-              ca-certificates curl git build-essential devscripts debhelper
-          # Debian main ships linuxcnc 2.9.x; its build-deps are close
-          # enough to master's to let dpkg-buildpackage run.
-          apt-get build-dep -y linuxcnc
+              ca-certificates curl git build-essential devscripts debhelper equivs
 
     - name: Resolve linuxcnc master commit
       id: sha
@@ -50,11 +45,19 @@ runs:
     - name: Build linuxcnc master debs
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
+      env:
+          DEBIAN_FRONTEND: noninteractive
       run: |
           set -e
           git clone --depth 1 https://github.com/LinuxCNC/linuxcnc.git linuxcnc-master
           cd linuxcnc-master
           (cd debian && ./configure uspace)
+          # Install master's own build-deps (the archive's linuxcnc 2.9.x
+          # build-deps lag master's debian/control, e.g. asciidoctor and
+          # the pyqt5 stack). mk-build-deps generates and installs a
+          # linuxcnc-build-deps package from the cloned control file.
+          mk-build-deps --install --remove \
+              --tool "apt-get -y --no-install-recommends" debian/control
           dpkg-buildpackage -b -us -uc -j"$(nproc)"
           mkdir -p ../linuxcnc-dist
           # dpkg-buildpackage drops the debs next to the source tree, i.e.
