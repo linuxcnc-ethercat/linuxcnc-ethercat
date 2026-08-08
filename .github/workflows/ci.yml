@@ -26,6 +26,13 @@ jobs:
             matrix:
                 distro: [debian-11, debian-12, debian-13]
                 hal_api: [legacy, next]
+                exclude:
+                    # linuxcnc master needs a C++20 compiler; bullseye's
+                    # gcc 10 fails configure. No bullseye system will ever
+                    # run new-API linuxcnc, so a +getset deb is useless
+                    # there - bullseye stays legacy-only.
+                    - distro: debian-11
+                      hal_api: next
                 include:
                     # hal_api=legacy: 2.9-era HAL headers from the repos.
                     # hal_api=next: linuxcnc master built from source (new
