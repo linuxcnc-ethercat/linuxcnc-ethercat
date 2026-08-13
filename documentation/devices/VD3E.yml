@@ -1,0 +1,11 @@
+---
+Device: VD3E
+VendorID: "0x00000eff"
+VendorName: "Wecon"
+PID: "0x0d3e0001"
+Description: "Wecon VD3E single-axis EtherCAT servo drive"
+DocumentationURL: "https://docs.we-con.com.cn/bin/view/Servo/"
+DeviceType: "Servo Drive"
+Notes: "CoE only. Assigns exactly one RxPDO and one TxPDO (0x1c12/0x1c13 hold a single entry each, default 0x1701/0x1b01); every mapping object holds at most 10 entries. 0x608f and 0x6092 do not exist on this drive, so encoder resolution (2^23 counts/rev) cannot be read from the bus. SDO writes must not use complete access."
+SrcFile: src/devices/lcec_wecon.c
+TestingStatus: "Identity and PDO layout confirmed against vendor ESI V1.15.0 and against the drive on our bench (Vendor 0x00000eff, product 0x0d3e0001, revision 0x00000073); encoder resolution verified physically. Not yet run to OP with this driver."
