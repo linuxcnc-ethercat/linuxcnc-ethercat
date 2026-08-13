@@ -6,6 +6,6 @@ PID: "0x0d3e0001"
 Description: "Wecon VD3E single-axis EtherCAT servo drive"
 DocumentationURL: "https://docs.we-con.com.cn/bin/view/Servo/"
 DeviceType: "Servo Drive"
-Notes: "CoE only. Assigns exactly one RxPDO and one TxPDO (0x1c12/0x1c13 hold a single entry each, default 0x1701/0x1b01); every mapping object holds at most 10 entries. 0x608f and 0x6092 do not exist on this drive, so encoder resolution (2^23 counts/rev) cannot be read from the bus. SDO writes must not use complete access."
+Notes: "CoE only. One RxPDO and one TxPDO, 10 entries max per mapping. 0x608f/0x6092 absent (encoder 2^23 counts/rev). SDO complete access NAKed."
 SrcFile: src/devices/lcec_wecon.c
-TestingStatus: "Tested on live hardware 2026-08-13: reaches OP via <slave type='VD3E'/> at chain position 3 of a five-slave bus (3x Inovance IS620N plus an Omron NX-ECC202 coupler). Statusword 0x0250, error code 0, 0x6502 reads 0x03AD and the driver exports srv-supports-mode-{pp,pv,tq,hm,csp,csv}; position, velocity, torque and following error are live. Distributed clocks converge with refClockSyncCycles=-1: dc-sync-diff settled at 103 ns after 40 s (with +1 it did not converge at all)."
+TestingStatus: "Tested live 2026-08-13: OP on a five-slave bus, runs a mill spindle in CSV. DC converges only with refClockSyncCycles=-1 (103 ns)."
