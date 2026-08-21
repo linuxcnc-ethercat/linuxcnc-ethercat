@@ -246,6 +246,7 @@ Description | Driver | EtherCAT VID:PID | Device Type | Testing Status | Notes
 [SMC EX260-SEC4](https://www.smcpneumatics.com/EX260-SEC4.html) | [ex260](../src/devices/lcec_ex260.c) | 0x114:0x01000004 | Valve Controller | Merged 2023-12-31, untested | by @satiowadahc
 [AB&T EasyIO 16 din, 16 dout, 4 ain, 2 aout module](https://www.bausano.net/en/hardware/easyio.html) | [easyio](../devices/lcec_easyio.c) | 0x79a:0x0debacca | Analog/Digital Combo | COMPLETELY UNTESTED.  Written without hardware. | 
 [AB&T EpoCAT FR4000](https://www.bausano.net/en/hardware/epocat-fr-1000.html) | [epocat](../src/devices/lcec_epocat.c) | 0x79a:0x00decade | Stepper Drive | Merged 2023-12-31, untested | by @abausano
+[Inovance IS620N single-axis EtherCAT servo drive](https://www.inovance.com/) | [inovance](../src/devices/lcec_inovance.c) | 0x100000:0x000c0108 | Servo Drive | Tested and working @yurc | Assigns exactly one TxPDO (0x1A00, max 10 entries); 0x1A01 does not exist. Shares the 0x000c01 product-code prefix with the SV660.
 Lichuan OL57E-4A 4-axis open-loop stepper drive | [lichuan](../src/devices/lcec_lichuan.c) | 0xa79:0x00006000 | Stepper Drive | Untested, awaiting bench validation by @rodw-au (issue #474) | 4 axes via CiA 402 multiaxis pattern (SDO offset 0x800, PDO index increment 0x10).
 Lichuan CL57E-4A 4-axis closed-loop stepper drive | [lichuan](../src/devices/lcec_lichuan.c) | 0xa79:0x00006100 | Stepper Drive | Untested, config shared by Dil300 on linuxcnc.org forum (post 346506) | 4 axes via CiA 402 multiaxis pattern. Closed-loop variant exposes 0x6077 Torque Actual.
 [Omron MX2 VFD](https://www.ia.omron.com/data_pdf/cat/mx2-v1_i920-e1_14_16_csm1010813.pdf?id=3164) | [ommx2](../devices/lcec_ommx2.c) | 0x83:0x00000053 | VFD |  | 
@@ -272,6 +273,7 @@ Lichuan CL57E-4A 4-axis closed-loop stepper drive | [lichuan](../src/devices/lce
 [Omron R88D-KN75F-ECT G5 Series ServoDrive/Motor](http://www.ia.omron.com/) | [omrg5](../src/devices/lcec_omrg5.c) | 0x83:0x0000005e | Servo Drive |  | 
 [Omron R88D-KN75H-ECT G5 Series ServoDrive/Motor](http://www.ia.omron.com/) | [omrg5](../src/devices/lcec_omrg5.c) | 0x83:0x00000059 | Servo Drive |  | 
 [Omron R88D-KNA5L-ECT G5 Series ServoDrive/Motor](http://www.ia.omron.com/) | [omrg5](../src/devices/lcec_omrg5.c) | 0x83:0x00000001 | Servo Drive |  | 
+[Inovance SV660 single-axis EtherCAT servo drive](https://www.inovance.com/) | [inovance](../src/devices/lcec_inovance.c) | 0x100000:0x000c010d | Servo Drive | Tested and working @yurc | Same H-code architecture as the IS620N; distinct product code. Supports EoE in addition to CoE.
 [Stoeber Posidrive MDS 5000](https://www.ethercat.org/en/products/CE4C65D2ED8B4F39A8166D6CEDB2C872.htm) | [stmds5k](../src/devices/lcec_stmds5k.c) | 0xb9:0x00001388 | Servo Drive |  | 
 Driver for generic CiA 402 hardware without a dedicated driver | [basic_cia402](../devices/lcec_basic_cia402.c) | 0xffffffff:0xffffffff | Motion Controller |  | 
 

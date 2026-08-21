@@ -69,6 +69,7 @@ extern "C" {
 #define LCEC_MODUSOFT_VID   0x00000907
 #define LCEC_LICHUAN_VID    0x00000a79
 #define LCEC_RTELLIGENT_VID 0x00000a88
+#define LCEC_INOVANCE_VID   0x00100000
 
 // State update period (ns)
 #define LCEC_STATE_UPDATE_PERIOD 1000000000LL
@@ -378,12 +379,12 @@ typedef struct {
   const char *fmt;    ///< Format string for generating pin names via sprintf().
 } lcec_pindesc_t;
 
-/// @brief HAL pin description.
+/// @brief HAL parameter description.
 typedef struct {
-  hal_type_t type;      ///< HAL type of this pin (`HAL_BIT`, `HAL_FLOAT`, `HAL_S32`, or `HAL_U32`).
-  hal_param_dir_t dir;  ///< Direction for this pin (`HAL_IN`, `HAL_OUT`, or `HAL_IO`).
-  int offset;           ///< Offset for this pin's data in `hal_data`.
-  const char *fmt;      ///< Format string for generating pin names via sprintf().
+  hal_type_t type;      ///< HAL type of this parameter (`HAL_BIT`, `HAL_FLOAT`, `HAL_S32`, or `HAL_U32`).
+  hal_param_dir_t dir;  ///< Direction for this parameter (`HAL_RO` or `HAL_RW`).
+  int offset;           ///< Offset for this parameter's data in `hal_data`.
+  const char *fmt;      ///< Format string for generating parameter names via sprintf().
 } lcec_paramdesc_t;
 
 /// @brief Sync manager configuration.

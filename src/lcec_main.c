@@ -184,7 +184,6 @@ int rtapi_app_main(void) {
   sigaction(SIGSEGV, &handler, NULL);
   sigaction(SIGBUS, &handler, NULL);
   sigaction(SIGFPE, &handler, NULL);
-  sigaction(SIGKILL, &handler, NULL);
 #endif
 
   // connect to the HAL
@@ -1694,7 +1693,22 @@ void lcec_write_master(void *arg, long period) {
     }
     // Mode 1 or other: use manual pll-drift value
 
-    *(hal_data->pll_err) = raw_offset + drift;
+    // Fold pll_err into (-period/2, period/2]. drift jumps a full period
+    // when app_phase crosses zero; raw_offset is physical and cannot
+    // follow. Two steps handle the startup cycle where the sum can exceed
+    // 1.5 periods in one pass (#501).
+    int32_t pll_err = raw_offset + drift;
+    if (pll_err > app_period / 2) {
+      pll_err -= app_period;
+    } else if (pll_err < -(app_period / 2)) {
+      pll_err += app_period;
+    }
+    if (pll_err > app_period / 2) {
+      pll_err -= app_period;
+    } else if (pll_err < -(app_period / 2)) {
+      pll_err += app_period;
+    }
+    *(hal_data->pll_err) = pll_err;
 
     // PLL is considered phased if error is within 10% of period
     int32_t lock_threshold = master->app_time_period / 10;
@@ -1706,10 +1720,18 @@ void lcec_write_master(void *arg, long period) {
     // When sync_to_ref_clock = false, master is the clock source, DC syncs to us
     // When sync_to_ref_clock = true, DC is the clock source, we sync to DC
     if (master->sync_to_ref_clock) {
-      // check for invalid error values
-      if (abs(*(hal_data->pll_err)) > hal_data->pll_max_err) {
+      // Watchdog on the physical offset, not the folded error: folded,
+      // |pll_err| <= period/2 could never reach the default threshold, and
+      // a whole-period displacement would go undetected. Remove only whole
+      // periods; the controller drives the remainder to zero.
+      if (abs(raw_offset) > hal_data->pll_max_err) {
+        int32_t resync_corr = raw_offset;
+        if (raw_offset >= app_period || raw_offset <= -app_period) {
+          // the division runs only on the cycle a resync fires
+          resync_corr = (raw_offset / app_period) * app_period;
+        }
         // force resync of master time
-        master->dc_ref -= *(hal_data->pll_err);
+        master->dc_ref -= resync_corr;
         // skip next control cycle to allow resync
         dc_time_valid = 0;
         // increment reset counter to document this event
@@ -1719,7 +1741,7 @@ void lcec_write_master(void *arg, long period) {
           hal_data->auto_drift_delay = 100;
         }
       } else {
-        *(hal_data->pll_out) = (*(hal_data->pll_err) < 0) ? -(hal_data->pll_step) : (hal_data->pll_step);
+        *(hal_data->pll_out) = (pll_err < 0) ? -(hal_data->pll_step) : (hal_data->pll_step);
       }
     }
     // Note: When sync_to_ref_clock = false, pll_out is set in the phase calibration code above

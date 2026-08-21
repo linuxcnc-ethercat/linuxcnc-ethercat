@@ -297,7 +297,7 @@
 #define PDO_BITS_actual_current            16
 #define PDO_BITS_actual_following_error    32
 #define PDO_BITS_actual_position           32
-#define PDO_BITS_actual_torque             32
+#define PDO_BITS_actual_torque             16
 #define PDO_BITS_actual_velocity           32
 #define PDO_BITS_actual_velocity_sensor    32
 #define PDO_BITS_actual_vl                 16

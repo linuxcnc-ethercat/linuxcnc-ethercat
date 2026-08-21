@@ -1,0 +1,11 @@
+---
+Device: IS620N
+VendorID: "0x00100000"
+VendorName: "Inovance"
+PID: "0x000c0108"
+Description: "Inovance IS620N single-axis EtherCAT servo drive"
+DocumentationURL: "https://www.inovance.com/"
+DeviceType: "Servo Drive"
+Notes: "Assigns exactly one TxPDO (0x1A00, max 10 entries); 0x1A01 does not exist. Shares the 0x000c01 product-code prefix with the SV660."
+SrcFile: src/devices/lcec_inovance.c
+TestingStatus: "Tested and working @yurc"
