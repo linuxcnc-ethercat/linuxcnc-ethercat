@@ -11,174 +11,351 @@
 
 #include "lcec_mdp_coupler.h"
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0404etp_5v_tx_entries[] = {
-    {0x6001, 1, 1, 8, 0, "Digital input CH0-8bit"},
+// 0404ETP input-8bit maping: exclusive-variant entry base normalized 0x6001 -> 0x6000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0404etp_5v_tx0_entries[] = {
+    {0x6000, 1, 1, 8, 0, "Digital input CH0-8bit"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0404etp_5v_rx_entries[] = {
-    {0x7001, 1, 1, 8, 0, "Digital output CH0-8bit"},
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0404etp_5v_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "0404ETP-5V Moudle 24V Diagnosis information"},
+    {0xa000, 1, 2, 16, 0, "0404ETP-5V Moudle 5V Diagnosis information"},
+    {0xa000, 1, 3, 16, 0, "0404ETP-5V DO-CH0 Diagnosis information"},
+    {0xa000, 1, 4, 16, 0, "0404ETP-5V DO-CH1 Diagnosis information"},
+    {0xa000, 1, 5, 16, 0, "0404ETP-5V DO-CH2 Diagnosis information"},
+    {0xa000, 1, 6, 16, 0, "0404ETP-5V DO-CH3 Diagnosis information"},
 };
-
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0808etn_tx_entries[] = {
-    {0x6001, 1, 1, 8, 0, "Digital input CH0-8bit"},
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0404etp_5v_tx_pdos[] = {
+    {0x1a01, 1, 1, gl20_gl20_gl20s__0404etp_5v_tx0_entries, 1},  // 0404ETP input-8bit maping
+    {0x1a04, 1, 0, gl20_gl20_gl20s__0404etp_5v_tx1_entries, 6},  // 0404ETP-5V Moudle Diagnosis Information maping
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0808etn_rx_entries[] = {
-    {0x7001, 1, 1, 8, 0, "Digital output CH0-8bit"},
+// 0404ETP Output-8bit maping: exclusive-variant entry base normalized 0x7001 -> 0x7000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0404etp_5v_rx0_entries[] = {
+    {0x7000, 1, 1, 8, 0, "Digital output CH0-8bit"},
 };
-
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__3232etn_tx_entries[] = {
-    {0x6001, 1, 1, 8, 0, "Digital input CH0-8bit"},
-    {0x6001, 1, 2, 8, 0, "Digital input CH1-8bit"},
-    {0x6001, 1, 3, 8, 0, "Digital input CH2-8bit"},
-    {0x6001, 1, 4, 8, 0, "Digital input CH3-8bit"},
-};
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__3232etn_rx_entries[] = {
-    {0x7001, 1, 1, 8, 0, "Digital output CH0-8bit"},
-    {0x7001, 1, 2, 8, 0, "Digital output CH1-8bit"},
-    {0x7001, 1, 3, 8, 0, "Digital output CH2-8bit"},
-    {0x7001, 1, 4, 8, 0, "Digital output CH3-8bit"},
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0404etp_5v_rx_pdos[] = {
+    {0x1601, 1, 1, gl20_gl20_gl20s__0404etp_5v_rx0_entries, 1},  // 0404ETP Output-8bit maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0032etp_tx_entries[] = {
+// 0808ETN input-8bit maping: exclusive-variant entry base normalized 0x6001 -> 0x6000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0808etn_tx0_entries[] = {
+    {0x6000, 1, 1, 8, 0, "Digital input CH0-8bit"},
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0808etn_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "0808ETN Moudle Diagnosis information"},
+    {0xa000, 1, 2, 16, 0, "0808ETN DI-CH0 Diagnosis information"},
+    {0xa000, 1, 3, 16, 0, "0808ETN DO-CH0 Diagnosis information"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0808etn_tx_pdos[] = {
+    {0x1a01, 1, 1, gl20_gl20_gl20s__0808etn_tx0_entries, 1},  // 0808ETN input-8bit maping
+    {0x1a04, 1, 0, gl20_gl20_gl20s__0808etn_tx1_entries, 3},  // 0808ETN Moudle Diagnosis information maping
+};
+// 0808ETN Output-8bit maping: exclusive-variant entry base normalized 0x7001 -> 0x7000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0808etn_rx0_entries[] = {
+    {0x7000, 1, 1, 8, 0, "Digital output CH0-8bit"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0808etn_rx_pdos[] = {
+    {0x1601, 1, 1, gl20_gl20_gl20s__0808etn_rx0_entries, 1},  // 0808ETN Output-8bit maping
+};
+
+// 3232ETN input-8bit maping: exclusive-variant entry base normalized 0x6001 -> 0x6000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__3232etn_tx0_entries[] = {
+    {0x6000, 1, 1, 8, 0, "Digital input CH0-8bit"},
+    {0x6000, 1, 2, 8, 0, "Digital input CH1-8bit"},
+    {0x6000, 1, 3, 8, 0, "Digital input CH2-8bit"},
+    {0x6000, 1, 4, 8, 0, "Digital input CH3-8bit"},
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__3232etn_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "3232ETN Module Diagnosis Information"},
+    {0xa000, 1, 2, 16, 0, "3232ETN DI-CH0 Diagnosis Information"},
+    {0xa000, 1, 3, 16, 0, "3232ETN DI-CH1 Diagnosis Information"},
+    {0xa000, 1, 4, 16, 0, "3232ETN DI-CH2 Diagnosis Information"},
+    {0xa000, 1, 5, 16, 0, "3232ETN DI-CH3 Diagnosis Information"},
+    {0xa000, 1, 6, 16, 0, "3232ETN DO-CH0 Diagnosis Information"},
+    {0xa000, 1, 7, 16, 0, "3232ETN DO-CH1 Diagnosis Information"},
+    {0xa000, 1, 8, 16, 0, "3232ETN DO-CH2 Diagnosis Information"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__3232etn_tx_pdos[] = {
+    {0x1a01, 1, 1, gl20_gl20_gl20s__3232etn_tx0_entries, 4},  // 3232ETN input-8bit maping
+    {0x1a04, 1, 0, gl20_gl20_gl20s__3232etn_tx1_entries, 8},  // 3232ETN Diagnosis Information maping
+};
+// 3232ETN Output-8bit maping: exclusive-variant entry base normalized 0x7001 -> 0x7000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__3232etn_rx0_entries[] = {
+    {0x7000, 1, 1, 8, 0, "Digital output CH0-8bit"},
+    {0x7000, 1, 2, 8, 0, "Digital output CH1-8bit"},
+    {0x7000, 1, 3, 8, 0, "Digital output CH2-8bit"},
+    {0x7000, 1, 4, 8, 0, "Digital output CH3-8bit"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__3232etn_rx_pdos[] = {
+    {0x1601, 1, 1, gl20_gl20_gl20s__3232etn_rx0_entries, 4},  // 3232ETN Output-8bit maping
+};
+
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0032etp_tx0_entries[] = {
     {0xa000, 1, 1, 16, 0, "0032ETP Module Diagnosis Information"},
     {0xa000, 1, 2, 16, 0, "0032ETP DO-CH0 Diagnosis Information"},
     {0xa000, 1, 3, 16, 0, "0032ETP DO-CH1 Diagnosis Information"},
     {0xa000, 1, 4, 16, 0, "0032ETP DO-CH2 Diagnosis Information"},
     {0xa000, 1, 5, 16, 0, "0032ETP DO-CH3 Diagnosis Information"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0032etp_rx_entries[] = {
-    {0x7001, 1, 1, 8, 0, "Digital output CH0-8bit"},
-    {0x7001, 1, 2, 8, 0, "Digital output CH1-8bit"},
-    {0x7001, 1, 3, 8, 0, "Digital output CH2-8bit"},
-    {0x7001, 1, 4, 8, 0, "Digital output CH3-8bit"},
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0032etp_tx_pdos[] = {
+    {0x1a04, 1, 0, gl20_gl20_gl20s__0032etp_tx0_entries, 5},  // 0032ETP Diagnosis Information maping
+};
+// 0032ETP Output-8bit maping: exclusive-variant entry base normalized 0x7001 -> 0x7000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0032etp_rx0_entries[] = {
+    {0x7000, 1, 1, 8, 0, "Digital output CH0-8bit"},
+    {0x7000, 1, 2, 8, 0, "Digital output CH1-8bit"},
+    {0x7000, 1, 3, 8, 0, "Digital output CH2-8bit"},
+    {0x7000, 1, 4, 8, 0, "Digital output CH3-8bit"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0032etp_rx_pdos[] = {
+    {0x1601, 1, 1, gl20_gl20_gl20s__0032etp_rx0_entries, 4},  // 0032ETP Output-8bit maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0032etp_m_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0032etp_m_tx0_entries[] = {
     {0xa000, 1, 1, 16, 0, "0032ETP-M Module Diagnosis Information"},
     {0xa000, 1, 2, 16, 0, "0032ETP-M DO-CH0 Diagnosis Information"},
     {0xa000, 1, 3, 16, 0, "0032ETP-M DO-CH1 Diagnosis Information"},
     {0xa000, 1, 4, 16, 0, "0032ETP-M DO-CH2 Diagnosis Information"},
     {0xa000, 1, 5, 16, 0, "0032ETP-M DO-CH3 Diagnosis Information"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0032etp_m_rx_entries[] = {
-    {0x7001, 1, 1, 8, 0, "Digital output CH0-8bit"},
-    {0x7001, 1, 2, 8, 0, "Digital output CH1-8bit"},
-    {0x7001, 1, 3, 8, 0, "Digital output CH2-8bit"},
-    {0x7001, 1, 4, 8, 0, "Digital output CH3-8bit"},
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0032etp_m_tx_pdos[] = {
+    {0x1a04, 1, 0, gl20_gl20_gl20s__0032etp_m_tx0_entries, 5},  // 0032ETP-M Diagnosis Information maping
+};
+// 0032ETP-M Output-8bit maping: exclusive-variant entry base normalized 0x7001 -> 0x7000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0032etp_m_rx0_entries[] = {
+    {0x7000, 1, 1, 8, 0, "Digital output CH0-8bit"},
+    {0x7000, 1, 2, 8, 0, "Digital output CH1-8bit"},
+    {0x7000, 1, 3, 8, 0, "Digital output CH2-8bit"},
+    {0x7000, 1, 4, 8, 0, "Digital output CH3-8bit"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0032etp_m_rx_pdos[] = {
+    {0x1601, 1, 1, gl20_gl20_gl20s__0032etp_m_rx0_entries, 4},  // 0032ETP-M Output-8bit maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__3200end_tx_entries[] = {
-    {0x6001, 1, 1, 8, 0, "Digital input CH0-8bit"},
-    {0x6001, 1, 2, 8, 0, "Digital input CH1-8bit"},
-    {0x6001, 1, 3, 8, 0, "Digital input CH2-8bit"},
-    {0x6001, 1, 4, 8, 0, "Digital input CH3-8bit"},
+// 3200END input-8bit maping: exclusive-variant entry base normalized 0x6001 -> 0x6000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__3200end_tx0_entries[] = {
+    {0x6000, 1, 1, 8, 0, "Digital input CH0-8bit"},
+    {0x6000, 1, 2, 8, 0, "Digital input CH1-8bit"},
+    {0x6000, 1, 3, 8, 0, "Digital input CH2-8bit"},
+    {0x6000, 1, 4, 8, 0, "Digital input CH3-8bit"},
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__3200end_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "3200END Module Diagnosis Information"},
+    {0xa000, 1, 2, 16, 0, "3200END DI-CH0 Diagnosis Information"},
+    {0xa000, 1, 3, 16, 0, "3200END DI-CH1 Diagnosis Information"},
+    {0xa000, 1, 4, 16, 0, "3200END DI-CH2 Diagnosis Information"},
+    {0xa000, 1, 5, 16, 0, "3200END DI-CH3 Diagnosis Information"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__3200end_tx_pdos[] = {
+    {0x1a01, 1, 1, gl20_gl20_gl20s__3200end_tx0_entries, 4},  // 3200END input-8bit maping
+    {0x1a04, 1, 0, gl20_gl20_gl20s__3200end_tx1_entries, 5},  // 3200END Diagnosis Information maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0032etn_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0032etn_tx0_entries[] = {
     {0xa000, 1, 1, 16, 0, "0032ETN Module Diagnosis Information"},
     {0xa000, 1, 2, 16, 0, "0032ETN DO-CH0 Diagnosis Information"},
     {0xa000, 1, 3, 16, 0, "0032ETN DO-CH1 Diagnosis Information"},
     {0xa000, 1, 4, 16, 0, "0032ETN DO-CH2 Diagnosis Information"},
     {0xa000, 1, 5, 16, 0, "0032ETN DO-CH3 Diagnosis Information"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0032etn_rx_entries[] = {
-    {0x7001, 1, 1, 8, 0, "Digital output CH0-8bit"},
-    {0x7001, 1, 2, 8, 0, "Digital output CH1-8bit"},
-    {0x7001, 1, 3, 8, 0, "Digital output CH2-8bit"},
-    {0x7001, 1, 4, 8, 0, "Digital output CH3-8bit"},
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0032etn_tx_pdos[] = {
+    {0x1a04, 1, 0, gl20_gl20_gl20s__0032etn_tx0_entries, 5},  // 0032ETN Diagnosis Information maping
+};
+// 0032ETN Output-8bit maping: exclusive-variant entry base normalized 0x7001 -> 0x7000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0032etn_rx0_entries[] = {
+    {0x7000, 1, 1, 8, 0, "Digital output CH0-8bit"},
+    {0x7000, 1, 2, 8, 0, "Digital output CH1-8bit"},
+    {0x7000, 1, 3, 8, 0, "Digital output CH2-8bit"},
+    {0x7000, 1, 4, 8, 0, "Digital output CH3-8bit"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0032etn_rx_pdos[] = {
+    {0x1601, 1, 1, gl20_gl20_gl20s__0032etn_rx0_entries, 4},  // 0032ETN Output-8bit maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0008er_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0008er_tx0_entries[] = {
     {0xa000, 1, 1, 16, 0, "0008ER Moudle Diagnosis information"},
     {0xa000, 1, 2, 16, 0, "0008ER CH0 Diagnosis information"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0008er_rx_entries[] = {
-    {0x7001, 1, 1, 8, 0, "Digital output CH0-8bit"},
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0008er_tx_pdos[] = {
+    {0x1a04, 1, 0, gl20_gl20_gl20s__0008er_tx0_entries, 2},  // 0008ER Moudle Diagnosis information maping
+};
+// 0008ER Output-8bit maping: exclusive-variant entry base normalized 0x7001 -> 0x7000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0008er_rx0_entries[] = {
+    {0x7000, 1, 1, 8, 0, "Digital output CH0-8bit"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0008er_rx_pdos[] = {
+    {0x1601, 1, 1, gl20_gl20_gl20s__0008er_rx0_entries, 1},  // 0008ER Output-8bit maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0004er_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0004er_tx0_entries[] = {
     {0xa000, 1, 1, 16, 0, "0004ER Moudle Diagnosis information"},
     {0xa000, 1, 2, 16, 0, "0004ER CH0 Diagnosis information"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0004er_rx_entries[] = {
-    {0x7001, 1, 1, 8, 0, "Digital output CH0-8bit"},
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0004er_tx_pdos[] = {
+    {0x1a04, 1, 0, gl20_gl20_gl20s__0004er_tx0_entries, 2},  // 0004ER Module Diagnosis Information maping
+};
+// 0004ER Output-8bit maping: exclusive-variant entry base normalized 0x7001 -> 0x7000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0004er_rx0_entries[] = {
+    {0x7000, 1, 1, 8, 0, "Digital output CH0-8bit"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0004er_rx_pdos[] = {
+    {0x1601, 1, 1, gl20_gl20_gl20s__0004er_rx0_entries, 1},  // 0004ER Output-8bit maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0004etp_2a_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0004etp_2a_tx0_entries[] = {
     {0xa000, 1, 1, 16, 0, "0004ETP-2A Module Diagnosis Information"},
     {0xa000, 1, 2, 16, 0, "0004ETP-2A CH0 Diagnosis Information"},
     {0xa000, 1, 3, 16, 0, "0004ETP-2A CH1 Diagnosis Information"},
     {0xa000, 1, 4, 16, 0, "0004ETP-2A CH2 Diagnosis Information"},
     {0xa000, 1, 5, 16, 0, "0004ETP-2A CH3 Diagnosis Information"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0004etp_2a_rx_entries[] = {
-    {0x7001, 1, 1, 8, 0, "Digital output CH0-8bit"},
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0004etp_2a_tx_pdos[] = {
+    {0x1a04, 1, 0, gl20_gl20_gl20s__0004etp_2a_tx0_entries, 5},  // 0004ETP-2A Diagnosis Information maping
+};
+// 0004ETP-2A Output-8bit maping: exclusive-variant entry base normalized 0x7001 -> 0x7000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0004etp_2a_rx0_entries[] = {
+    {0x7000, 1, 1, 8, 0, "Digital output CH0-8bit"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0004etp_2a_rx_pdos[] = {
+    {0x1601, 1, 1, gl20_gl20_gl20s__0004etp_2a_rx0_entries, 1},  // 0004ETP-2A Output-8bit maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0008etn_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0008etn_tx0_entries[] = {
     {0xa000, 1, 1, 16, 0, "0008ETN Module Diagnosis Information"},
     {0xa000, 1, 2, 16, 0, "0008ETN CH0 Diagnosis Information"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0008etn_rx_entries[] = {
-    {0x7001, 1, 1, 8, 0, "Digital output CH0-8bit"},
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0008etn_tx_pdos[] = {
+    {0x1a04, 1, 0, gl20_gl20_gl20s__0008etn_tx0_entries, 2},  // 0008ETN Diagnosis Information maping
+};
+// 0008ETN Output-8bit maping: exclusive-variant entry base normalized 0x7001 -> 0x7000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0008etn_rx0_entries[] = {
+    {0x7000, 1, 1, 8, 0, "Digital output CH0-8bit"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0008etn_rx_pdos[] = {
+    {0x1601, 1, 1, gl20_gl20_gl20s__0008etn_rx0_entries, 1},  // 0008ETN Output-8bit maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0008etp_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0008etp_tx0_entries[] = {
     {0xa000, 1, 1, 16, 0, "0008ETP Module Diagnosis Information"},
     {0xa000, 1, 2, 16, 0, "0008ETP CH0 Diagnosis Information"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0008etp_rx_entries[] = {
-    {0x7001, 1, 1, 8, 0, "Digital output CH0-8bit"},
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0008etp_tx_pdos[] = {
+    {0x1a04, 1, 0, gl20_gl20_gl20s__0008etp_tx0_entries, 2},  // 0008ETP Diagnosis Information maping
+};
+// 0008ETP Output-8bit maping: exclusive-variant entry base normalized 0x7001 -> 0x7000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0008etp_rx0_entries[] = {
+    {0x7000, 1, 1, 8, 0, "Digital output CH0-8bit"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0008etp_rx_pdos[] = {
+    {0x1601, 1, 1, gl20_gl20_gl20s__0008etp_rx0_entries, 1},  // 0008ETP Output-8bit maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__1600end_tx_entries[] = {
-    {0x6001, 1, 1, 8, 0, "Digital input CH0-8bit"},
-    {0x6001, 1, 2, 8, 0, "Digital input CH1-8bit"},
+// 1600END input-8bit maping: exclusive-variant entry base normalized 0x6001 -> 0x6000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__1600end_tx0_entries[] = {
+    {0x6000, 1, 1, 8, 0, "Digital input CH0-8bit"},
+    {0x6000, 1, 2, 8, 0, "Digital input CH1-8bit"},
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__1600end_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "1600END Module Diagnosis Information"},
+    {0xa000, 1, 2, 16, 0, "1600END CH0 Diagnosis Information"},
+    {0xa000, 1, 3, 16, 0, "1600END CH1 Diagnosis Information"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__1600end_tx_pdos[] = {
+    {0x1a01, 1, 1, gl20_gl20_gl20s__1600end_tx0_entries, 2},  // 1600END input-8bit maping
+    {0x1a04, 1, 0, gl20_gl20_gl20s__1600end_tx1_entries, 3},  // 1600END Diagnosis Information maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__1600end_5v_tx_entries[] = {
-    {0x6001, 1, 1, 8, 0, "Digital input CH0-8bit"},
-    {0x6001, 1, 2, 8, 0, "Digital input CH1-8bit"},
+// 1600END-5V input-8bit maping: exclusive-variant entry base normalized 0x6001 -> 0x6000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__1600end_5v_tx0_entries[] = {
+    {0x6000, 1, 1, 8, 0, "Digital input CH0-8bit"},
+    {0x6000, 1, 2, 8, 0, "Digital input CH1-8bit"},
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__1600end_5v_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "1600END-5V Module Diagnosis Information"},
+    {0xa000, 1, 2, 16, 0, "1600END-5V CH0 Diagnosis Information"},
+    {0xa000, 1, 3, 16, 0, "1600END-5V CH1 Diagnosis Information"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__1600end_5v_tx_pdos[] = {
+    {0x1a01, 1, 1, gl20_gl20_gl20s__1600end_5v_tx0_entries, 2},  // 1600END-5V input-8bit maping
+    {0x1a04, 1, 0, gl20_gl20_gl20s__1600end_5v_tx1_entries, 3},  // 1600END-5V Diagnosis Information maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0800end_tx_entries[] = {
-    {0x6001, 1, 1, 8, 0, "Digital input CH0-8bit"},
+// 0800END input-8bit maping: exclusive-variant entry base normalized 0x6001 -> 0x6000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0800end_tx0_entries[] = {
+    {0x6000, 1, 1, 8, 0, "Digital input CH0-8bit"},
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0800end_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "0800END Moudle Diagnosis information"},
+    {0xa000, 1, 2, 16, 0, "0800END Diagnosis information"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0800end_tx_pdos[] = {
+    {0x1a01, 1, 1, gl20_gl20_gl20s__0800end_tx0_entries, 1},  // 0800END input-8bit maping
+    {0x1a04, 1, 0, gl20_gl20_gl20s__0800end_tx1_entries, 2},  // 0800END Moudle Diagnosis Information maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0800ena_tx_entries[] = {
-    {0x6001, 1, 1, 8, 0, "Digital input CH0-8bit"},
+// 0800ENA input-8bit maping: exclusive-variant entry base normalized 0x6001 -> 0x6000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0800ena_tx0_entries[] = {
+    {0x6000, 1, 1, 8, 0, "Digital input CH0-8bit"},
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0800ena_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "0800ENA Moudle Diagnosis information"},
+    {0xa000, 1, 2, 16, 0, "0800ENA Diagnosis information"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0800ena_tx_pdos[] = {
+    {0x1a01, 1, 1, gl20_gl20_gl20s__0800ena_tx0_entries, 1},  // 0800ENA input-8bit maping
+    {0x1a04, 1, 0, gl20_gl20_gl20s__0800ena_tx1_entries, 2},  // 0800ENA Moudle Diagnosis Information maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0016etn_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0016etn_tx0_entries[] = {
     {0xa000, 1, 1, 16, 0, "0016ETN Module Diagnosis Information"},
     {0xa000, 1, 2, 16, 0, "0016ETN CH0 Diagnosis Information"},
     {0xa000, 1, 3, 16, 0, "0016ETN CH1 Diagnosis Information"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0016etn_rx_entries[] = {
-    {0x7001, 1, 1, 8, 0, "Digital output CH0-8bit"},
-    {0x7001, 1, 2, 8, 0, "Digital output CH1-8bit"},
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0016etn_tx_pdos[] = {
+    {0x1a04, 1, 0, gl20_gl20_gl20s__0016etn_tx0_entries, 3},  // 0016ETN Diagnosis Information maping
+};
+// 0016ETN Output-8bit maping: exclusive-variant entry base normalized 0x7001 -> 0x7000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0016etn_rx0_entries[] = {
+    {0x7000, 1, 1, 8, 0, "Digital output CH0-8bit"},
+    {0x7000, 1, 2, 8, 0, "Digital output CH1-8bit"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0016etn_rx_pdos[] = {
+    {0x1601, 1, 1, gl20_gl20_gl20s__0016etn_rx0_entries, 2},  // 0016ETN Output-8bit maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0016etp_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0016etp_tx0_entries[] = {
     {0xa000, 1, 1, 16, 0, "0016ETP Module Diagnosis Information"},
     {0xa000, 1, 2, 16, 0, "0016ETP CH0 Diagnosis Information"},
     {0xa000, 1, 3, 16, 0, "0016ETP CH1 Diagnosis Information"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0016etp_rx_entries[] = {
-    {0x7001, 1, 1, 8, 0, "Digital output CH0-8bit"},
-    {0x7001, 1, 2, 8, 0, "Digital output CH1-8bit"},
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0016etp_tx_pdos[] = {
+    {0x1a04, 1, 0, gl20_gl20_gl20s__0016etp_tx0_entries, 3},  // 0016ETP Diagnosis Information maping
+};
+// 0016ETP Output-8bit maping: exclusive-variant entry base normalized 0x7001 -> 0x7000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0016etp_rx0_entries[] = {
+    {0x7000, 1, 1, 8, 0, "Digital output CH0-8bit"},
+    {0x7000, 1, 2, 8, 0, "Digital output CH1-8bit"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0016etp_rx_pdos[] = {
+    {0x1601, 1, 1, gl20_gl20_gl20s__0016etp_rx0_entries, 2},  // 0016ETP Output-8bit maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0016etp_5v_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0016etp_5v_tx0_entries[] = {
     {0xa000, 1, 1, 16, 0, "0016ETP-5V Module Diagnosis Information"},
     {0xa000, 1, 2, 16, 0, "0016ETP-5V CH0 Diagnosis Information"},
     {0xa000, 1, 3, 16, 0, "0016ETP-5V CH1 Diagnosis Information"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0016etp_5v_rx_entries[] = {
-    {0x7001, 1, 1, 8, 0, "Digital output CH0-8bit"},
-    {0x7001, 1, 2, 8, 0, "Digital output CH1-8bit"},
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0016etp_5v_tx_pdos[] = {
+    {0x1a04, 1, 0, gl20_gl20_gl20s__0016etp_5v_tx0_entries, 3},  // 0016ETP-5V Diagnosis Information maping
+};
+// 0016ETP-5V Output-8bit maping: exclusive-variant entry base normalized 0x7001 -> 0x7000
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__0016etp_5v_rx0_entries[] = {
+    {0x7000, 1, 1, 8, 0, "Digital output CH0-8bit"},
+    {0x7000, 1, 2, 8, 0, "Digital output CH1-8bit"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__0016etp_5v_rx_pdos[] = {
+    {0x1601, 1, 1, gl20_gl20_gl20s__0016etp_5v_rx0_entries, 2},  // 0016ETP-5V Output-8bit maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8adv_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8adv_tx0_entries[] = {
     {0x6000, 1, 1, 16, 0, "8ADV CH0"},
     {0x6000, 1, 2, 16, 0, "8ADV CH1"},
     {0x6000, 1, 3, 16, 0, "8ADV CH2"},
@@ -188,8 +365,23 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8adv_tx_entries[] = {
     {0x6000, 1, 7, 16, 0, "8ADV CH6"},
     {0x6000, 1, 8, 16, 0, "8ADV CH7"},
 };
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8adv_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "8ADV Module Diagnosis Information"},
+    {0xa000, 1, 2, 16, 0, "8ADV CH0 Diagnosis Information"},
+    {0xa000, 1, 3, 16, 0, "8ADV CH1 Diagnosis Information"},
+    {0xa000, 1, 4, 16, 0, "8ADV CH2 Diagnosis Information"},
+    {0xa000, 1, 5, 16, 0, "8ADV CH3 Diagnosis Information"},
+    {0xa000, 1, 6, 16, 0, "8ADV CH4 Diagnosis Information"},
+    {0xa000, 1, 7, 16, 0, "8ADV CH5 Diagnosis Information"},
+    {0xa000, 1, 8, 16, 0, "8ADV CH6 Diagnosis Information"},
+    {0xa000, 1, 9, 16, 0, "8ADV CH7 Diagnosis Information"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__8adv_tx_pdos[] = {
+    {0x1a02, 1, 1, gl20_gl20_gl20s__8adv_tx0_entries, 8},  // 8ADV Input maping
+    {0x1a04, 1, 0, gl20_gl20_gl20s__8adv_tx1_entries, 9},  // 8ADV Diagnosis Information maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8adi_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8adi_tx0_entries[] = {
     {0x6000, 1, 1, 16, 0, "8ADI CH0"},
     {0x6000, 1, 2, 16, 0, "8ADI CH1"},
     {0x6000, 1, 3, 16, 0, "8ADI CH2"},
@@ -199,25 +391,65 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8adi_tx_entries[] = {
     {0x6000, 1, 7, 16, 0, "8ADI CH6"},
     {0x6000, 1, 8, 16, 0, "8ADI CH7"},
 };
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8adi_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "8ADI Module Diagnosis Information"},
+    {0xa000, 1, 2, 16, 0, "8ADI CH0 Diagnosis Information"},
+    {0xa000, 1, 3, 16, 0, "8ADI CH1 Diagnosis Information"},
+    {0xa000, 1, 4, 16, 0, "8ADI CH2 Diagnosis Information"},
+    {0xa000, 1, 5, 16, 0, "8ADI CH3 Diagnosis Information"},
+    {0xa000, 1, 6, 16, 0, "8ADI CH4 Diagnosis Information"},
+    {0xa000, 1, 7, 16, 0, "8ADI CH5 Diagnosis Information"},
+    {0xa000, 1, 8, 16, 0, "8ADI CH6 Diagnosis Information"},
+    {0xa000, 1, 9, 16, 0, "8ADI CH7 Diagnosis Information"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__8adi_tx_pdos[] = {
+    {0x1a02, 1, 1, gl20_gl20_gl20s__8adi_tx0_entries, 8},  // 8ADI Input maping
+    {0x1a04, 1, 0, gl20_gl20_gl20s__8adi_tx1_entries, 9},  // 8ADI Diagnosis Information maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4ad_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4ad_tx0_entries[] = {
     {0x6000, 1, 1, 16, 0, "AD CH0"},
     {0x6000, 1, 2, 16, 0, "AD CH1"},
     {0x6000, 1, 3, 16, 0, "AD CH2"},
     {0x6000, 1, 4, 16, 0, "AD CH3"},
 };
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4ad_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "AD Module Diagnosis Information"},
+    {0xa000, 1, 2, 16, 0, "AD CH0 Diagnosis Information"},
+    {0xa000, 1, 3, 16, 0, "AD CH1 Diagnosis Information"},
+    {0xa000, 1, 4, 16, 0, "AD CH2 Diagnosis Information"},
+    {0xa000, 1, 5, 16, 0, "AD CH3 Diagnosis Information"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__4ad_tx_pdos[] = {
+    {0x1a02, 1, 1, gl20_gl20_gl20s__4ad_tx0_entries, 4},  // 4AD Input maping
+    {0x1a04, 1, 0, gl20_gl20_gl20s__4ad_tx1_entries, 5},  // 4AD Diagnosis Information maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4ad_h_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4ad_h_tx0_entries[] = {
     {0x6000, 1, 1, 16, 0, "4AD-H CH0"},
     {0x6000, 1, 2, 16, 0, "4AD-H CH1"},
     {0x6000, 1, 3, 16, 0, "4AD-H CH2"},
     {0x6000, 1, 4, 16, 0, "4AD-H CH3"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4ad_h_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4ad_h_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "4AD-H Module Diagnosis Information"},
+    {0xa000, 1, 2, 16, 0, "4AD-H CH0 Diagnosis Information"},
+    {0xa000, 1, 3, 16, 0, "4AD-H CH1 Diagnosis Information"},
+    {0xa000, 1, 4, 16, 0, "4AD-H CH2 Diagnosis Information"},
+    {0xa000, 1, 5, 16, 0, "4AD-H CH3 Diagnosis Information"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__4ad_h_tx_pdos[] = {
+    {0x1a02, 1, 1, gl20_gl20_gl20s__4ad_h_tx0_entries, 4},  // 4AD-H Input maping
+    {0x1a04, 1, 0, gl20_gl20_gl20s__4ad_h_tx1_entries, 5},  // 4AD-H Diagnosis Information maping
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4ad_h_rx0_entries[] = {
     {0x7000, 1, 1, 16, 0, "4AD-H Control Word"},
 };
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__4ad_h_rx_pdos[] = {
+    {0x1602, 1, 1, gl20_gl20_gl20s__4ad_h_rx0_entries, 1},  // 4AD-H Output mapping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8dav_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8dav_tx0_entries[] = {
     {0xa000, 1, 1, 16, 0, "8DAV Module Diagnosis Information"},
     {0xa000, 1, 2, 16, 0, "8DAV CH0 Diagnosis Information"},
     {0xa000, 1, 3, 16, 0, "8DAV CH1 Diagnosis Information"},
@@ -228,7 +460,10 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8dav_tx_entries[] = {
     {0xa000, 1, 8, 16, 0, "8DAV CH6 Diagnosis Information"},
     {0xa000, 1, 9, 16, 0, "8DAV CH7 Diagnosis Information"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8dav_rx_entries[] = {
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__8dav_tx_pdos[] = {
+    {0x1a04, 1, 0, gl20_gl20_gl20s__8dav_tx0_entries, 9},  // 8DAV Diagnosis Information maping
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8dav_rx0_entries[] = {
     {0x7000, 1, 1, 16, 0, "DA CH0"},
     {0x7000, 1, 2, 16, 0, "DA CH1"},
     {0x7000, 1, 3, 16, 0, "DA CH2"},
@@ -238,8 +473,11 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8dav_rx_entries[] = {
     {0x7000, 1, 7, 16, 0, "DA CH6"},
     {0x7000, 1, 8, 16, 0, "DA CH7"},
 };
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__8dav_rx_pdos[] = {
+    {0x1602, 1, 1, gl20_gl20_gl20s__8dav_rx0_entries, 8},  // 8DAV Output maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8dai_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8dai_tx0_entries[] = {
     {0xa000, 1, 1, 16, 0, "8DAI Module Diagnosis Information"},
     {0xa000, 1, 2, 16, 0, "8DAI CH0 Diagnosis Information"},
     {0xa000, 1, 3, 16, 0, "8DAI CH1 Diagnosis Information"},
@@ -250,7 +488,10 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8dai_tx_entries[] = {
     {0xa000, 1, 8, 16, 0, "8DAI CH6 Diagnosis Information"},
     {0xa000, 1, 9, 16, 0, "8DAI CH7 Diagnosis Information"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8dai_rx_entries[] = {
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__8dai_tx_pdos[] = {
+    {0x1a04, 1, 0, gl20_gl20_gl20s__8dai_tx0_entries, 9},  // 8DAI Diagnosis Information maping
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8dai_rx0_entries[] = {
     {0x7000, 1, 1, 16, 0, "DA CH0"},
     {0x7000, 1, 2, 16, 0, "DA CH1"},
     {0x7000, 1, 3, 16, 0, "DA CH2"},
@@ -260,56 +501,115 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8dai_rx_entries[] = {
     {0x7000, 1, 7, 16, 0, "DA CH6"},
     {0x7000, 1, 8, 16, 0, "DA CH7"},
 };
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__8dai_rx_pdos[] = {
+    {0x1602, 1, 1, gl20_gl20_gl20s__8dai_rx0_entries, 8},  // 8DAI Output maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4da_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4da_tx0_entries[] = {
     {0xa000, 1, 1, 16, 0, "DA Module Diagnosis Information"},
     {0xa000, 1, 2, 16, 0, "DA CH0 Diagnosis Information"},
     {0xa000, 1, 3, 16, 0, "DA CH1 Diagnosis Information"},
     {0xa000, 1, 4, 16, 0, "DA CH2 Diagnosis Information"},
     {0xa000, 1, 5, 16, 0, "DA CH3 Diagnosis Information"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4da_rx_entries[] = {
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__4da_tx_pdos[] = {
+    {0x1a04, 1, 0, gl20_gl20_gl20s__4da_tx0_entries, 5},  // 4DA Diagnosis Information maping
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4da_rx0_entries[] = {
     {0x7000, 1, 1, 16, 0, "DA CH0"},
     {0x7000, 1, 2, 16, 0, "DA CH1"},
     {0x7000, 1, 3, 16, 0, "DA CH2"},
     {0x7000, 1, 4, 16, 0, "DA CH3"},
 };
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__4da_rx_pdos[] = {
+    {0x1602, 1, 1, gl20_gl20_gl20s__4da_rx0_entries, 4},  // 4DA Output maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4pt_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4pt_tx0_entries[] = {
     {0x6000, 1, 1, 32, 0, "4PT CH0"},
     {0x6000, 1, 2, 32, 0, "4PT CH1"},
     {0x6000, 1, 3, 32, 0, "4PT CH2"},
     {0x6000, 1, 4, 32, 0, "4PT CH3"},
 };
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4pt_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "Moudle Error Code"},
+    {0xa000, 1, 2, 16, 0, "Channel Error Code CH0"},
+    {0xa000, 1, 3, 16, 0, "Channel Error Code CH1"},
+    {0xa000, 1, 4, 16, 0, "Channel Error Code CH2"},
+    {0xa000, 1, 5, 16, 0, "Channel Error Code CH3"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__4pt_tx_pdos[] = {
+    {0x1a03, 1, 1, gl20_gl20_gl20s__4pt_tx0_entries, 4},  // 4PT Input maping
+    {0x1a04, 1, 0, gl20_gl20_gl20s__4pt_tx1_entries, 5},  // 4PT Diagnosis Information maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4pt_iso_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4pt_iso_tx0_entries[] = {
     {0x6000, 1, 1, 32, 0, "4PT-ISO CH0"},
     {0x6000, 1, 2, 32, 0, "4PT-ISO CH1"},
     {0x6000, 1, 3, 32, 0, "4PT-ISO CH2"},
     {0x6000, 1, 4, 32, 0, "4PT-ISO CH3"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4pt_iso_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4pt_iso_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "Moudle Error Code"},
+    {0xa000, 1, 2, 16, 0, "Channel Error Code CH0"},
+    {0xa000, 1, 3, 16, 0, "Channel Error Code CH1"},
+    {0xa000, 1, 4, 16, 0, "Channel Error Code CH2"},
+    {0xa000, 1, 5, 16, 0, "Channel Error Code CH3"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__4pt_iso_tx_pdos[] = {
+    {0x1a03, 1, 1, gl20_gl20_gl20s__4pt_iso_tx0_entries, 4},  // 4PT-ISO Input maping
+    {0x1a04, 1, 0, gl20_gl20_gl20s__4pt_iso_tx1_entries, 5},  // 4PT-ISO Diagnosis Information maping
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4pt_iso_rx0_entries[] = {
     {0x7000, 1, 1, 16, 0, "4PT-ISO Control Word"},
 };
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__4pt_iso_rx_pdos[] = {
+    {0x1602, 1, 1, gl20_gl20_gl20s__4pt_iso_rx0_entries, 1},  // 4PT-ISO Output maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4tc_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4tc_tx0_entries[] = {
     {0x6000, 1, 1, 32, 0, "4TC CH0"},
     {0x6000, 1, 2, 32, 0, "4TC CH1"},
     {0x6000, 1, 3, 32, 0, "4TC CH2"},
     {0x6000, 1, 4, 32, 0, "4TC CH3"},
 };
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4tc_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "Module Error Code"},
+    {0xa000, 1, 2, 16, 0, "Channel Error Code CH0"},
+    {0xa000, 1, 3, 16, 0, "Channel Error Code CH1"},
+    {0xa000, 1, 4, 16, 0, "Channel Error Code CH2"},
+    {0xa000, 1, 5, 16, 0, "Channel Error Code CH3"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__4tc_tx_pdos[] = {
+    {0x1a03, 1, 1, gl20_gl20_gl20s__4tc_tx0_entries, 4},  // 4TC Input maping
+    {0x1a04, 1, 0, gl20_gl20_gl20s__4tc_tx1_entries, 5},  // 4TC Diagnosis Information maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4tc_iso_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4tc_iso_tx0_entries[] = {
     {0x6000, 1, 1, 32, 0, "4TC-ISO CH0"},
     {0x6000, 1, 2, 32, 0, "4TC-ISO CH1"},
     {0x6000, 1, 3, 32, 0, "4TC-ISO CH2"},
     {0x6000, 1, 4, 32, 0, "4TC-ISO CH3"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4tc_iso_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4tc_iso_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "Module Error Code"},
+    {0xa000, 1, 2, 16, 0, "Channel Error Code CH0"},
+    {0xa000, 1, 3, 16, 0, "Channel Error Code CH1"},
+    {0xa000, 1, 4, 16, 0, "Channel Error Code CH2"},
+    {0xa000, 1, 5, 16, 0, "Channel Error Code CH3"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__4tc_iso_tx_pdos[] = {
+    {0x1a03, 1, 1, gl20_gl20_gl20s__4tc_iso_tx0_entries, 4},  // 4TC-ISO Input maping
+    {0x1a04, 1, 0, gl20_gl20_gl20s__4tc_iso_tx1_entries, 5},  // 4TC-ISO Diagnosis Information maping
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4tc_iso_rx0_entries[] = {
     {0x7000, 1, 1, 16, 0, "4TC-ISO Control Word"},
 };
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__4tc_iso_rx_pdos[] = {
+    {0x1602, 1, 1, gl20_gl20_gl20s__4tc_iso_rx0_entries, 1},  // 4TC-ISO Output maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4lc_pid_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4lc_pid_tx0_entries[] = {
     {0x6000, 1, 1, 32, 0, "CH0 Temperature"},
     {0x6000, 1, 2, 16, 0, "CH0 OutPercent"},
     {0x6000, 1, 3, 16, 0, "CH0 CoolPercent"},
@@ -371,7 +671,10 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4lc_pid_tx_entries[] = {
     {0x6003, 1, 14, 8, 1, "CH3 Reserved"},
     {0x6003, 1, 15, 16, 0, "CH3 ECMaxOut_AT"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4lc_pid_rx_entries[] = {
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__4lc_pid_tx_pdos[] = {
+    {0x1a03, 1, 1, gl20_gl20_gl20s__4lc_pid_tx0_entries, 60},  // 4LC Input1 maping
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4lc_pid_rx0_entries[] = {
     {0x7000, 1, 1, 32, 0, "4LC CH0 Set Point"},
     {0x7000, 1, 2, 16, 0, "4LC CH0 ManualValue"},
     {0x7000, 1, 3, 16, 0, "4LC CH0 Kp"},
@@ -429,8 +732,11 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__4lc_pid_rx_entries[] = {
     {0x7003, 1, 13, 16, 0, "4LC CH3 OutputOffsetCool"},
     {0x7003, 1, 14, 16, 0, "4LC CH3 ECMax"},
 };
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__4lc_pid_rx_pdos[] = {
+    {0x1603, 1, 1, gl20_gl20_gl20s__4lc_pid_rx0_entries, 56},  // 4LC Output maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8tc_pid_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8tc_pid_tx0_entries[] = {
     {0x6000, 1, 1, 32, 0, "8TC-PID CH0 Temperature"},
     {0x6000, 1, 2, 16, 0, "8TC-PID CH0 HeatPercent"},
     {0x6000, 1, 3, 16, 0, "8TC-PID CH0 CoolPercent"},
@@ -552,7 +858,10 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8tc_pid_tx_entries[] = {
     {0x6007, 1, 14, 8, 1, "8TC-PID CH7 Reserve"},
     {0x6007, 1, 15, 16, 1, "8TC-PID CH7 Reserve1"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8tc_pid_rx_entries[] = {
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__8tc_pid_tx_pdos[] = {
+    {0x1b00, 1, 1, gl20_gl20_gl20s__8tc_pid_tx0_entries, 120},  // 8TC-PID Input maping
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8tc_pid_rx0_entries[] = {
     {0x7000, 1, 1, 32, 0, "8TC-PID CH0 Set Point"},
     {0x7000, 1, 2, 16, 0, "8TC-PID CH0 ManualValue"},
     {0x7000, 1, 3, 16, 0, "8TC-PID CH0 KP"},
@@ -650,8 +959,11 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8tc_pid_rx_entries[] = {
     {0x7007, 1, 11, 8, 0, "8TC-PID CH7 TempCommand"},
     {0x7007, 1, 12, 16, 1, "8TC-PID CH7 Reserve"},
 };
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__8tc_pid_rx_pdos[] = {
+    {0x1700, 1, 1, gl20_gl20_gl20s__8tc_pid_rx0_entries, 96},  // 8TC-PID Output maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8tc_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8tc_tx0_entries[] = {
     {0x6000, 1, 1, 32, 0, "8TC CH0 Temperature"},
     {0x6000, 1, 2, 32, 0, "8TC CH1 Temperature"},
     {0x6000, 1, 3, 32, 0, "8TC CH2 Temperature"},
@@ -661,12 +973,18 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__8tc_tx_entries[] = {
     {0x6000, 1, 7, 32, 0, "8TC CH6 Temperature"},
     {0x6000, 1, 8, 32, 0, "8TC CH7 Temperature"},
 };
-
-static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__ps2_tx_entries[] = {
-    {0xa000, 1, 1, 16, 0, "PS2 Module Diagnosis Information"},
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__8tc_tx_pdos[] = {
+    {0x1a03, 1, 1, gl20_gl20_gl20s__8tc_tx0_entries, 8},  // 8TC Input maping
 };
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_2can_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_gl20s__ps2_tx0_entries[] = {
+    {0xa000, 1, 1, 16, 0, "PS2 Module Diagnosis Information"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_gl20s__ps2_tx_pdos[] = {
+    {0x1a04, 1, 0, gl20_gl20_gl20s__ps2_tx0_entries, 1},  // PS2 Moudle Diagnosis information maping
+};
+
+static const lcec_mdp_pdo_entry_t gl20_gl20_2can_tx0_entries[] = {
     {0x6000, 1, 1, 32, 0, "CAN0_Frame0_RX_ID"},
     {0x6000, 1, 2, 32, 0, "CAN0_Frame0_RXDATA0"},
     {0x6000, 1, 3, 32, 0, "CAN0_Frame0_RXDATA1"},
@@ -698,7 +1016,60 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_2can_tx_entries[] = {
     {0x6000, 1, 29, 32, 0, "CAN0_Frame4_TO_Frame7_length"},
     {0x6000, 1, 30, 32, 0, "CAN0_RX_Couter and Frame8_length"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_2can_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_2can_tx1_entries[] = {
+    {0x6001, 1, 1, 32, 0, "CAN1_Frame0_RX_ID"},
+    {0x6001, 1, 2, 32, 0, "CAN1_Frame0_RXDATA0"},
+    {0x6001, 1, 3, 32, 0, "CAN1_Frame0_RXDATA1"},
+    {0x6001, 1, 4, 32, 0, "CAN1_Frame1_RX_ID"},
+    {0x6001, 1, 5, 32, 0, "CAN1_Frame1_RXDATA0"},
+    {0x6001, 1, 6, 32, 0, "CAN1_Frame1_RXDATA1"},
+    {0x6001, 1, 7, 32, 0, "CAN1_Frame2_RX_ID"},
+    {0x6001, 1, 8, 32, 0, "CAN1_Frame2_RXDATA0"},
+    {0x6001, 1, 9, 32, 0, "CAN1_Frame2_RXDATA1"},
+    {0x6001, 1, 10, 32, 0, "CAN1_Frame3_RX_ID"},
+    {0x6001, 1, 11, 32, 0, "CAN1_Frame3_RXDATA0"},
+    {0x6001, 1, 12, 32, 0, "CAN1_Frame3_RXDATA1"},
+    {0x6001, 1, 13, 32, 0, "CAN1_Frame4_RX_ID"},
+    {0x6001, 1, 14, 32, 0, "CAN1_Frame4_RXDATA0"},
+    {0x6001, 1, 15, 32, 0, "CAN1_Frame4_RXDATA1"},
+    {0x6001, 1, 16, 32, 0, "CAN1_Frame5_RX_ID"},
+    {0x6001, 1, 17, 32, 0, "CAN1_Frame5_RXDATA0"},
+    {0x6001, 1, 18, 32, 0, "CAN1_Frame5_RXDATA1"},
+    {0x6001, 1, 19, 32, 0, "CAN1_Frame6_RX_ID"},
+    {0x6001, 1, 20, 32, 0, "CAN1_Frame6_RXDATA0"},
+    {0x6001, 1, 21, 32, 0, "CAN1_Frame6_RXDATA1"},
+    {0x6001, 1, 22, 32, 0, "CAN1_Frame7_RX_ID"},
+    {0x6001, 1, 23, 32, 0, "CAN1_Frame7_RXDATA0"},
+    {0x6001, 1, 24, 32, 0, "CAN1_Frame7_RXDATA1"},
+    {0x6001, 1, 25, 32, 0, "CAN1_Frame8_RX_ID"},
+    {0x6001, 1, 26, 32, 0, "CAN1_Frame8_RXDATA0"},
+    {0x6001, 1, 27, 32, 0, "CAN1_Frame8_RXDATA1"},
+    {0x6001, 1, 28, 32, 0, "CAN1_Frame0_TO_Frame3_length"},
+    {0x6001, 1, 29, 32, 0, "CAN1_Frame4_TO_Frame7_length"},
+    {0x6001, 1, 30, 32, 0, "CAN1_RX_Couter and Frame8_length"},
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_2can_tx2_entries[] = {
+    {0xa000, 1, 1, 16, 0, "CAN Module Diagnosis Information"},
+    {0xa000, 1, 2, 16, 0, "CAN0 Diagnosis Information"},
+    {0xa000, 1, 3, 16, 0, "CAN1 Diagnosis Information"},
+    {0xa000, 1, 4, 16, 0, "CAN0 REEOR FRAME COUNTER"},
+    {0xa000, 1, 5, 16, 0, "CAN1 REEOR FRAME COUNTER"},
+    {0xa000, 1, 6, 16, 0, "CAN0 AND CAN1 LOADRATE"},
+    {0xa000, 1, 7, 16, 0, "CAN0 TEC/REC Error Value"},
+    {0xa000, 1, 8, 16, 0, "CAN1 TEC/REC Error Value"},
+    {0xa000, 1, 9, 16, 1, "reservedata0"},
+    {0xa000, 1, 10, 16, 1, "reservedata1"},
+    {0xa000, 1, 11, 16, 1, "reservedata2"},
+    {0xa000, 1, 12, 16, 1, "reservedata3"},
+    {0xa000, 1, 13, 16, 1, "reservedata4"},
+    {0xa000, 1, 14, 16, 1, "reservedata5"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_2can_tx_pdos[] = {
+    {0x1b00, 1, 1, gl20_gl20_2can_tx0_entries, 30},  // CAN Input maping
+    {0x1b01, 1, 1, gl20_gl20_2can_tx1_entries, 30},  // CAN Input maping
+    {0x1a04, 1, 0, gl20_gl20_2can_tx2_entries, 14},  // 2CAN Module Diagnosis Information maping
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_2can_rx0_entries[] = {
     {0x7000, 1, 1, 32, 0, "CAN0_Frame0_TX_ID"},
     {0x7000, 1, 2, 32, 0, "CAN0_Frame0_TXDATA0"},
     {0x7000, 1, 3, 32, 0, "CAN0_Frame0_TXDATA1"},
@@ -730,8 +1101,44 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_2can_rx_entries[] = {
     {0x7000, 1, 29, 32, 0, "CAN0_Frame4_TO_Frame7_length"},
     {0x7000, 1, 30, 32, 0, "CAN0_TX_Couter and Frame8_length"},
 };
+static const lcec_mdp_pdo_entry_t gl20_gl20_2can_rx1_entries[] = {
+    {0x7001, 1, 1, 32, 0, "CAN1_Frame0_TX_ID"},
+    {0x7001, 1, 2, 32, 0, "CAN1_Frame0_TXDATA0"},
+    {0x7001, 1, 3, 32, 0, "CAN1_Frame0_TXDATA1"},
+    {0x7001, 1, 4, 32, 0, "CAN1_Frame1_TX_ID"},
+    {0x7001, 1, 5, 32, 0, "CAN1_Frame1_TXDATA0"},
+    {0x7001, 1, 6, 32, 0, "CAN1_Frame1_TXDATA1"},
+    {0x7001, 1, 7, 32, 0, "CAN1_Frame2_TX_ID"},
+    {0x7001, 1, 8, 32, 0, "CAN1_Frame2_TXDATA0"},
+    {0x7001, 1, 9, 32, 0, "CAN1_Frame2_TXDATA1"},
+    {0x7001, 1, 10, 32, 0, "CAN1_Frame3_TX_ID"},
+    {0x7001, 1, 11, 32, 0, "CAN1_Frame3_TXDATA0"},
+    {0x7001, 1, 12, 32, 0, "CAN1_Frame3_TXDATA1"},
+    {0x7001, 1, 13, 32, 0, "CAN1_Frame4_TX_ID"},
+    {0x7001, 1, 14, 32, 0, "CAN1_Frame4_TXDATA0"},
+    {0x7001, 1, 15, 32, 0, "CAN1_Frame4_TXDATA1"},
+    {0x7001, 1, 16, 32, 0, "CAN1_Frame5_TX_ID"},
+    {0x7001, 1, 17, 32, 0, "CAN1_Frame5_TXDATA0"},
+    {0x7001, 1, 18, 32, 0, "CAN1_Frame5_TXDATA1"},
+    {0x7001, 1, 19, 32, 0, "CAN1_Frame6_TX_ID"},
+    {0x7001, 1, 20, 32, 0, "CAN1_Frame6_TXDATA0"},
+    {0x7001, 1, 21, 32, 0, "CAN1_Frame6_TXDATA1"},
+    {0x7001, 1, 22, 32, 0, "CAN1_Frame7_TX_ID"},
+    {0x7001, 1, 23, 32, 0, "CAN1_Frame7_TXDATA0"},
+    {0x7001, 1, 24, 32, 0, "CAN1_Frame7_TXDATA1"},
+    {0x7001, 1, 25, 32, 0, "CAN1_Frame8_TX_ID"},
+    {0x7001, 1, 26, 32, 0, "CAN1_Frame8_TXDATA0"},
+    {0x7001, 1, 27, 32, 0, "CAN1_Frame8_TXDATA1"},
+    {0x7001, 1, 28, 32, 0, "CAN1_Frame0_TO_Frame3_length"},
+    {0x7001, 1, 29, 32, 0, "CAN1_Frame4_TO_Frame7_length"},
+    {0x7001, 1, 30, 32, 0, "CAN1_TX_Couter and Frame8_length"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_2can_rx_pdos[] = {
+    {0x1700, 1, 1, gl20_gl20_2can_rx0_entries, 30},  // CAN Output maping
+    {0x1701, 1, 1, gl20_gl20_2can_rx1_entries, 30},  // CAN Output maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_2s485_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_2s485_tx0_entries[] = {
     {0x6000, 1, 1, 32, 0, "RS485-0 RXCOUNTER and length"},
     {0x6000, 1, 2, 32, 0, "RS485-0 RX_DATA1"},
     {0x6000, 1, 3, 32, 0, "RS485-0 RX_DATA2"},
@@ -748,7 +1155,27 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_2s485_tx_entries[] = {
     {0x6000, 1, 14, 32, 0, "RS485-1 RX_DATA6"},
     {0x6000, 1, 15, 32, 0, "RX_status"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_2s485_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_2s485_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "RS485 Module Diagnosis Information"},
+    {0xa000, 1, 2, 16, 0, "RS485-0 Diagnosis Information"},
+    {0xa000, 1, 3, 16, 0, "RS485-1 Diagnosis Information"},
+    {0xa000, 1, 4, 16, 0, "RS485-0 REEOR FRAME COUNTER"},
+    {0xa000, 1, 5, 16, 0, "RS485-1 REEOR FRAME COUNTER"},
+    {0xa000, 1, 6, 16, 0, "RS485-0 REEOR FRAME SEGNUB"},
+    {0xa000, 1, 7, 16, 0, "RS485-1 REEOR FRAME SEGNUB"},
+    {0xa000, 1, 8, 16, 1, "reserve Diagnosis information0"},
+    {0xa000, 1, 9, 16, 1, "reserve Diagnosis information1"},
+    {0xa000, 1, 10, 16, 1, "reserve Diagnosis information2"},
+    {0xa000, 1, 11, 16, 1, "reserve Diagnosis information3"},
+    {0xa000, 1, 12, 16, 1, "reserve Diagnosis information4"},
+    {0xa000, 1, 13, 16, 1, "reserve Diagnosis information5"},
+    {0xa000, 1, 14, 16, 1, "reserve Diagnosis information6"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_2s485_tx_pdos[] = {
+    {0x1a03, 1, 1, gl20_gl20_2s485_tx0_entries, 15},  // RS485 Input maping
+    {0x1a04, 1, 0, gl20_gl20_2s485_tx1_entries, 14},  // 2S485 Module Diagnosis Information maping
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_2s485_rx0_entries[] = {
     {0x7000, 1, 1, 32, 0, "RS485-0 TXCOUNTER and length"},
     {0x7000, 1, 2, 32, 0, "RS485-0 TX_DATA1"},
     {0x7000, 1, 3, 32, 0, "RS485-0 TX_DATA2"},
@@ -765,8 +1192,11 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_2s485_rx_entries[] = {
     {0x7000, 1, 14, 32, 0, "RS485-1 TX_DATA6"},
     {0x7000, 1, 15, 32, 0, "TX_status"},
 };
+static const lcec_mdp_pdo_t gl20_gl20_2s485_rx_pdos[] = {
+    {0x1603, 1, 1, gl20_gl20_2s485_rx0_entries, 15},  // RS485 Output maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_2scom_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_2scom_tx0_entries[] = {
     {0x6000, 1, 1, 32, 0, "2SCOM-1 RXCOUNTER and length"},
     {0x6000, 1, 2, 32, 0, "2SCOM-1 RX_DATA1"},
     {0x6000, 1, 3, 32, 0, "2SCOM-1 RX_DATA2"},
@@ -783,7 +1213,28 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_2scom_tx_entries[] = {
     {0x6000, 1, 14, 32, 0, "2SCOM-2 RX_DATA6"},
     {0x6000, 1, 15, 32, 0, "RX_status"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_2scom_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_2scom_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "2SCOM Moudle Diagnosis Information"},
+    {0xa000, 1, 2, 16, 0, "2SCOM-1 Diagnosis information"},
+    {0xa000, 1, 3, 16, 0, "2SCOM-2 Diagnosis information"},
+    {0xa000, 1, 4, 16, 0, "2SCOM-1 Miss Frame count"},
+    {0xa000, 1, 5, 16, 0, "2SCOM-2 Miss Frame count"},
+    {0xa000, 1, 6, 16, 1, "reserve Diagnosis information0"},
+    {0xa000, 1, 7, 16, 1, "reserve Diagnosis information1"},
+    {0xa000, 1, 8, 16, 1, "reserve Diagnosis information2"},
+    {0xa000, 1, 9, 16, 1, "reserve Diagnosis information3"},
+    {0xa000, 1, 10, 16, 1, "reserve Diagnosis information4"},
+    {0xa000, 1, 11, 16, 1, "reserve Diagnosis information5"},
+    {0xa000, 1, 12, 16, 1, "reserve Diagnosis information6"},
+    {0xa000, 1, 13, 16, 1, "reserve Diagnosis information7"},
+    {0xa000, 1, 14, 16, 1, "reserve Diagnosis information8"},
+    {0xa000, 1, 15, 16, 1, "reserve Diagnosis information9"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_2scom_tx_pdos[] = {
+    {0x1a03, 1, 1, gl20_gl20_2scom_tx0_entries, 15},  // 2SCOM Input maping
+    {0x1a04, 1, 0, gl20_gl20_2scom_tx1_entries, 15},  // 2SCOM Moudle Diagnosis Information maping
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_2scom_rx0_entries[] = {
     {0x7000, 1, 1, 32, 0, "2SCOM-1 TXCOUNTER and length"},
     {0x7000, 1, 2, 32, 0, "2SCOM-1 TX_DATA1"},
     {0x7000, 1, 3, 32, 0, "2SCOM-1 TX_DATA2"},
@@ -800,8 +1251,11 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_2scom_rx_entries[] = {
     {0x7000, 1, 14, 32, 0, "2SCOM-2 TX_DATA6"},
     {0x7000, 1, 15, 32, 0, "TX_status"},
 };
+static const lcec_mdp_pdo_t gl20_gl20_2scom_rx_pdos[] = {
+    {0x1603, 1, 1, gl20_gl20_2scom_rx0_entries, 15},  // 2SCOM Output maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_2ssi_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_2ssi_tx0_entries[] = {
     {0x6000, 1, 1, 32, 0, "Ch0 Para Input"},
     {0x6000, 1, 2, 32, 1, "Ch0 Reserve data0"},
     {0x6000, 1, 3, 32, 1, "Ch0 Reserve data1"},
@@ -815,8 +1269,25 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_2ssi_tx_entries[] = {
     {0x6000, 1, 11, 32, 1, "Ch1 Reserve data3"},
     {0x6000, 1, 12, 32, 1, "Ch1 Reserve data4"},
 };
+static const lcec_mdp_pdo_entry_t gl20_gl20_2ssi_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "2SSI Moudle Diagnosis Information"},
+    {0xa000, 1, 2, 16, 0, "CH0 Diagnosis Information"},
+    {0xa000, 1, 3, 16, 0, "CH1 Diagnosis Information"},
+    {0xa000, 1, 4, 16, 1, "reserve0"},
+    {0xa000, 1, 5, 16, 1, "reserve1"},
+    {0xa000, 1, 6, 16, 1, "reserve2"},
+    {0xa000, 1, 7, 16, 1, "reserve3"},
+    {0xa000, 1, 8, 16, 1, "reserve4"},
+    {0xa000, 1, 9, 16, 1, "reserve5"},
+    {0xa000, 1, 10, 16, 1, "reserve6"},
+    {0xa000, 1, 11, 16, 1, "reserve7"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_2ssi_tx_pdos[] = {
+    {0x1a03, 1, 1, gl20_gl20_2ssi_tx0_entries, 12},  // 2SSI Channel Para Input
+    {0x1a04, 1, 0, gl20_gl20_2ssi_tx1_entries, 11},  // 2SSI Diagnosis Information maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_1dnm_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_1dnm_tx0_entries[] = {
     {0x6000, 1, 1, 32, 0, "TxPDO01"},
     {0x6000, 1, 2, 32, 0, "TxPDO01"},
     {0x6000, 1, 3, 32, 0, "TxPDO02"},
@@ -848,7 +1319,28 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_1dnm_tx_entries[] = {
     {0x6000, 1, 29, 32, 0, "TxPDO15"},
     {0x6000, 1, 30, 32, 0, "TxPDO15"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_1dnm_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_1dnm_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "Module Err"},
+    {0xa000, 1, 2, 16, 0, "Offline Number"},
+    {0xa000, 1, 3, 16, 0, "Slave Offline1_Flag"},
+    {0xa000, 1, 4, 16, 0, "Slave Offline2_Flag"},
+    {0xa000, 1, 5, 16, 0, "Slave Offline3_Flag"},
+    {0xa000, 1, 6, 16, 0, "Slave Offline4_Flag"},
+    {0xa000, 1, 7, 16, 0, "1DNM Status"},
+    {0xa000, 1, 8, 16, 0, "DNSlave Station"},
+    {0xa000, 1, 9, 16, 0, "Error Code"},
+    {0xa000, 1, 10, 16, 0, "CANRec Frame Count"},
+    {0xa000, 1, 11, 16, 0, "REC Err Count"},
+    {0xa000, 1, 12, 16, 0, "TEC Err Count"},
+    {0xa000, 1, 13, 16, 0, "CAN BUS-OFF Count"},
+    {0xa000, 1, 14, 16, 0, "CAN LoadRate"},
+    {0xa000, 1, 15, 16, 1, "Reserved_0"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_1dnm_tx_pdos[] = {
+    {0x1b00, 1, 1, gl20_gl20_1dnm_tx0_entries, 30},  // 1DNM Input maping
+    {0x1a04, 1, 0, gl20_gl20_1dnm_tx1_entries, 15},  // DeviceNet Master Diagnosis Information maping
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_1dnm_rx0_entries[] = {
     {0x7000, 1, 1, 32, 0, "RxPDO01"},
     {0x7000, 1, 2, 32, 0, "RxPDO01"},
     {0x7000, 1, 3, 32, 0, "RxPDO02"},
@@ -880,8 +1372,11 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_1dnm_rx_entries[] = {
     {0x7000, 1, 29, 32, 0, "RxPDO015"},
     {0x7000, 1, 30, 32, 0, "RxPDO015"},
 };
+static const lcec_mdp_pdo_t gl20_gl20_1dnm_rx_pdos[] = {
+    {0x1700, 1, 1, gl20_gl20_1dnm_rx0_entries, 30},  // 1DNM Output maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_dnslave_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_dnslave_tx0_entries[] = {
     {0x6000, 1, 1, 32, 0, "TxPDO01"},
     {0x6000, 1, 2, 32, 0, "TxPDO01"},
     {0x6000, 1, 3, 32, 0, "TxPDO02"},
@@ -913,7 +1408,10 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_dnslave_tx_entries[] = {
     {0x6000, 1, 29, 32, 0, "TxPDO15"},
     {0x6000, 1, 30, 32, 0, "TxPDO15"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_dnslave_rx_entries[] = {
+static const lcec_mdp_pdo_t gl20_gl20_dnslave_tx_pdos[] = {
+    {0x1b00, 1, 1, gl20_gl20_dnslave_tx0_entries, 30},  // DNSlave Input maping
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_dnslave_rx0_entries[] = {
     {0x7000, 1, 1, 32, 0, "RxPDO01"},
     {0x7000, 1, 2, 32, 0, "RxPDO01"},
     {0x7000, 1, 3, 32, 0, "RxPDO02"},
@@ -945,8 +1443,11 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_dnslave_rx_entries[] = {
     {0x7000, 1, 29, 32, 0, "RxPDO015"},
     {0x7000, 1, 30, 32, 0, "RxPDO015"},
 };
+static const lcec_mdp_pdo_t gl20_gl20_dnslave_rx_pdos[] = {
+    {0x1700, 1, 1, gl20_gl20_dnslave_rx0_entries, 30},  // DNSlave Output maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_2hc_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_2hc_tx0_entries[] = {
     {0x6000, 1, 1, 8, 0, "2HC CH0 Encoder status"},
     {0x6000, 1, 2, 8, 0, "2HC CH0 DI status"},
     {0x6000, 1, 3, 8, 0, "2HC CH0 DO status"},
@@ -965,7 +1466,36 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_2hc_tx_entries[] = {
     {0x6000, 1, 16, 32, 1, "2HC CH0 Reserve603"},
     {0x6000, 1, 17, 32, 0, "2HC CH0 Errorcode"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_2hc_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_2hc_tx1_entries[] = {
+    {0x6001, 1, 1, 8, 0, "2HC CH1 Encoder status"},
+    {0x6001, 1, 2, 8, 0, "2HC CH1 DI status"},
+    {0x6001, 1, 3, 8, 0, "2HC CH1 DO status"},
+    {0x6001, 1, 4, 8, 0, "2HC CH1 Compare status"},
+    {0x6001, 1, 5, 32, 0, "2HC CH1 Probe status"},
+    {0x6001, 1, 6, 32, 0, "2HC CH1 Encoder present position"},
+    {0x6001, 1, 7, 32, 0, "2HC CH1 Measure value 1"},
+    {0x6001, 1, 8, 32, 0, "2HC CH1 Measure value 2"},
+    {0x6001, 1, 9, 32, 0, "2HC CH1 Probe 0 positive value"},
+    {0x6001, 1, 10, 32, 0, "2HC CH1 Probe 1 positive value"},
+    {0x6001, 1, 11, 32, 1, "2HC CH1 Reserve610"},
+    {0x6001, 1, 12, 32, 1, "2HC CH1 Reserve611"},
+    {0x6001, 1, 13, 32, 0, "2HC CH1 Probe 0 negative value"},
+    {0x6001, 1, 14, 32, 0, "2HC CH1 Probe 1 negative value"},
+    {0x6001, 1, 15, 32, 1, "2HC CH1 Reserve612"},
+    {0x6001, 1, 16, 32, 1, "2HC CH1 Reserve613"},
+    {0x6001, 1, 17, 32, 0, "2HC CH1 Errorcode"},
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_2hc_tx2_entries[] = {
+    {0xa000, 1, 1, 16, 0, "2HC Module Diagnosis Information"},
+    {0xa000, 1, 2, 16, 0, "2HC CH0 Diagnosis Information"},
+    {0xa000, 1, 3, 16, 0, "2HC CH1 Diagnosis Information"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_2hc_tx_pdos[] = {
+    {0x1b00, 1, 1, gl20_gl20_2hc_tx0_entries, 17},  // 2HC CH0 TxPDO mapping parameter
+    {0x1b01, 1, 1, gl20_gl20_2hc_tx1_entries, 17},  // 2HC CH1 TxPDO mapping parameter
+    {0x1a04, 1, 0, gl20_gl20_2hc_tx2_entries, 3},  // 2HC Module Diagnosis Information maping
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_2hc_rx0_entries[] = {
     {0x7000, 1, 1, 16, 0, "2HC CH0 Encoder command value"},
     {0x7000, 1, 2, 16, 0, "2HC CH0 DO function command value"},
     {0x7000, 1, 3, 32, 0, "2HC CH0 Encoder preset value"},
@@ -985,78 +1515,246 @@ static const lcec_mdp_pdo_entry_t gl20_gl20_2hc_rx_entries[] = {
     {0x7000, 1, 17, 32, 1, "2HC CH0 Reserve708"},
     {0x7000, 1, 18, 32, 0, "2HC CH0 Compare function command parameter"},
 };
+static const lcec_mdp_pdo_entry_t gl20_gl20_2hc_rx1_entries[] = {
+    {0x7001, 1, 1, 16, 0, "2HC CH1 Encoder command value"},
+    {0x7001, 1, 2, 16, 0, "2HC CH1 DO function command value"},
+    {0x7001, 1, 3, 32, 0, "2HC CH1 Encoder preset value"},
+    {0x7001, 1, 4, 32, 0, "2HC CH1 Probe function command value"},
+    {0x7001, 1, 5, 32, 0, "2HC CH1 Compare function command value"},
+    {0x7001, 1, 6, 16, 0, "2HC CH1 Compare 0 command size/step"},
+    {0x7001, 1, 7, 16, 1, "2HC CH1 Reserve710"},
+    {0x7001, 1, 8, 16, 1, "2HC CH1 Reserve711"},
+    {0x7001, 1, 9, 16, 1, "2HC CH1 Reserve712"},
+    {0x7001, 1, 10, 32, 0, "2HC CH1 Compare 0 position value 1"},
+    {0x7001, 1, 11, 32, 1, "2HC CH1 Reserve713"},
+    {0x7001, 1, 12, 32, 1, "2HC CH1 Reserve714"},
+    {0x7001, 1, 13, 32, 1, "2HC CH1 Reserve715"},
+    {0x7001, 1, 14, 32, 0, "2HC CH1 Compare 0 position value 2"},
+    {0x7001, 1, 15, 32, 1, "2HC CH1 Reserve716"},
+    {0x7001, 1, 16, 32, 1, "2HC CH1 Reserve717"},
+    {0x7001, 1, 17, 32, 1, "2HC CH1 Reserve718"},
+    {0x7001, 1, 18, 32, 0, "2HC CH1 Compare function command parameter"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_2hc_rx_pdos[] = {
+    {0x1700, 1, 1, gl20_gl20_2hc_rx0_entries, 18},  // 2HC CH0 RxPDO mapping parameter
+    {0x1701, 1, 1, gl20_gl20_2hc_rx1_entries, 18},  // 2HC CH1 RxPDO mapping parameter
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_2scom_mdb_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_2scom_mdb_tx0_entries[] = {
     {0x6000, 1, 1, 240, 0, "2SCOM-MDB_Frame0_RX_0"},
     {0x6000, 1, 2, 240, 0, "2SCOM-MDB_Frame0_RX_1"},
     {0x6000, 1, 3, 240, 0, "2SCOM-MDB_Frame0_RX_2"},
     {0x6000, 1, 4, 240, 0, "2SCOM-MDB_Frame0_RX_3"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_2scom_mdb_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_2scom_mdb_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "2SCOM-MDB Module Diagnosis Information"},
+    {0xa000, 1, 2, 16, 0, "2SCOM-0 Diagnosis Information1"},
+    {0xa000, 1, 3, 16, 0, "2SCOM-0 Diagnosis Information2"},
+    {0xa000, 1, 4, 16, 0, "2SCOM-0 Diagnosis Information3"},
+    {0xa000, 1, 5, 16, 0, "2SCOM-0 Diagnosis Information4"},
+    {0xa000, 1, 6, 16, 0, "2SCOM-0 Diagnosis Information5"},
+    {0xa000, 1, 7, 16, 0, "2SCOM-0 Diagnosis Information6"},
+    {0xa000, 1, 8, 16, 0, "2SCOM-0 Diagnosis Information7"},
+    {0xa000, 1, 9, 16, 0, "2SCOM-0 Diagnosis Information8"},
+    {0xa000, 1, 10, 16, 0, "2SCOM-0 Diagnosis Information9"},
+    {0xa000, 1, 11, 16, 0, "2SCOM-0 Diagnosis Information10"},
+    {0xa000, 1, 12, 16, 0, "2SCOM-0 Diagnosis Information11"},
+    {0xa000, 1, 13, 16, 0, "2SCOM-0 Diagnosis Information12"},
+    {0xa000, 1, 14, 16, 0, "2SCOM-0 Diagnosis Information13"},
+    {0xa000, 1, 15, 16, 0, "2SCOM-0 Diagnosis Information14"},
+    {0xa000, 1, 16, 16, 0, "2SCOM-0 Diagnosis Information15"},
+    {0xa000, 1, 17, 16, 0, "2SCOM-0 Diagnosis Information16"},
+    {0xa000, 1, 18, 16, 0, "2SCOM-0 Diagnosis Information17"},
+    {0xa000, 1, 19, 16, 0, "2SCOM-0 Diagnosis Information18"},
+    {0xa000, 1, 20, 16, 0, "2SCOM-0 Diagnosis Information19"},
+    {0xa000, 1, 21, 16, 0, "2SCOM-0 Diagnosis Information20"},
+    {0xa000, 1, 22, 16, 0, "2SCOM-0 Diagnosis Information21"},
+    {0xa000, 1, 23, 16, 0, "2SCOM-0 Diagnosis Information22"},
+    {0xa000, 1, 24, 16, 0, "2SCOM-0 Diagnosis Information23"},
+    {0xa000, 1, 25, 16, 0, "2SCOM-0 Diagnosis Information24"},
+    {0xa000, 1, 26, 16, 0, "2SCOM-0 Diagnosis Information25"},
+    {0xa000, 1, 27, 16, 0, "2SCOM-0 Diagnosis Information26"},
+    {0xa000, 1, 28, 16, 0, "2SCOM-0 Diagnosis Information27"},
+    {0xa000, 1, 29, 16, 0, "2SCOM-0 Diagnosis Information28"},
+    {0xa000, 1, 30, 16, 0, "2SCOM-0 Diagnosis Information29"},
+    {0xa000, 1, 31, 16, 0, "2SCOM-0 Diagnosis Information30"},
+    {0xa000, 1, 32, 16, 0, "2SCOM-0 Diagnosis Information31"},
+    {0xa000, 1, 33, 16, 0, "2SCOM-1 Diagnosis Information1"},
+    {0xa000, 1, 34, 16, 0, "2SCOM-1 Diagnosis Information2"},
+    {0xa000, 1, 35, 16, 0, "2SCOM-1 Diagnosis Information3"},
+    {0xa000, 1, 36, 16, 0, "2SCOM-1 Diagnosis Information4"},
+    {0xa000, 1, 37, 16, 0, "2SCOM-1 Diagnosis Information5"},
+    {0xa000, 1, 38, 16, 0, "2SCOM-1 Diagnosis Information6"},
+    {0xa000, 1, 39, 16, 0, "2SCOM-1 Diagnosis Information7"},
+    {0xa000, 1, 40, 16, 0, "2SCOM-1 Diagnosis Information8"},
+    {0xa000, 1, 41, 16, 0, "2SCOM-1 Diagnosis Information9"},
+    {0xa000, 1, 42, 16, 0, "2SCOM-1 Diagnosis Information10"},
+    {0xa000, 1, 43, 16, 0, "2SCOM-1 Diagnosis Information11"},
+    {0xa000, 1, 44, 16, 0, "2SCOM-1 Diagnosis Information12"},
+    {0xa000, 1, 45, 16, 0, "2SCOM-1 Diagnosis Information13"},
+    {0xa000, 1, 46, 16, 0, "2SCOM-1 Diagnosis Information14"},
+    {0xa000, 1, 47, 16, 0, "2SCOM-1 Diagnosis Information15"},
+    {0xa000, 1, 48, 16, 0, "2SCOM-1 Diagnosis Information16"},
+    {0xa000, 1, 49, 16, 0, "2SCOM-1 Diagnosis Information17"},
+    {0xa000, 1, 50, 16, 0, "2SCOM-1 Diagnosis Information18"},
+    {0xa000, 1, 51, 16, 0, "2SCOM-1 Diagnosis Information19"},
+    {0xa000, 1, 52, 16, 0, "2SCOM-1 Diagnosis Information20"},
+    {0xa000, 1, 53, 16, 0, "2SCOM-1 Diagnosis Information21"},
+    {0xa000, 1, 54, 16, 0, "2SCOM-1 Diagnosis Information22"},
+    {0xa000, 1, 55, 16, 0, "2SCOM-1 Diagnosis Information23"},
+    {0xa000, 1, 56, 16, 0, "2SCOM-1 Diagnosis Information24"},
+    {0xa000, 1, 57, 16, 0, "2SCOM-1 Diagnosis Information25"},
+    {0xa000, 1, 58, 16, 0, "2SCOM-1 Diagnosis Information26"},
+    {0xa000, 1, 59, 16, 0, "2SCOM-1 Diagnosis Information27"},
+    {0xa000, 1, 60, 16, 0, "2SCOM-1 Diagnosis Information28"},
+    {0xa000, 1, 61, 16, 0, "2SCOM-1 Diagnosis Information29"},
+    {0xa000, 1, 62, 16, 0, "2SCOM-1 Diagnosis Information30"},
+    {0xa000, 1, 63, 16, 0, "2SCOM-1 Diagnosis Information31"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_2scom_mdb_tx_pdos[] = {
+    {0x1b00, 1, 1, gl20_gl20_2scom_mdb_tx0_entries, 4},  // 2SCOM-MDB Input0 maping
+    {0x1a04, 1, 0, gl20_gl20_2scom_mdb_tx1_entries, 63},  // 2SCOM-MDB Diagnosis Information maping
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_2scom_mdb_rx0_entries[] = {
     {0x7000, 1, 1, 240, 0, "2SCOM-MDB_Frame0_TX_0"},
     {0x7000, 1, 2, 240, 0, "2SCOM-MDB_Frame0_TX_1"},
     {0x7000, 1, 3, 240, 0, "2SCOM-MDB_Frame0_TX_2"},
     {0x7000, 1, 4, 240, 0, "2SCOM-MDB_Frame0_TX_3"},
 };
+static const lcec_mdp_pdo_t gl20_gl20_2scom_mdb_rx_pdos[] = {
+    {0x1700, 1, 1, gl20_gl20_2scom_mdb_rx0_entries, 4},  // 2SCOM-MDB Output0 maping
+};
 
-static const lcec_mdp_pdo_entry_t gl20_gl20_2s485_mdb_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_2s485_mdb_tx0_entries[] = {
     {0x6000, 1, 1, 240, 0, "2S485-MDB_Frame0_RX_0"},
     {0x6000, 1, 2, 240, 0, "2S485-MDB_Frame0_RX_1"},
     {0x6000, 1, 3, 240, 0, "2S485-MDB_Frame0_RX_2"},
     {0x6000, 1, 4, 240, 0, "2S485-MDB_Frame0_RX_3"},
 };
-static const lcec_mdp_pdo_entry_t gl20_gl20_2s485_mdb_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t gl20_gl20_2s485_mdb_tx1_entries[] = {
+    {0xa000, 1, 1, 16, 0, "2S485-MDB Module Diagnosis Information"},
+    {0xa000, 1, 2, 16, 0, "2S485-0 Diagnosis Information1"},
+    {0xa000, 1, 3, 16, 0, "2S485-0 Diagnosis Information2"},
+    {0xa000, 1, 4, 16, 0, "2S485-0 Diagnosis Information3"},
+    {0xa000, 1, 5, 16, 0, "2S485-0 Diagnosis Information4"},
+    {0xa000, 1, 6, 16, 0, "2S485-0 Diagnosis Information5"},
+    {0xa000, 1, 7, 16, 0, "2S485-0 Diagnosis Information6"},
+    {0xa000, 1, 8, 16, 0, "2S485-0 Diagnosis Information7"},
+    {0xa000, 1, 9, 16, 0, "2S485-0 Diagnosis Information8"},
+    {0xa000, 1, 10, 16, 0, "2S485-0 Diagnosis Information9"},
+    {0xa000, 1, 11, 16, 0, "2S485-0 Diagnosis Information10"},
+    {0xa000, 1, 12, 16, 0, "2S485-0 Diagnosis Information11"},
+    {0xa000, 1, 13, 16, 0, "2S485-0 Diagnosis Information12"},
+    {0xa000, 1, 14, 16, 0, "2S485-0 Diagnosis Information13"},
+    {0xa000, 1, 15, 16, 0, "2S485-0 Diagnosis Information14"},
+    {0xa000, 1, 16, 16, 0, "2S485-0 Diagnosis Information15"},
+    {0xa000, 1, 17, 16, 0, "2S485-0 Diagnosis Information16"},
+    {0xa000, 1, 18, 16, 0, "2S485-0 Diagnosis Information17"},
+    {0xa000, 1, 19, 16, 0, "2S485-0 Diagnosis Information18"},
+    {0xa000, 1, 20, 16, 0, "2S485-0 Diagnosis Information19"},
+    {0xa000, 1, 21, 16, 0, "2S485-0 Diagnosis Information20"},
+    {0xa000, 1, 22, 16, 0, "2S485-0 Diagnosis Information21"},
+    {0xa000, 1, 23, 16, 0, "2S485-0 Diagnosis Information22"},
+    {0xa000, 1, 24, 16, 0, "2S485-0 Diagnosis Information23"},
+    {0xa000, 1, 25, 16, 0, "2S485-0 Diagnosis Information24"},
+    {0xa000, 1, 26, 16, 0, "2S485-0 Diagnosis Information25"},
+    {0xa000, 1, 27, 16, 0, "2S485-0 Diagnosis Information26"},
+    {0xa000, 1, 28, 16, 0, "2S485-0 Diagnosis Information27"},
+    {0xa000, 1, 29, 16, 0, "2S485-0 Diagnosis Information28"},
+    {0xa000, 1, 30, 16, 0, "2S485-0 Diagnosis Information29"},
+    {0xa000, 1, 31, 16, 0, "2S485-0 Diagnosis Information30"},
+    {0xa000, 1, 32, 16, 0, "2S485-0 Diagnosis Information31"},
+    {0xa000, 1, 33, 16, 0, "2S485-1 Diagnosis Information1"},
+    {0xa000, 1, 34, 16, 0, "2S485-1 Diagnosis Information2"},
+    {0xa000, 1, 35, 16, 0, "2S485-1 Diagnosis Information3"},
+    {0xa000, 1, 36, 16, 0, "2S485-1 Diagnosis Information4"},
+    {0xa000, 1, 37, 16, 0, "2S485-1 Diagnosis Information5"},
+    {0xa000, 1, 38, 16, 0, "2S485-1 Diagnosis Information6"},
+    {0xa000, 1, 39, 16, 0, "2S485-1 Diagnosis Information7"},
+    {0xa000, 1, 40, 16, 0, "2S485-1 Diagnosis Information8"},
+    {0xa000, 1, 41, 16, 0, "2S485-1 Diagnosis Information9"},
+    {0xa000, 1, 42, 16, 0, "2S485-1 Diagnosis Information10"},
+    {0xa000, 1, 43, 16, 0, "2S485-1 Diagnosis Information11"},
+    {0xa000, 1, 44, 16, 0, "2S485-1 Diagnosis Information12"},
+    {0xa000, 1, 45, 16, 0, "2S485-1 Diagnosis Information13"},
+    {0xa000, 1, 46, 16, 0, "2S485-1 Diagnosis Information14"},
+    {0xa000, 1, 47, 16, 0, "2S485-1 Diagnosis Information15"},
+    {0xa000, 1, 48, 16, 0, "2S485-1 Diagnosis Information16"},
+    {0xa000, 1, 49, 16, 0, "2S485-1 Diagnosis Information17"},
+    {0xa000, 1, 50, 16, 0, "2S485-1 Diagnosis Information18"},
+    {0xa000, 1, 51, 16, 0, "2S485-1 Diagnosis Information19"},
+    {0xa000, 1, 52, 16, 0, "2S485-1 Diagnosis Information20"},
+    {0xa000, 1, 53, 16, 0, "2S485-1 Diagnosis Information21"},
+    {0xa000, 1, 54, 16, 0, "2S485-1 Diagnosis Information22"},
+    {0xa000, 1, 55, 16, 0, "2S485-1 Diagnosis Information23"},
+    {0xa000, 1, 56, 16, 0, "2S485-1 Diagnosis Information24"},
+    {0xa000, 1, 57, 16, 0, "2S485-1 Diagnosis Information25"},
+    {0xa000, 1, 58, 16, 0, "2S485-1 Diagnosis Information26"},
+    {0xa000, 1, 59, 16, 0, "2S485-1 Diagnosis Information27"},
+    {0xa000, 1, 60, 16, 0, "2S485-1 Diagnosis Information28"},
+    {0xa000, 1, 61, 16, 0, "2S485-1 Diagnosis Information29"},
+    {0xa000, 1, 62, 16, 0, "2S485-1 Diagnosis Information30"},
+    {0xa000, 1, 63, 16, 0, "2S485-1 Diagnosis Information31"},
+};
+static const lcec_mdp_pdo_t gl20_gl20_2s485_mdb_tx_pdos[] = {
+    {0x1b00, 1, 1, gl20_gl20_2s485_mdb_tx0_entries, 4},  // 2S485-MDB Input0 maping
+    {0x1a04, 1, 0, gl20_gl20_2s485_mdb_tx1_entries, 63},  // 2S485-MDB Diagnosis Information maping
+};
+static const lcec_mdp_pdo_entry_t gl20_gl20_2s485_mdb_rx0_entries[] = {
     {0x7000, 1, 1, 240, 0, "2S485-MDB_Frame0_TX_0"},
     {0x7000, 1, 2, 240, 0, "2S485-MDB_Frame0_TX_1"},
     {0x7000, 1, 3, 240, 0, "2S485-MDB_Frame0_TX_2"},
     {0x7000, 1, 4, 240, 0, "2S485-MDB_Frame0_TX_3"},
 };
+static const lcec_mdp_pdo_t gl20_gl20_2s485_mdb_rx_pdos[] = {
+    {0x1700, 1, 1, gl20_gl20_2s485_mdb_rx0_entries, 4},  // 2S485-MDB Output0 maping
+};
 
 static const lcec_mdp_module_t gl20_modules[] = {
-    {0x10f41064, "GL20(GL20S)-0404ETP-5V", LCEC_MDP_MOD_DOUT, 0x1a01, 1, gl20_gl20_gl20s__0404etp_5v_tx_entries, 1, 0x1601, 1, gl20_gl20_gl20s__0404etp_5v_rx_entries, 1},  // NOTE: ESI offers 4tx/3rx alternative mappings; default (first) emitted
-    {0x10f41060, "GL20(GL20S)-0808ETN", LCEC_MDP_MOD_DOUT, 0x1a01, 1, gl20_gl20_gl20s__0808etn_tx_entries, 1, 0x1601, 1, gl20_gl20_gl20s__0808etn_rx_entries, 1},  // NOTE: ESI offers 4tx/3rx alternative mappings; default (first) emitted
-    {0x10f41061, "GL20(GL20S)-3232ETN", LCEC_MDP_MOD_DOUT, 0x1a01, 1, gl20_gl20_gl20s__3232etn_tx_entries, 4, 0x1601, 1, gl20_gl20_gl20s__3232etn_rx_entries, 4},  // NOTE: ESI offers 4tx/3rx alternative mappings; default (first) emitted
-    {0x10f41523, "GL20(GL20S)-0032ETP", LCEC_MDP_MOD_DOUT, 0x1a04, 1, gl20_gl20_gl20s__0032etp_tx_entries, 5, 0x1601, 1, gl20_gl20_gl20s__0032etp_rx_entries, 4},  // NOTE: ESI offers 1tx/3rx alternative mappings; default (first) emitted
-    {0x10f41521, "GL20(GL20S)-0032ETP-M", LCEC_MDP_MOD_DOUT, 0x1a04, 1, gl20_gl20_gl20s__0032etp_m_tx_entries, 5, 0x1601, 1, gl20_gl20_gl20s__0032etp_m_rx_entries, 4},  // NOTE: ESI offers 1tx/3rx alternative mappings; default (first) emitted
-    {0x10f41011, "GL20(GL20S)-3200END", LCEC_MDP_MOD_DIN, 0x1a01, 1, gl20_gl20_gl20s__3200end_tx_entries, 4, 0, 0, NULL, 0},  // NOTE: ESI offers 4tx/0rx alternative mappings; default (first) emitted
-    {0x10f41021, "GL20(GL20S)-0032ETN", LCEC_MDP_MOD_DOUT, 0x1a04, 1, gl20_gl20_gl20s__0032etn_tx_entries, 5, 0x1601, 1, gl20_gl20_gl20s__0032etn_rx_entries, 4},  // NOTE: ESI offers 1tx/3rx alternative mappings; default (first) emitted
-    {0x10f41023, "GL20(GL20S)-0008ER", LCEC_MDP_MOD_DOUT, 0x1a04, 1, gl20_gl20_gl20s__0008er_tx_entries, 2, 0x1601, 1, gl20_gl20_gl20s__0008er_rx_entries, 1},  // NOTE: ESI offers 1tx/3rx alternative mappings; default (first) emitted
-    {0x10f41027, "GL20(GL20S)-0004ER", LCEC_MDP_MOD_DOUT, 0x1a04, 1, gl20_gl20_gl20s__0004er_tx_entries, 2, 0x1601, 1, gl20_gl20_gl20s__0004er_rx_entries, 1},  // NOTE: ESI offers 1tx/3rx alternative mappings; default (first) emitted
-    {0x10f41028, "GL20(GL20S)-0004ETP-2A", LCEC_MDP_MOD_DOUT, 0x1a04, 1, gl20_gl20_gl20s__0004etp_2a_tx_entries, 5, 0x1601, 1, gl20_gl20_gl20s__0004etp_2a_rx_entries, 1},  // NOTE: ESI offers 1tx/3rx alternative mappings; default (first) emitted
-    {0x10f41022, "GL20(GL20S)-0008ETN", LCEC_MDP_MOD_DOUT, 0x1a04, 1, gl20_gl20_gl20s__0008etn_tx_entries, 2, 0x1601, 1, gl20_gl20_gl20s__0008etn_rx_entries, 1},  // NOTE: ESI offers 1tx/3rx alternative mappings; default (first) emitted
-    {0x10f41025, "GL20(GL20S)-0008ETP", LCEC_MDP_MOD_DOUT, 0x1a04, 1, gl20_gl20_gl20s__0008etp_tx_entries, 2, 0x1601, 1, gl20_gl20_gl20s__0008etp_rx_entries, 1},  // NOTE: ESI offers 1tx/3rx alternative mappings; default (first) emitted
-    {0x10f41010, "GL20(GL20S)-1600END", LCEC_MDP_MOD_DIN, 0x1a01, 1, gl20_gl20_gl20s__1600end_tx_entries, 2, 0, 0, NULL, 0},  // NOTE: ESI offers 4tx/0rx alternative mappings; default (first) emitted
-    {0x10f41013, "GL20(GL20S)-1600END-5V", LCEC_MDP_MOD_DIN, 0x1a01, 1, gl20_gl20_gl20s__1600end_5v_tx_entries, 2, 0, 0, NULL, 0},  // NOTE: ESI offers 4tx/0rx alternative mappings; default (first) emitted
-    {0x10f41012, "GL20(GL20S)-0800END", LCEC_MDP_MOD_DIN, 0x1a01, 1, gl20_gl20_gl20s__0800end_tx_entries, 1, 0, 0, NULL, 0},  // NOTE: ESI offers 4tx/0rx alternative mappings; default (first) emitted
-    {0x10f41211, "GL20(GL20S)-0800ENA", LCEC_MDP_MOD_DIN, 0x1a01, 1, gl20_gl20_gl20s__0800ena_tx_entries, 1, 0, 0, NULL, 0},  // NOTE: ESI offers 4tx/0rx alternative mappings; default (first) emitted
-    {0x10f41020, "GL20(GL20S)-0016ETN", LCEC_MDP_MOD_DOUT, 0x1a04, 1, gl20_gl20_gl20s__0016etn_tx_entries, 3, 0x1601, 1, gl20_gl20_gl20s__0016etn_rx_entries, 2},  // NOTE: ESI offers 1tx/3rx alternative mappings; default (first) emitted
-    {0x10f41024, "GL20(GL20S)-0016ETP", LCEC_MDP_MOD_DOUT, 0x1a04, 1, gl20_gl20_gl20s__0016etp_tx_entries, 3, 0x1601, 1, gl20_gl20_gl20s__0016etp_rx_entries, 2},  // NOTE: ESI offers 1tx/3rx alternative mappings; default (first) emitted
-    {0x10f41320, "GL20(GL20S)-0016ETP-5V", LCEC_MDP_MOD_DOUT, 0x1a04, 1, gl20_gl20_gl20s__0016etp_5v_tx_entries, 3, 0x1601, 1, gl20_gl20_gl20s__0016etp_5v_rx_entries, 2},  // NOTE: ESI offers 1tx/3rx alternative mappings; default (first) emitted
-    {0x10f41031, "GL20(GL20S)-8ADV", LCEC_MDP_MOD_AIN, 0x1a02, 1, gl20_gl20_gl20s__8adv_tx_entries, 8, 0, 0, NULL, 0},  // NOTE: ESI offers 2tx/0rx alternative mappings; default (first) emitted
-    {0x10f41032, "GL20(GL20S)-8ADI", LCEC_MDP_MOD_AIN, 0x1a02, 1, gl20_gl20_gl20s__8adi_tx_entries, 8, 0, 0, NULL, 0},  // NOTE: ESI offers 2tx/0rx alternative mappings; default (first) emitted
-    {0x10f41030, "GL20(GL20S)-4AD", LCEC_MDP_MOD_AIN, 0x1a02, 1, gl20_gl20_gl20s__4ad_tx_entries, 4, 0, 0, NULL, 0},  // NOTE: ESI offers 2tx/0rx alternative mappings; default (first) emitted
-    {0x10f41033, "GL20(GL20S)-4AD-H", LCEC_MDP_MOD_AIN, 0x1a02, 1, gl20_gl20_gl20s__4ad_h_tx_entries, 4, 0x1602, 1, gl20_gl20_gl20s__4ad_h_rx_entries, 1},  // NOTE: ESI offers 2tx/1rx alternative mappings; default (first) emitted
-    {0x10f41041, "GL20(GL20S)-8DAV", LCEC_MDP_MOD_AOUT, 0x1a04, 1, gl20_gl20_gl20s__8dav_tx_entries, 9, 0x1602, 1, gl20_gl20_gl20s__8dav_rx_entries, 8},
-    {0x10f41042, "GL20(GL20S)-8DAI", LCEC_MDP_MOD_AOUT, 0x1a04, 1, gl20_gl20_gl20s__8dai_tx_entries, 9, 0x1602, 1, gl20_gl20_gl20s__8dai_rx_entries, 8},
-    {0x10f41040, "GL20(GL20S)-4DA", LCEC_MDP_MOD_AOUT, 0x1a04, 1, gl20_gl20_gl20s__4da_tx_entries, 5, 0x1602, 1, gl20_gl20_gl20s__4da_rx_entries, 4},
-    {0x10f41050, "GL20(GL20S)-4PT", LCEC_MDP_MOD_OTHER, 0x1a03, 1, gl20_gl20_gl20s__4pt_tx_entries, 4, 0, 0, NULL, 0},  // NOTE: ESI offers 3tx/0rx alternative mappings; default (first) emitted
-    {0x10f41055, "GL20(GL20S)-4PT-ISO", LCEC_MDP_MOD_OTHER, 0x1a03, 1, gl20_gl20_gl20s__4pt_iso_tx_entries, 4, 0x1602, 1, gl20_gl20_gl20s__4pt_iso_rx_entries, 1},  // NOTE: ESI offers 2tx/1rx alternative mappings; default (first) emitted
-    {0x10f41051, "GL20(GL20S)-4TC", LCEC_MDP_MOD_OTHER, 0x1a03, 1, gl20_gl20_gl20s__4tc_tx_entries, 4, 0, 0, NULL, 0},  // NOTE: ESI offers 3tx/0rx alternative mappings; default (first) emitted
-    {0x10f41056, "GL20(GL20S)-4TC-ISO", LCEC_MDP_MOD_OTHER, 0x1a03, 1, gl20_gl20_gl20s__4tc_iso_tx_entries, 4, 0x1602, 1, gl20_gl20_gl20s__4tc_iso_rx_entries, 1},  // NOTE: ESI offers 2tx/1rx alternative mappings; default (first) emitted
-    {0x10f41053, "GL20(GL20S)-4LC-PID", LCEC_MDP_MOD_OTHER, 0x1a03, 1, gl20_gl20_gl20s__4lc_pid_tx_entries, 60, 0x1603, 1, gl20_gl20_gl20s__4lc_pid_rx_entries, 56},
-    {0x10f41054, "GL20(GL20S)-8TC-PID", LCEC_MDP_MOD_OTHER, 0x1b00, 1, gl20_gl20_gl20s__8tc_pid_tx_entries, 120, 0x1700, 1, gl20_gl20_gl20s__8tc_pid_rx_entries, 96},
-    {0x10f41052, "GL20(GL20S)-8TC", LCEC_MDP_MOD_OTHER, 0x1a03, 1, gl20_gl20_gl20s__8tc_tx_entries, 8, 0, 0, NULL, 0},
-    {0x10f41080, "GL20(GL20S)-PS2", LCEC_MDP_MOD_OTHER, 0x1a04, 1, gl20_gl20_gl20s__ps2_tx_entries, 1, 0, 0, NULL, 0},
-    {0x10f41090, "GL20-2CAN", LCEC_MDP_MOD_OTHER, 0x1b00, 1, gl20_gl20_2can_tx_entries, 30, 0x1700, 1, gl20_gl20_2can_rx_entries, 30},  // NOTE: ESI offers 3tx/2rx alternative mappings; default (first) emitted
-    {0x10f41091, "GL20-2S485", LCEC_MDP_MOD_OTHER, 0x1a03, 1, gl20_gl20_2s485_tx_entries, 15, 0x1603, 1, gl20_gl20_2s485_rx_entries, 15},  // NOTE: ESI offers 2tx/1rx alternative mappings; default (first) emitted
-    {0x10f41094, "GL20-2SCOM", LCEC_MDP_MOD_OTHER, 0x1a03, 1, gl20_gl20_2scom_tx_entries, 15, 0x1603, 1, gl20_gl20_2scom_rx_entries, 15},  // NOTE: ESI offers 2tx/1rx alternative mappings; default (first) emitted
-    {0x10f41093, "GL20-2SSI", LCEC_MDP_MOD_OTHER, 0x1a03, 1, gl20_gl20_2ssi_tx_entries, 12, 0, 0, NULL, 0},  // NOTE: ESI offers 2tx/0rx alternative mappings; default (first) emitted
-    {0x10f41095, "GL20-1DNM", LCEC_MDP_MOD_OTHER, 0x1b00, 1, gl20_gl20_1dnm_tx_entries, 30, 0x1700, 1, gl20_gl20_1dnm_rx_entries, 30},  // NOTE: ESI offers 2tx/1rx alternative mappings; default (first) emitted
-    {0x10f41096, "GL20-DNSLAVE", LCEC_MDP_MOD_OTHER, 0x1b00, 1, gl20_gl20_dnslave_tx_entries, 30, 0x1700, 1, gl20_gl20_dnslave_rx_entries, 30},
-    {0x10f41082, "GL20-2HC", LCEC_MDP_MOD_ENC, 0x1b00, 1, gl20_gl20_2hc_tx_entries, 17, 0x1700, 1, gl20_gl20_2hc_rx_entries, 18},  // NOTE: ESI offers 3tx/2rx alternative mappings; default (first) emitted
-    {0x10f41098, "GL20-2SCOM-MDB", LCEC_MDP_MOD_OTHER, 0x1b00, 1, gl20_gl20_2scom_mdb_tx_entries, 4, 0x1700, 1, gl20_gl20_2scom_mdb_rx_entries, 4},  // NOTE: ESI offers 5tx/4rx alternative mappings; default (first) emitted
-    {0x10f41099, "GL20-2S485-MDB", LCEC_MDP_MOD_OTHER, 0x1b00, 1, gl20_gl20_2s485_mdb_tx_entries, 4, 0x1700, 1, gl20_gl20_2s485_mdb_rx_entries, 4},  // NOTE: ESI offers 5tx/4rx alternative mappings; default (first) emitted
-    {0, NULL, LCEC_MDP_MOD_OTHER, 0, 0, NULL, 0, 0, 0, NULL, 0},
+    {0x10f41064, "GL20(GL20S)-0404ETP-5V", LCEC_MDP_MOD_DIO, gl20_gl20_gl20s__0404etp_5v_tx_pdos, 2, gl20_gl20_gl20s__0404etp_5v_rx_pdos, 1},  // NOTE: 4 mutually exclusive mapping variant(s) not emitted
+    {0x10f41060, "GL20(GL20S)-0808ETN", LCEC_MDP_MOD_DIO, gl20_gl20_gl20s__0808etn_tx_pdos, 2, gl20_gl20_gl20s__0808etn_rx_pdos, 1},  // NOTE: 4 mutually exclusive mapping variant(s) not emitted
+    {0x10f41061, "GL20(GL20S)-3232ETN", LCEC_MDP_MOD_DIO, gl20_gl20_gl20s__3232etn_tx_pdos, 2, gl20_gl20_gl20s__3232etn_rx_pdos, 1},  // NOTE: 4 mutually exclusive mapping variant(s) not emitted
+    {0x10f41523, "GL20(GL20S)-0032ETP", LCEC_MDP_MOD_DOUT, gl20_gl20_gl20s__0032etp_tx_pdos, 1, gl20_gl20_gl20s__0032etp_rx_pdos, 1},  // NOTE: 2 mutually exclusive mapping variant(s) not emitted
+    {0x10f41521, "GL20(GL20S)-0032ETP-M", LCEC_MDP_MOD_DOUT, gl20_gl20_gl20s__0032etp_m_tx_pdos, 1, gl20_gl20_gl20s__0032etp_m_rx_pdos, 1},  // NOTE: 2 mutually exclusive mapping variant(s) not emitted
+    {0x10f41011, "GL20(GL20S)-3200END", LCEC_MDP_MOD_DIN, gl20_gl20_gl20s__3200end_tx_pdos, 2, NULL, 0},  // NOTE: 2 mutually exclusive mapping variant(s) not emitted
+    {0x10f41021, "GL20(GL20S)-0032ETN", LCEC_MDP_MOD_DOUT, gl20_gl20_gl20s__0032etn_tx_pdos, 1, gl20_gl20_gl20s__0032etn_rx_pdos, 1},  // NOTE: 2 mutually exclusive mapping variant(s) not emitted
+    {0x10f41023, "GL20(GL20S)-0008ER", LCEC_MDP_MOD_DOUT, gl20_gl20_gl20s__0008er_tx_pdos, 1, gl20_gl20_gl20s__0008er_rx_pdos, 1},  // NOTE: 2 mutually exclusive mapping variant(s) not emitted
+    {0x10f41027, "GL20(GL20S)-0004ER", LCEC_MDP_MOD_DOUT, gl20_gl20_gl20s__0004er_tx_pdos, 1, gl20_gl20_gl20s__0004er_rx_pdos, 1},  // NOTE: 2 mutually exclusive mapping variant(s) not emitted
+    {0x10f41028, "GL20(GL20S)-0004ETP-2A", LCEC_MDP_MOD_DOUT, gl20_gl20_gl20s__0004etp_2a_tx_pdos, 1, gl20_gl20_gl20s__0004etp_2a_rx_pdos, 1},  // NOTE: 2 mutually exclusive mapping variant(s) not emitted
+    {0x10f41022, "GL20(GL20S)-0008ETN", LCEC_MDP_MOD_DOUT, gl20_gl20_gl20s__0008etn_tx_pdos, 1, gl20_gl20_gl20s__0008etn_rx_pdos, 1},  // NOTE: 2 mutually exclusive mapping variant(s) not emitted
+    {0x10f41025, "GL20(GL20S)-0008ETP", LCEC_MDP_MOD_DOUT, gl20_gl20_gl20s__0008etp_tx_pdos, 1, gl20_gl20_gl20s__0008etp_rx_pdos, 1},  // NOTE: 2 mutually exclusive mapping variant(s) not emitted
+    {0x10f41010, "GL20(GL20S)-1600END", LCEC_MDP_MOD_DIN, gl20_gl20_gl20s__1600end_tx_pdos, 2, NULL, 0},  // NOTE: 2 mutually exclusive mapping variant(s) not emitted
+    {0x10f41013, "GL20(GL20S)-1600END-5V", LCEC_MDP_MOD_DIN, gl20_gl20_gl20s__1600end_5v_tx_pdos, 2, NULL, 0},  // NOTE: 2 mutually exclusive mapping variant(s) not emitted
+    {0x10f41012, "GL20(GL20S)-0800END", LCEC_MDP_MOD_DIN, gl20_gl20_gl20s__0800end_tx_pdos, 2, NULL, 0},  // NOTE: 2 mutually exclusive mapping variant(s) not emitted
+    {0x10f41211, "GL20(GL20S)-0800ENA", LCEC_MDP_MOD_DIN, gl20_gl20_gl20s__0800ena_tx_pdos, 2, NULL, 0},  // NOTE: 2 mutually exclusive mapping variant(s) not emitted
+    {0x10f41020, "GL20(GL20S)-0016ETN", LCEC_MDP_MOD_DOUT, gl20_gl20_gl20s__0016etn_tx_pdos, 1, gl20_gl20_gl20s__0016etn_rx_pdos, 1},  // NOTE: 2 mutually exclusive mapping variant(s) not emitted
+    {0x10f41024, "GL20(GL20S)-0016ETP", LCEC_MDP_MOD_DOUT, gl20_gl20_gl20s__0016etp_tx_pdos, 1, gl20_gl20_gl20s__0016etp_rx_pdos, 1},  // NOTE: 2 mutually exclusive mapping variant(s) not emitted
+    {0x10f41320, "GL20(GL20S)-0016ETP-5V", LCEC_MDP_MOD_DOUT, gl20_gl20_gl20s__0016etp_5v_tx_pdos, 1, gl20_gl20_gl20s__0016etp_5v_rx_pdos, 1},  // NOTE: 2 mutually exclusive mapping variant(s) not emitted
+    {0x10f41031, "GL20(GL20S)-8ADV", LCEC_MDP_MOD_AIN, gl20_gl20_gl20s__8adv_tx_pdos, 2, NULL, 0},
+    {0x10f41032, "GL20(GL20S)-8ADI", LCEC_MDP_MOD_AIN, gl20_gl20_gl20s__8adi_tx_pdos, 2, NULL, 0},
+    {0x10f41030, "GL20(GL20S)-4AD", LCEC_MDP_MOD_AIN, gl20_gl20_gl20s__4ad_tx_pdos, 2, NULL, 0},
+    {0x10f41033, "GL20(GL20S)-4AD-H", LCEC_MDP_MOD_AIN, gl20_gl20_gl20s__4ad_h_tx_pdos, 2, gl20_gl20_gl20s__4ad_h_rx_pdos, 1},
+    {0x10f41041, "GL20(GL20S)-8DAV", LCEC_MDP_MOD_AOUT, gl20_gl20_gl20s__8dav_tx_pdos, 1, gl20_gl20_gl20s__8dav_rx_pdos, 1},
+    {0x10f41042, "GL20(GL20S)-8DAI", LCEC_MDP_MOD_AOUT, gl20_gl20_gl20s__8dai_tx_pdos, 1, gl20_gl20_gl20s__8dai_rx_pdos, 1},
+    {0x10f41040, "GL20(GL20S)-4DA", LCEC_MDP_MOD_AOUT, gl20_gl20_gl20s__4da_tx_pdos, 1, gl20_gl20_gl20s__4da_rx_pdos, 1},
+    {0x10f41050, "GL20(GL20S)-4PT", LCEC_MDP_MOD_OTHER, gl20_gl20_gl20s__4pt_tx_pdos, 2, NULL, 0},  // NOTE: 1 mutually exclusive mapping variant(s) not emitted
+    {0x10f41055, "GL20(GL20S)-4PT-ISO", LCEC_MDP_MOD_OTHER, gl20_gl20_gl20s__4pt_iso_tx_pdos, 2, gl20_gl20_gl20s__4pt_iso_rx_pdos, 1},
+    {0x10f41051, "GL20(GL20S)-4TC", LCEC_MDP_MOD_OTHER, gl20_gl20_gl20s__4tc_tx_pdos, 2, NULL, 0},  // NOTE: 1 mutually exclusive mapping variant(s) not emitted
+    {0x10f41056, "GL20(GL20S)-4TC-ISO", LCEC_MDP_MOD_OTHER, gl20_gl20_gl20s__4tc_iso_tx_pdos, 2, gl20_gl20_gl20s__4tc_iso_rx_pdos, 1},
+    {0x10f41053, "GL20(GL20S)-4LC-PID", LCEC_MDP_MOD_OTHER, gl20_gl20_gl20s__4lc_pid_tx_pdos, 1, gl20_gl20_gl20s__4lc_pid_rx_pdos, 1},
+    {0x10f41054, "GL20(GL20S)-8TC-PID", LCEC_MDP_MOD_OTHER, gl20_gl20_gl20s__8tc_pid_tx_pdos, 1, gl20_gl20_gl20s__8tc_pid_rx_pdos, 1},
+    {0x10f41052, "GL20(GL20S)-8TC", LCEC_MDP_MOD_OTHER, gl20_gl20_gl20s__8tc_tx_pdos, 1, NULL, 0},
+    {0x10f41080, "GL20(GL20S)-PS2", LCEC_MDP_MOD_OTHER, gl20_gl20_gl20s__ps2_tx_pdos, 1, NULL, 0},
+    {0x10f41090, "GL20-2CAN", LCEC_MDP_MOD_OTHER, gl20_gl20_2can_tx_pdos, 3, gl20_gl20_2can_rx_pdos, 2},
+    {0x10f41091, "GL20-2S485", LCEC_MDP_MOD_OTHER, gl20_gl20_2s485_tx_pdos, 2, gl20_gl20_2s485_rx_pdos, 1},
+    {0x10f41094, "GL20-2SCOM", LCEC_MDP_MOD_OTHER, gl20_gl20_2scom_tx_pdos, 2, gl20_gl20_2scom_rx_pdos, 1},
+    {0x10f41093, "GL20-2SSI", LCEC_MDP_MOD_OTHER, gl20_gl20_2ssi_tx_pdos, 2, NULL, 0},
+    {0x10f41095, "GL20-1DNM", LCEC_MDP_MOD_OTHER, gl20_gl20_1dnm_tx_pdos, 2, gl20_gl20_1dnm_rx_pdos, 1},
+    {0x10f41096, "GL20-DNSLAVE", LCEC_MDP_MOD_OTHER, gl20_gl20_dnslave_tx_pdos, 1, gl20_gl20_dnslave_rx_pdos, 1},
+    {0x10f41082, "GL20-2HC", LCEC_MDP_MOD_ENC, gl20_gl20_2hc_tx_pdos, 3, gl20_gl20_2hc_rx_pdos, 2},
+    {0x10f41098, "GL20-2SCOM-MDB", LCEC_MDP_MOD_OTHER, gl20_gl20_2scom_mdb_tx_pdos, 2, gl20_gl20_2scom_mdb_rx_pdos, 1},  // NOTE: 6 repeat data set(s) not emitted; vendor default is one per direction
+    {0x10f41099, "GL20-2S485-MDB", LCEC_MDP_MOD_OTHER, gl20_gl20_2s485_mdb_tx_pdos, 2, gl20_gl20_2s485_mdb_rx_pdos, 1},  // NOTE: 6 repeat data set(s) not emitted; vendor default is one per direction
+    {0, NULL, LCEC_MDP_MOD_OTHER, NULL, 0, NULL, 0},
 };
 
 static const lcec_mdp_family_t gl20_family = {

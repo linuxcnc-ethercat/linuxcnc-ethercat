@@ -11,7 +11,7 @@
 
 #include "lcec_mdp_coupler.h"
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_8di_np_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_8di_np_tx0_entries[] = {
     {0x6000, 1, 1, 1, 0, "DI00"},
     {0x6000, 1, 2, 1, 0, "DI01"},
     {0x6000, 1, 3, 1, 0, "DI02"},
@@ -22,8 +22,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_8di_np_tx_entries[] = {
     {0x6000, 1, 8, 1, 0, "DI07"},
     {0x6000, 1, 9, 8, 1, "align"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_8di_np_tx_pdos[] = {
+    {0x1a00, 1, 1, uc20_uc20_8di_np_tx0_entries, 9},  // Input
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_16di_np_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_16di_np_tx0_entries[] = {
     {0x6000, 1, 1, 1, 0, "DI00"},
     {0x6000, 1, 2, 1, 0, "DI01"},
     {0x6000, 1, 3, 1, 0, "DI02"},
@@ -41,8 +44,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_16di_np_tx_entries[] = {
     {0x6000, 1, 15, 1, 0, "DI16"},
     {0x6000, 1, 16, 1, 0, "DI17"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_16di_np_tx_pdos[] = {
+    {0x1a00, 1, 1, uc20_uc20_16di_np_tx0_entries, 16},  // Input
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_16do_p_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_16do_p_rx0_entries[] = {
     {0x7000, 1, 1, 1, 0, "DO00"},
     {0x7000, 1, 2, 1, 0, "DO01"},
     {0x7000, 1, 3, 1, 0, "DO02"},
@@ -60,8 +66,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_16do_p_rx_entries[] = {
     {0x7000, 1, 15, 1, 0, "DO16"},
     {0x7000, 1, 16, 1, 0, "DO17"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_16do_p_rx_pdos[] = {
+    {0x1600, 1, 1, uc20_uc20_16do_p_rx0_entries, 16},  // Outputs
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_16do_n_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_16do_n_rx0_entries[] = {
     {0x7000, 1, 1, 1, 0, "DO00"},
     {0x7000, 1, 2, 1, 0, "DO01"},
     {0x7000, 1, 3, 1, 0, "DO02"},
@@ -79,36 +88,51 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_16do_n_rx_entries[] = {
     {0x7000, 1, 15, 1, 0, "DO16"},
     {0x7000, 1, 16, 1, 0, "DO17"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_16do_n_rx_pdos[] = {
+    {0x1600, 1, 1, uc20_uc20_16do_n_rx0_entries, 16},  // Outputs
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_4ai_u_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_4ai_u_tx0_entries[] = {
     {0x6000, 1, 1, 16, 0, "AI0"},
     {0x6000, 1, 2, 16, 0, "AI1"},
     {0x6000, 1, 3, 16, 0, "AI2"},
     {0x6000, 1, 4, 16, 0, "AI3"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_4ai_u_tx_pdos[] = {
+    {0x1a00, 1, 1, uc20_uc20_4ai_u_tx0_entries, 4},  // Input
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_4ai_i_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_4ai_i_tx0_entries[] = {
     {0x6000, 1, 1, 16, 0, "AI0"},
     {0x6000, 1, 2, 16, 0, "AI1"},
     {0x6000, 1, 3, 16, 0, "AI2"},
     {0x6000, 1, 4, 16, 0, "AI3"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_4ai_i_tx_pdos[] = {
+    {0x1a00, 1, 1, uc20_uc20_4ai_i_tx0_entries, 4},  // Input
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_4rtd_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_4rtd_tx0_entries[] = {
     {0x6000, 1, 1, 16, 0, "AI0"},
     {0x6000, 1, 2, 16, 0, "AI1"},
     {0x6000, 1, 3, 16, 0, "AI2"},
     {0x6000, 1, 4, 16, 0, "AI3"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_4rtd_tx_pdos[] = {
+    {0x1a00, 1, 1, uc20_uc20_4rtd_tx0_entries, 4},  // Input
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_4ao_u_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_4ao_u_rx0_entries[] = {
     {0x7000, 1, 1, 16, 0, "AO0"},
     {0x7000, 1, 2, 16, 0, "AO1"},
     {0x7000, 1, 3, 16, 0, "AO2"},
     {0x7000, 1, 4, 16, 0, "AO3"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_4ao_u_rx_pdos[] = {
+    {0x1600, 1, 1, uc20_uc20_4ao_u_rx0_entries, 4},  // Outputs
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_8tc_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_8tc_tx0_entries[] = {
     {0x6000, 1, 1, 16, 0, "TC0"},
     {0x6000, 1, 2, 16, 0, "TC1"},
     {0x6000, 1, 3, 16, 0, "TC2"},
@@ -118,8 +142,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_8tc_tx_entries[] = {
     {0x6000, 1, 7, 16, 0, "TC6"},
     {0x6000, 1, 8, 16, 0, "TC7"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_8tc_tx_pdos[] = {
+    {0x1a00, 1, 1, uc20_uc20_8tc_tx0_entries, 8},  // Input
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_8do_n_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_8do_n_rx0_entries[] = {
     {0x7000, 1, 1, 1, 0, "DO00"},
     {0x7000, 1, 2, 1, 0, "DO01"},
     {0x7000, 1, 3, 1, 0, "DO02"},
@@ -130,8 +157,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_8do_n_rx_entries[] = {
     {0x7000, 1, 8, 1, 0, "DO07"},
     {0x7000, 1, 9, 8, 1, "align"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_8do_n_rx_pdos[] = {
+    {0x1600, 1, 1, uc20_uc20_8do_n_rx0_entries, 9},  // Outputs
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_8do_p_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_8do_p_rx0_entries[] = {
     {0x7000, 1, 1, 1, 0, "DO00"},
     {0x7000, 1, 2, 1, 0, "DO01"},
     {0x7000, 1, 3, 1, 0, "DO02"},
@@ -142,8 +172,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_8do_p_rx_entries[] = {
     {0x7000, 1, 8, 1, 0, "DO07"},
     {0x7000, 1, 9, 8, 1, "align"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_8do_p_rx_pdos[] = {
+    {0x1600, 1, 1, uc20_uc20_8do_p_rx0_entries, 9},  // Outputs
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_8ai_u_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_8ai_u_tx0_entries[] = {
     {0x6000, 1, 1, 16, 0, "AI0"},
     {0x6000, 1, 2, 16, 0, "AI1"},
     {0x6000, 1, 3, 16, 0, "AI2"},
@@ -153,8 +186,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_8ai_u_tx_entries[] = {
     {0x6000, 1, 7, 16, 0, "AI6"},
     {0x6000, 1, 8, 16, 0, "AI7"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_8ai_u_tx_pdos[] = {
+    {0x1a00, 1, 1, uc20_uc20_8ai_u_tx0_entries, 8},  // Input
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_8ai_i_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_8ai_i_tx0_entries[] = {
     {0x6000, 1, 1, 16, 0, "AI0"},
     {0x6000, 1, 2, 16, 0, "AI1"},
     {0x6000, 1, 3, 16, 0, "AI2"},
@@ -164,8 +200,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_8ai_i_tx_entries[] = {
     {0x6000, 1, 7, 16, 0, "AI6"},
     {0x6000, 1, 8, 16, 0, "AI7"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_8ai_i_tx_pdos[] = {
+    {0x1a00, 1, 1, uc20_uc20_8ai_i_tx0_entries, 8},  // Input
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_8ao_u_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_8ao_u_rx0_entries[] = {
     {0x7000, 1, 1, 16, 0, "AO0"},
     {0x7000, 1, 2, 16, 0, "AO1"},
     {0x7000, 1, 3, 16, 0, "AO2"},
@@ -175,15 +214,21 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_8ao_u_rx_entries[] = {
     {0x7000, 1, 7, 16, 0, "AO6"},
     {0x7000, 1, 8, 16, 0, "AO7"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_8ao_u_rx_pdos[] = {
+    {0x1600, 1, 1, uc20_uc20_8ao_u_rx0_entries, 8},  // Outputs
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_4ao_i_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_4ao_i_rx0_entries[] = {
     {0x7000, 1, 1, 16, 0, "AO0"},
     {0x7000, 1, 2, 16, 0, "AO1"},
     {0x7000, 1, 3, 16, 0, "AO2"},
     {0x7000, 1, 4, 16, 0, "AO3"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_4ao_i_rx_pdos[] = {
+    {0x1600, 1, 1, uc20_uc20_4ao_i_rx0_entries, 4},  // Outputs
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_8ao_i_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_8ao_i_rx0_entries[] = {
     {0x7000, 1, 1, 16, 0, "AO0"},
     {0x7000, 1, 2, 16, 0, "AO1"},
     {0x7000, 1, 3, 16, 0, "AO2"},
@@ -193,8 +238,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_8ao_i_rx_entries[] = {
     {0x7000, 1, 7, 16, 0, "AO6"},
     {0x7000, 1, 8, 16, 0, "AO7"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_8ao_i_rx_pdos[] = {
+    {0x1600, 1, 1, uc20_uc20_8ao_i_rx0_entries, 8},  // Outputs
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_32do_p_m_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_32do_p_m_rx0_entries[] = {
     {0x7000, 1, 1, 1, 0, "DO00"},
     {0x7000, 1, 2, 1, 0, "DO01"},
     {0x7000, 1, 3, 1, 0, "DO02"},
@@ -228,8 +276,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_32do_p_m_rx_entries[] = {
     {0x7000, 1, 31, 1, 0, "DO36"},
     {0x7000, 1, 32, 1, 0, "DO37"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_32do_p_m_rx_pdos[] = {
+    {0x1600, 1, 1, uc20_uc20_32do_p_m_rx0_entries, 32},  // Outputs
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_32do_n_m_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_32do_n_m_rx0_entries[] = {
     {0x7000, 1, 1, 1, 0, "DO00"},
     {0x7000, 1, 2, 1, 0, "DO01"},
     {0x7000, 1, 3, 1, 0, "DO02"},
@@ -263,8 +314,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_32do_n_m_rx_entries[] = {
     {0x7000, 1, 31, 1, 0, "DO36"},
     {0x7000, 1, 32, 1, 0, "DO37"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_32do_n_m_rx_pdos[] = {
+    {0x1600, 1, 1, uc20_uc20_32do_n_m_rx0_entries, 32},  // Outputs
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_32do_p_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_32do_p_rx0_entries[] = {
     {0x7000, 1, 1, 1, 0, "DO00"},
     {0x7000, 1, 2, 1, 0, "DO01"},
     {0x7000, 1, 3, 1, 0, "DO02"},
@@ -298,8 +352,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_32do_p_rx_entries[] = {
     {0x7000, 1, 31, 1, 0, "DO36"},
     {0x7000, 1, 32, 1, 0, "DO37"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_32do_p_rx_pdos[] = {
+    {0x1600, 1, 1, uc20_uc20_32do_p_rx0_entries, 32},  // Outputs
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_32do_n_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_32do_n_rx0_entries[] = {
     {0x7000, 1, 1, 1, 0, "DO00"},
     {0x7000, 1, 2, 1, 0, "DO01"},
     {0x7000, 1, 3, 1, 0, "DO02"},
@@ -333,8 +390,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_32do_n_rx_entries[] = {
     {0x7000, 1, 31, 1, 0, "DO36"},
     {0x7000, 1, 32, 1, 0, "DO37"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_32do_n_rx_pdos[] = {
+    {0x1600, 1, 1, uc20_uc20_32do_n_rx0_entries, 32},  // Outputs
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_32di_np_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_32di_np_tx0_entries[] = {
     {0x6000, 1, 1, 1, 0, "DI00"},
     {0x6000, 1, 2, 1, 0, "DI01"},
     {0x6000, 1, 3, 1, 0, "DI02"},
@@ -368,8 +428,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_32di_np_tx_entries[] = {
     {0x6000, 1, 31, 1, 0, "DI36"},
     {0x6000, 1, 32, 1, 0, "DI37"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_32di_np_tx_pdos[] = {
+    {0x1a00, 1, 1, uc20_uc20_32di_np_tx0_entries, 32},  // Input
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_32di_np_m_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_32di_np_m_tx0_entries[] = {
     {0x6000, 1, 1, 1, 0, "DI00"},
     {0x6000, 1, 2, 1, 0, "DI01"},
     {0x6000, 1, 3, 1, 0, "DI02"},
@@ -403,8 +466,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_32di_np_m_tx_entries[] = {
     {0x6000, 1, 31, 1, 0, "DI36"},
     {0x6000, 1, 32, 1, 0, "DI37"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_32di_np_m_tx_pdos[] = {
+    {0x1a00, 1, 1, uc20_uc20_32di_np_m_tx0_entries, 32},  // Input
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_8do_r_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_8do_r_rx0_entries[] = {
     {0x7000, 1, 1, 1, 0, "DO00"},
     {0x7000, 1, 2, 1, 0, "DO01"},
     {0x7000, 1, 3, 1, 0, "DO02"},
@@ -415,8 +481,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_8do_r_rx_entries[] = {
     {0x7000, 1, 8, 1, 0, "DO07"},
     {0x7000, 1, 9, 8, 1, "align"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_8do_r_rx_pdos[] = {
+    {0x1600, 1, 1, uc20_uc20_8do_r_rx0_entries, 9},  // Outputs
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_16di_np_48_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_16di_np_48_tx0_entries[] = {
     {0x6000, 1, 1, 1, 0, "DI00"},
     {0x6000, 1, 2, 1, 0, "DI01"},
     {0x6000, 1, 3, 1, 0, "DI02"},
@@ -434,15 +503,21 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_16di_np_48_tx_entries[] = {
     {0x6000, 1, 15, 1, 0, "DI16"},
     {0x6000, 1, 16, 1, 0, "DI17"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_16di_np_48_tx_pdos[] = {
+    {0x1a00, 1, 1, uc20_uc20_16di_np_48_tx0_entries, 16},  // Input
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_4tc_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_4tc_tx0_entries[] = {
     {0x6000, 1, 1, 16, 0, "TC0"},
     {0x6000, 1, 2, 16, 0, "TC1"},
     {0x6000, 1, 3, 16, 0, "TC2"},
     {0x6000, 1, 4, 16, 0, "TC3"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_4tc_tx_pdos[] = {
+    {0x1a00, 1, 1, uc20_uc20_4tc_tx0_entries, 4},  // Input
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_16di_np_m_tx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_16di_np_m_tx0_entries[] = {
     {0x6000, 1, 1, 1, 0, "DI00"},
     {0x6000, 1, 2, 1, 0, "DI01"},
     {0x6000, 1, 3, 1, 0, "DI02"},
@@ -460,8 +535,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_16di_np_m_tx_entries[] = {
     {0x6000, 1, 15, 1, 0, "DI16"},
     {0x6000, 1, 16, 1, 0, "DI17"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_16di_np_m_tx_pdos[] = {
+    {0x1a00, 1, 1, uc20_uc20_16di_np_m_tx0_entries, 16},  // Input
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_16do_p_m_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_16do_p_m_rx0_entries[] = {
     {0x7000, 1, 1, 1, 0, "DO00"},
     {0x7000, 1, 2, 1, 0, "DO01"},
     {0x7000, 1, 3, 1, 0, "DO02"},
@@ -479,8 +557,11 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_16do_p_m_rx_entries[] = {
     {0x7000, 1, 15, 1, 0, "DO16"},
     {0x7000, 1, 16, 1, 0, "DO17"},
 };
+static const lcec_mdp_pdo_t uc20_uc20_16do_p_m_rx_pdos[] = {
+    {0x1600, 1, 1, uc20_uc20_16do_p_m_rx0_entries, 16},  // Outputs
+};
 
-static const lcec_mdp_pdo_entry_t uc20_uc20_16do_n_m_rx_entries[] = {
+static const lcec_mdp_pdo_entry_t uc20_uc20_16do_n_m_rx0_entries[] = {
     {0x7000, 1, 1, 1, 0, "DO00"},
     {0x7000, 1, 2, 1, 0, "DO01"},
     {0x7000, 1, 3, 1, 0, "DO02"},
@@ -497,38 +578,41 @@ static const lcec_mdp_pdo_entry_t uc20_uc20_16do_n_m_rx_entries[] = {
     {0x7000, 1, 14, 1, 0, "DO15"},
     {0x7000, 1, 15, 1, 0, "DO16"},
     {0x7000, 1, 16, 1, 0, "DO17"},
+};
+static const lcec_mdp_pdo_t uc20_uc20_16do_n_m_rx_pdos[] = {
+    {0x1600, 1, 1, uc20_uc20_16do_n_m_rx0_entries, 16},  // Outputs
 };
 
 static const lcec_mdp_module_t uc20_modules[] = {
-    {0x00000001, "UC20-8DI-NP", LCEC_MDP_MOD_DIN, 0x1a00, 1, uc20_uc20_8di_np_tx_entries, 9, 0, 0, NULL, 0},
-    {0x00000002, "UC20-16DI-NP", LCEC_MDP_MOD_DIN, 0x1a00, 1, uc20_uc20_16di_np_tx_entries, 16, 0, 0, NULL, 0},
-    {0x00000004, "UC20-16DO-P", LCEC_MDP_MOD_DOUT, 0, 0, NULL, 0, 0x1600, 1, uc20_uc20_16do_p_rx_entries, 16},
-    {0x00000005, "UC20-16DO-N", LCEC_MDP_MOD_DOUT, 0, 0, NULL, 0, 0x1600, 1, uc20_uc20_16do_n_rx_entries, 16},
-    {0x00000006, "UC20-4AI-U", LCEC_MDP_MOD_AIN, 0x1a00, 1, uc20_uc20_4ai_u_tx_entries, 4, 0, 0, NULL, 0},
-    {0x00000007, "UC20-4AI-I", LCEC_MDP_MOD_AIN, 0x1a00, 1, uc20_uc20_4ai_i_tx_entries, 4, 0, 0, NULL, 0},
-    {0x00000008, "UC20-4RTD", LCEC_MDP_MOD_AIN, 0x1a00, 1, uc20_uc20_4rtd_tx_entries, 4, 0, 0, NULL, 0},
-    {0x00000009, "UC20-4AO-U", LCEC_MDP_MOD_AOUT, 0, 0, NULL, 0, 0x1600, 1, uc20_uc20_4ao_u_rx_entries, 4},
-    {0x0000000a, "UC20-8TC", LCEC_MDP_MOD_AOUT, 0x1a00, 1, uc20_uc20_8tc_tx_entries, 8, 0, 0, NULL, 0},
-    {0x0000000b, "UC20-8DO-N", LCEC_MDP_MOD_DOUT, 0, 0, NULL, 0, 0x1600, 1, uc20_uc20_8do_n_rx_entries, 9},
-    {0x0000000c, "UC20-8DO-P", LCEC_MDP_MOD_DOUT, 0, 0, NULL, 0, 0x1600, 1, uc20_uc20_8do_p_rx_entries, 9},
-    {0x0000000d, "UC20-8AI-U", LCEC_MDP_MOD_AIN, 0x1a00, 1, uc20_uc20_8ai_u_tx_entries, 8, 0, 0, NULL, 0},
-    {0x0000000e, "UC20-8AI-I", LCEC_MDP_MOD_AIN, 0x1a00, 1, uc20_uc20_8ai_i_tx_entries, 8, 0, 0, NULL, 0},
-    {0x0000000f, "UC20-8AO-U", LCEC_MDP_MOD_AOUT, 0, 0, NULL, 0, 0x1600, 1, uc20_uc20_8ao_u_rx_entries, 8},
-    {0x00000010, "UC20-4AO-I", LCEC_MDP_MOD_AOUT, 0, 0, NULL, 0, 0x1600, 1, uc20_uc20_4ao_i_rx_entries, 4},
-    {0x00000011, "UC20-8AO-I", LCEC_MDP_MOD_AOUT, 0, 0, NULL, 0, 0x1600, 1, uc20_uc20_8ao_i_rx_entries, 8},
-    {0x00000012, "UC20-32DO-P-M", LCEC_MDP_MOD_DOUT, 0, 0, NULL, 0, 0x1600, 1, uc20_uc20_32do_p_m_rx_entries, 32},
-    {0x00000013, "UC20-32DO-N-M", LCEC_MDP_MOD_DOUT, 0, 0, NULL, 0, 0x1600, 1, uc20_uc20_32do_n_m_rx_entries, 32},
-    {0x00000014, "UC20-32DO-P", LCEC_MDP_MOD_DOUT, 0, 0, NULL, 0, 0x1600, 1, uc20_uc20_32do_p_rx_entries, 32},
-    {0x00000015, "UC20-32DO-N", LCEC_MDP_MOD_DOUT, 0, 0, NULL, 0, 0x1600, 1, uc20_uc20_32do_n_rx_entries, 32},
-    {0x00000016, "UC20-32DI-NP", LCEC_MDP_MOD_DIN, 0x1a00, 1, uc20_uc20_32di_np_tx_entries, 32, 0, 0, NULL, 0},
-    {0x00000017, "UC20-32DI-NP-M", LCEC_MDP_MOD_DIN, 0x1a00, 1, uc20_uc20_32di_np_m_tx_entries, 32, 0, 0, NULL, 0},
-    {0x00000018, "UC20-8DO-R", LCEC_MDP_MOD_DOUT, 0, 0, NULL, 0, 0x1600, 1, uc20_uc20_8do_r_rx_entries, 9},
-    {0x00000019, "UC20-16DI-NP-48", LCEC_MDP_MOD_DIN, 0x1a00, 1, uc20_uc20_16di_np_48_tx_entries, 16, 0, 0, NULL, 0},
-    {0x0000001a, "UC20-4TC", LCEC_MDP_MOD_AOUT, 0x1a00, 1, uc20_uc20_4tc_tx_entries, 4, 0, 0, NULL, 0},
-    {0x0000001b, "UC20-16DI-NP-M", LCEC_MDP_MOD_DIN, 0x1a00, 1, uc20_uc20_16di_np_m_tx_entries, 16, 0, 0, NULL, 0},
-    {0x0000001c, "UC20-16DO-P-M", LCEC_MDP_MOD_DOUT, 0, 0, NULL, 0, 0x1600, 1, uc20_uc20_16do_p_m_rx_entries, 16},
-    {0x0000001d, "UC20-16DO-N-M", LCEC_MDP_MOD_DOUT, 0, 0, NULL, 0, 0x1600, 1, uc20_uc20_16do_n_m_rx_entries, 16},
-    {0, NULL, LCEC_MDP_MOD_OTHER, 0, 0, NULL, 0, 0, 0, NULL, 0},
+    {0x00000001, "UC20-8DI-NP", LCEC_MDP_MOD_DIN, uc20_uc20_8di_np_tx_pdos, 1, NULL, 0},
+    {0x00000002, "UC20-16DI-NP", LCEC_MDP_MOD_DIN, uc20_uc20_16di_np_tx_pdos, 1, NULL, 0},
+    {0x00000004, "UC20-16DO-P", LCEC_MDP_MOD_DOUT, NULL, 0, uc20_uc20_16do_p_rx_pdos, 1},
+    {0x00000005, "UC20-16DO-N", LCEC_MDP_MOD_DOUT, NULL, 0, uc20_uc20_16do_n_rx_pdos, 1},
+    {0x00000006, "UC20-4AI-U", LCEC_MDP_MOD_AIN, uc20_uc20_4ai_u_tx_pdos, 1, NULL, 0},
+    {0x00000007, "UC20-4AI-I", LCEC_MDP_MOD_AIN, uc20_uc20_4ai_i_tx_pdos, 1, NULL, 0},
+    {0x00000008, "UC20-4RTD", LCEC_MDP_MOD_AIN, uc20_uc20_4rtd_tx_pdos, 1, NULL, 0},
+    {0x00000009, "UC20-4AO-U", LCEC_MDP_MOD_AOUT, NULL, 0, uc20_uc20_4ao_u_rx_pdos, 1},
+    {0x0000000a, "UC20-8TC", LCEC_MDP_MOD_AOUT, uc20_uc20_8tc_tx_pdos, 1, NULL, 0},
+    {0x0000000b, "UC20-8DO-N", LCEC_MDP_MOD_DOUT, NULL, 0, uc20_uc20_8do_n_rx_pdos, 1},
+    {0x0000000c, "UC20-8DO-P", LCEC_MDP_MOD_DOUT, NULL, 0, uc20_uc20_8do_p_rx_pdos, 1},
+    {0x0000000d, "UC20-8AI-U", LCEC_MDP_MOD_AIN, uc20_uc20_8ai_u_tx_pdos, 1, NULL, 0},
+    {0x0000000e, "UC20-8AI-I", LCEC_MDP_MOD_AIN, uc20_uc20_8ai_i_tx_pdos, 1, NULL, 0},
+    {0x0000000f, "UC20-8AO-U", LCEC_MDP_MOD_AOUT, NULL, 0, uc20_uc20_8ao_u_rx_pdos, 1},
+    {0x00000010, "UC20-4AO-I", LCEC_MDP_MOD_AOUT, NULL, 0, uc20_uc20_4ao_i_rx_pdos, 1},
+    {0x00000011, "UC20-8AO-I", LCEC_MDP_MOD_AOUT, NULL, 0, uc20_uc20_8ao_i_rx_pdos, 1},
+    {0x00000012, "UC20-32DO-P-M", LCEC_MDP_MOD_DOUT, NULL, 0, uc20_uc20_32do_p_m_rx_pdos, 1},
+    {0x00000013, "UC20-32DO-N-M", LCEC_MDP_MOD_DOUT, NULL, 0, uc20_uc20_32do_n_m_rx_pdos, 1},
+    {0x00000014, "UC20-32DO-P", LCEC_MDP_MOD_DOUT, NULL, 0, uc20_uc20_32do_p_rx_pdos, 1},
+    {0x00000015, "UC20-32DO-N", LCEC_MDP_MOD_DOUT, NULL, 0, uc20_uc20_32do_n_rx_pdos, 1},
+    {0x00000016, "UC20-32DI-NP", LCEC_MDP_MOD_DIN, uc20_uc20_32di_np_tx_pdos, 1, NULL, 0},
+    {0x00000017, "UC20-32DI-NP-M", LCEC_MDP_MOD_DIN, uc20_uc20_32di_np_m_tx_pdos, 1, NULL, 0},
+    {0x00000018, "UC20-8DO-R", LCEC_MDP_MOD_DOUT, NULL, 0, uc20_uc20_8do_r_rx_pdos, 1},
+    {0x00000019, "UC20-16DI-NP-48", LCEC_MDP_MOD_DIN, uc20_uc20_16di_np_48_tx_pdos, 1, NULL, 0},
+    {0x0000001a, "UC20-4TC", LCEC_MDP_MOD_AOUT, uc20_uc20_4tc_tx_pdos, 1, NULL, 0},
+    {0x0000001b, "UC20-16DI-NP-M", LCEC_MDP_MOD_DIN, uc20_uc20_16di_np_m_tx_pdos, 1, NULL, 0},
+    {0x0000001c, "UC20-16DO-P-M", LCEC_MDP_MOD_DOUT, NULL, 0, uc20_uc20_16do_p_m_rx_pdos, 1},
+    {0x0000001d, "UC20-16DO-N-M", LCEC_MDP_MOD_DOUT, NULL, 0, uc20_uc20_16do_n_m_rx_pdos, 1},
+    {0, NULL, LCEC_MDP_MOD_OTHER, NULL, 0, NULL, 0},
 };
 
 static const lcec_mdp_family_t uc20_family = {

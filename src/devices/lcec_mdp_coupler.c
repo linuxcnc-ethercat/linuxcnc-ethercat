@@ -51,7 +51,15 @@ static const lcec_mdp_registration_t registrations[] = {
     // needed; tested on hardware 2026-07.
     {&uc20_family, 0},
     // Inovance GL20(S)-RTU-ECT32: same MDP pattern per ESI; supports DC
-    // sync0 (AssignActivate 0x300).  Untested on hardware so far.
+    // sync0 (AssignActivate 0x300).  Read back in PREOP on firmware
+    // 03.01.10.00: the coupler derives 0x1C12/0x1C13 from its detected
+    // module list, selecting each digital module's 8-bit mapping variant
+    // (0x1A01/0x1601 + slot * 8) plus every non-exclusive mapping, and
+    // instantiates one packed object per module at 0x6000/0x7000 +
+    // slot * 0x40.  The tables reproduce that assignment exactly, so the
+    // process image agrees with the slave whether or not it honours
+    // reassignment, and NO_PDO_ASSIGN would be safe to add if it turns out
+    // to reject it.  Not yet run in OP.
     {&gl20_family, 0},
     {NULL, 0},
 };
@@ -113,13 +121,35 @@ static uint16_t lcec_mdp_entry_index(const lcec_mdp_family_t *fam, const lcec_md
   return e->index + (e->index_dos ? slot * fam->slot_index_incr : 0);
 }
 
-/// @brief Append one direction of a slot's mapping to the syncs builder.
-static void lcec_mdp_append_pdos(lcec_syncs_t *syncs, const lcec_mdp_family_t *fam, uint8_t slot, uint16_t pdo_base, uint8_t pdo_dos,
-    const lcec_mdp_pdo_entry_t *entries, int count) {
-  if (pdo_base == 0 || count == 0) return;
-  lcec_syncs_add_pdo_info(syncs, pdo_base + (pdo_dos ? slot * fam->slot_pdo_incr : 0));
-  for (int i = 0; i < count; i++) {
-    lcec_syncs_add_pdo_entry(syncs, lcec_mdp_entry_index(fam, &entries[i], slot), entries[i].subindex, entries[i].bitlen);
+/// @brief Append every PDO of one direction of one slot to the syncs builder.
+static void lcec_mdp_append_pdos(
+    lcec_syncs_t *syncs, const lcec_mdp_family_t *fam, uint8_t slot, const lcec_mdp_pdo_t *pdos, uint16_t count) {
+  for (uint16_t p = 0; p < count; p++) {
+    const lcec_mdp_pdo_t *pdo = &pdos[p];
+    lcec_syncs_add_pdo_info(syncs, pdo->index + (pdo->index_dos ? slot * fam->slot_pdo_incr : 0));
+    for (uint16_t i = 0; i < pdo->entry_count; i++) {
+      const lcec_mdp_pdo_entry_t *e = &pdo->entries[i];
+      lcec_syncs_add_pdo_entry(syncs, lcec_mdp_entry_index(fam, e, slot), e->subindex, e->bitlen);
+    }
+  }
+}
+
+/// @brief Append one direction for all configured slots, lowest slot first.
+///
+/// Slot order, not `<subModule>` document order: the coupler assembles its own
+/// process image by ascending slot, so a master that emits another order only
+/// agrees with the slave while the slave honours PDO reassignment.
+static void lcec_mdp_append_direction(lcec_syncs_t *syncs, lcec_slave_t *slave, const lcec_mdp_family_t *fam, int inputs) {
+  for (uint32_t id = 0; id < fam->max_slots; id++) {
+    lcec_slave_submodule_t *s = lcec_submodule_find(slave, id);
+    if (s == NULL) continue;
+    const lcec_mdp_module_t *def = lcec_mdp_find_module(fam, s->ident);
+    if (def == NULL) continue;
+    if (inputs) {
+      lcec_mdp_append_pdos(syncs, fam, id, def->tx_pdos, def->tx_pdo_count);
+    } else {
+      lcec_mdp_append_pdos(syncs, fam, id, def->rx_pdos, def->rx_pdo_count);
+    }
   }
 }
 
@@ -132,117 +162,205 @@ static int lcec_mdp_build_syncs(lcec_slave_t *slave, const lcec_mdp_family_t *fa
   lcec_syncs_add_sync(syncs, EC_DIR_INPUT, EC_WD_DEFAULT);   // SM1 mailbox in
 
   lcec_syncs_add_sync(syncs, EC_DIR_OUTPUT, EC_WD_DEFAULT);  // SM2 outputs
-  for (lcec_slave_submodule_t *s = slave->submodules; s != NULL; s = s->next) {
-    const lcec_mdp_module_t *def = lcec_mdp_find_module(fam, s->ident);
-    if (def != NULL) lcec_mdp_append_pdos(syncs, fam, s->id, def->rx_pdo, def->rx_pdo_dos, def->rx_entries, def->rx_entry_count);
-  }
+  lcec_mdp_append_direction(syncs, slave, fam, 0);
 
   lcec_syncs_add_sync(syncs, EC_DIR_INPUT, EC_WD_DEFAULT);  // SM3 inputs
-  for (lcec_slave_submodule_t *s = slave->submodules; s != NULL; s = s->next) {
-    const lcec_mdp_module_t *def = lcec_mdp_find_module(fam, s->ident);
-    if (def != NULL) lcec_mdp_append_pdos(syncs, fam, s->id, def->tx_pdo, def->tx_pdo_dos, def->tx_entries, def->tx_entry_count);
-  }
+  lcec_mdp_append_direction(syncs, slave, fam, 1);
 
+  // The counters stop at the cap, so they show what fit, not what was needed.
+  // A coupler contributes every mapping it assigns itself, diagnosis included,
+  // so a five-module GL20 already needs 17 of the 17 available PDOs.
   if (syncs->error) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: PDO/sync layout overflow: too many modules/channels configured\n",
-        slave->master->name, slave->name);
+    rtapi_print_msg(RTAPI_MSG_ERR,
+        LCEC_MSG_PFX "%s.%s: layout exceeds capacity after %d of %d PDOs and %d of %d PDO entries; configure fewer modules\n",
+        slave->master->name, slave->name, syncs->pdo_info_count, LCEC_MAX_PDO_INFO_COUNT + 1, syncs->pdo_entry_count,
+        LCEC_MAX_PDO_ENTRY_COUNT + 1);
     return -EINVAL;
   }
   slave->sync_info = &syncs->syncs[0];
   return 0;
 }
 
-/// @brief Register HAL pins for one slot from its entry tables.
+/// @brief Number of digital HAL channels an entry carries.
 ///
-/// Digital channels are BOOL (bitlen 1) non-padding entries; analog channels
-/// are 16-bit non-padding entries.  Padding/diagnostic entries are mapped in
-/// the PDO layout but get no pins.
-static int lcec_mdp_register_slot(lcec_slave_t *slave, const lcec_mdp_family_t *fam, lcec_mdp_slot_t *slot, const char *base) {
-  const lcec_mdp_module_t *def = slot->def;
-
-  // digital inputs
-  if (def->kind == LCEC_MDP_MOD_DIN || def->kind == LCEC_MDP_MOD_DIO) {
-    int n = 0;
-    for (int i = 0; i < def->tx_entry_count; i++)
-      if (!def->tx_entries[i].padding && def->tx_entries[i].bitlen == 1) n++;
-    if (n > 0) {
-      slot->din = lcec_din_allocate_channels(n);
-      int ch = 0;
-      for (int i = 0; i < def->tx_entry_count; i++) {
-        const lcec_mdp_pdo_entry_t *e = &def->tx_entries[i];
-        if (e->padding || e->bitlen != 1) continue;
-        slot->din->channels[ch] =
-            lcec_din_register_channel_named(slave, lcec_mdp_entry_index(fam, e, slot->id), e->subindex, lcec_mdp_name(base, "din", ch));
-        if (slot->din->channels[ch] == NULL) return -EIO;
-        ch++;
-      }
-    }
+/// A bitlen-1 entry is one BOOL channel.  Wider entries are byte/word/dword
+/// registers holding one channel per bit: Inovance GL20 digital modules map
+/// their 16 channels as two 8-bit subindexes ("Digital input CH0-8bit"), and
+/// their bitwise ESI variant is not usable because the firmware instantiates
+/// only the packed object (0x60C0:00 reads 2, so subindexes 3..16 of the
+/// bitwise variant do not exist).  Padding entries carry none.
+static int lcec_mdp_digital_channels(const lcec_mdp_pdo_entry_t *e) {
+  if (e->padding) return 0;
+  switch (e->bitlen) {
+    case 1:
+    case 8:
+    case 16:
+    case 32:
+      return e->bitlen;
+    default:
+      return 0;  // not a digital register (analog value, string, ...)
   }
+}
 
-  // digital outputs
-  if (def->kind == LCEC_MDP_MOD_DOUT || def->kind == LCEC_MDP_MOD_DIO) {
-    int n = 0;
-    for (int i = 0; i < def->rx_entry_count; i++)
-      if (!def->rx_entries[i].padding && def->rx_entries[i].bitlen == 1) n++;
-    if (n > 0) {
-      slot->dout = lcec_dout_allocate_channels(n);
-      int ch = 0;
-      for (int i = 0; i < def->rx_entry_count; i++) {
-        const lcec_mdp_pdo_entry_t *e = &def->rx_entries[i];
-        if (e->padding || e->bitlen != 1) continue;
-        slot->dout->channels[ch] =
-            lcec_dout_register_channel_named(slave, lcec_mdp_entry_index(fam, e, slot->id), e->subindex, lcec_mdp_name(base, "dout", ch));
-        if (slot->dout->channels[ch] == NULL) return -EIO;
-        ch++;
-      }
-    }
+/// @brief Register one digital-input entry's channels, advancing *ch.
+///
+/// bitlen-1 entries keep the non-packed path: their bit position inside the
+/// PDO comes from the ESI subindex and is resolved by lcec_pdo_init(), which
+/// the `_packed` helper deliberately overrides.
+static int lcec_mdp_register_din_entry(
+    lcec_slave_t *slave, const lcec_mdp_pdo_entry_t *e, uint16_t idx, lcec_class_din_channels_t *din, const char *base, int *ch) {
+  int bits = lcec_mdp_digital_channels(e);
+
+  for (int bit = 0; bit < bits; bit++, (*ch)++) {
+    char *name = lcec_mdp_name(base, "din", *ch);
+    din->channels[*ch] = (e->bitlen == 1) ? lcec_din_register_channel_named(slave, idx, e->subindex, name)
+                                          : lcec_din_register_channel_packed(slave, idx, e->subindex, bit, name);
+    if (din->channels[*ch] == NULL) return -EIO;
   }
-
-  // analog inputs (16-bit value entries)
-  if (def->kind == LCEC_MDP_MOD_AIN) {
-    int n = 0;
-    for (int i = 0; i < def->tx_entry_count; i++)
-      if (!def->tx_entries[i].padding && def->tx_entries[i].bitlen == 16) n++;
-    if (n > 0) {
-      slot->ain = lcec_ain_allocate_channels(n);
-      int ch = 0;
-      for (int i = 0; i < def->tx_entry_count; i++) {
-        const lcec_mdp_pdo_entry_t *e = &def->tx_entries[i];
-        if (e->padding || e->bitlen != 16) continue;
-        lcec_class_ain_options_t *opt = lcec_ain_options();
-        opt->name_prefix = lcec_mdp_name(base, "ain", ch);
-        opt->valueonly = 1;
-        opt->value_idx = lcec_mdp_entry_index(fam, e, slot->id);
-        opt->value_sidx = e->subindex;
-        slot->ain->channels[ch] = lcec_ain_register_channel(slave, ch, opt->value_idx, opt);
-        if (slot->ain->channels[ch] == NULL) return -EIO;
-        ch++;
-      }
-    }
-  }
-
-  // analog outputs (16-bit value entries)
-  if (def->kind == LCEC_MDP_MOD_AOUT) {
-    int n = 0;
-    for (int i = 0; i < def->rx_entry_count; i++)
-      if (!def->rx_entries[i].padding && def->rx_entries[i].bitlen == 16) n++;
-    if (n > 0) {
-      slot->aout = lcec_aout_allocate_channels(n);
-      int ch = 0;
-      for (int i = 0; i < def->rx_entry_count; i++) {
-        const lcec_mdp_pdo_entry_t *e = &def->rx_entries[i];
-        if (e->padding || e->bitlen != 16) continue;
-        lcec_class_aout_options_t *opt = lcec_aout_options();
-        opt->name_prefix = lcec_mdp_name(base, "aout", ch);
-        opt->value_sidx = e->subindex;
-        slot->aout->channels[ch] = lcec_aout_register_channel(slave, ch, lcec_mdp_entry_index(fam, e, slot->id), opt);
-        if (slot->aout->channels[ch] == NULL) return -EIO;
-        ch++;
-      }
-    }
-  }
-
   return 0;
+}
+
+/// @brief Register one digital-output entry's channels, advancing *ch.
+/// See lcec_mdp_register_din_entry() for the bitlen-1 special case.
+static int lcec_mdp_register_dout_entry(
+    lcec_slave_t *slave, const lcec_mdp_pdo_entry_t *e, uint16_t idx, lcec_class_dout_channels_t *dout, const char *base, int *ch) {
+  int bits = lcec_mdp_digital_channels(e);
+
+  for (int bit = 0; bit < bits; bit++, (*ch)++) {
+    char *name = lcec_mdp_name(base, "dout", *ch);
+    dout->channels[*ch] = (e->bitlen == 1) ? lcec_dout_register_channel_named(slave, idx, e->subindex, name)
+                                           : lcec_dout_register_channel_packed(slave, idx, e->subindex, bit, name);
+    if (dout->channels[*ch] == NULL) return -EIO;
+  }
+  return 0;
+}
+
+/// @brief One analog HAL channel per 16-bit value entry.
+static int lcec_mdp_analog_channels(const lcec_mdp_pdo_entry_t *e) { return (!e->padding && e->bitlen == 16) ? 1 : 0; }
+
+/// @brief Total channels `width` reports across a direction's I/O mappings.
+///
+/// Mappings with `io` clear are skipped, and this is the only thing keeping
+/// diagnosis data out of the pin space: a GL20 DIN/DOUT module contributes a
+/// 0xA000-range diagnosis mapping of 16-bit words, which lcec_mdp_digital_-
+/// channels() would otherwise happily expand into 16 phantom channels each.
+static int lcec_mdp_count_channels(const lcec_mdp_pdo_t *pdos, uint16_t count, int (*width)(const lcec_mdp_pdo_entry_t *)) {
+  int n = 0;
+
+  for (uint16_t p = 0; p < count; p++) {
+    if (!pdos[p].io) continue;
+    for (uint16_t i = 0; i < pdos[p].entry_count; i++) n += width(&pdos[p].entries[i]);
+  }
+  return n;
+}
+
+/// @brief Register a slot's digital inputs, numbered across its I/O mappings.
+static int lcec_mdp_register_din(lcec_slave_t *slave, const lcec_mdp_family_t *fam, lcec_mdp_slot_t *slot, const char *base) {
+  const lcec_mdp_module_t *def = slot->def;
+  int n = lcec_mdp_count_channels(def->tx_pdos, def->tx_pdo_count, lcec_mdp_digital_channels);
+  int ch = 0, err;
+
+  if (n == 0) return 0;
+  slot->din = lcec_din_allocate_channels(n);
+  for (uint16_t p = 0; p < def->tx_pdo_count; p++) {
+    if (!def->tx_pdos[p].io) continue;
+    for (uint16_t i = 0; i < def->tx_pdos[p].entry_count; i++) {
+      const lcec_mdp_pdo_entry_t *e = &def->tx_pdos[p].entries[i];
+      if ((err = lcec_mdp_register_din_entry(slave, e, lcec_mdp_entry_index(fam, e, slot->id), slot->din, base, &ch)) != 0) return err;
+    }
+  }
+  return 0;
+}
+
+/// @brief Register a slot's digital outputs, numbered across its I/O mappings.
+static int lcec_mdp_register_dout(lcec_slave_t *slave, const lcec_mdp_family_t *fam, lcec_mdp_slot_t *slot, const char *base) {
+  const lcec_mdp_module_t *def = slot->def;
+  int n = lcec_mdp_count_channels(def->rx_pdos, def->rx_pdo_count, lcec_mdp_digital_channels);
+  int ch = 0, err;
+
+  if (n == 0) return 0;
+  slot->dout = lcec_dout_allocate_channels(n);
+  for (uint16_t p = 0; p < def->rx_pdo_count; p++) {
+    if (!def->rx_pdos[p].io) continue;
+    for (uint16_t i = 0; i < def->rx_pdos[p].entry_count; i++) {
+      const lcec_mdp_pdo_entry_t *e = &def->rx_pdos[p].entries[i];
+      if ((err = lcec_mdp_register_dout_entry(slave, e, lcec_mdp_entry_index(fam, e, slot->id), slot->dout, base, &ch)) != 0) return err;
+    }
+  }
+  return 0;
+}
+
+/// @brief Register a slot's analog inputs (16-bit value entries).
+static int lcec_mdp_register_ain(lcec_slave_t *slave, const lcec_mdp_family_t *fam, lcec_mdp_slot_t *slot, const char *base) {
+  const lcec_mdp_module_t *def = slot->def;
+  int n = lcec_mdp_count_channels(def->tx_pdos, def->tx_pdo_count, lcec_mdp_analog_channels);
+  int ch = 0;
+
+  if (n == 0) return 0;
+  slot->ain = lcec_ain_allocate_channels(n);
+  for (uint16_t p = 0; p < def->tx_pdo_count; p++) {
+    if (!def->tx_pdos[p].io) continue;
+    for (uint16_t i = 0; i < def->tx_pdos[p].entry_count; i++) {
+      const lcec_mdp_pdo_entry_t *e = &def->tx_pdos[p].entries[i];
+      if (!lcec_mdp_analog_channels(e)) continue;
+      lcec_class_ain_options_t *opt = lcec_ain_options();
+      opt->name_prefix = lcec_mdp_name(base, "ain", ch);
+      opt->valueonly = 1;
+      opt->value_idx = lcec_mdp_entry_index(fam, e, slot->id);
+      opt->value_sidx = e->subindex;
+      slot->ain->channels[ch] = lcec_ain_register_channel(slave, ch, opt->value_idx, opt);
+      if (slot->ain->channels[ch] == NULL) return -EIO;
+      ch++;
+    }
+  }
+  return 0;
+}
+
+/// @brief Register a slot's analog outputs (16-bit value entries).
+static int lcec_mdp_register_aout(lcec_slave_t *slave, const lcec_mdp_family_t *fam, lcec_mdp_slot_t *slot, const char *base) {
+  const lcec_mdp_module_t *def = slot->def;
+  int n = lcec_mdp_count_channels(def->rx_pdos, def->rx_pdo_count, lcec_mdp_analog_channels);
+  int ch = 0;
+
+  if (n == 0) return 0;
+  slot->aout = lcec_aout_allocate_channels(n);
+  for (uint16_t p = 0; p < def->rx_pdo_count; p++) {
+    if (!def->rx_pdos[p].io) continue;
+    for (uint16_t i = 0; i < def->rx_pdos[p].entry_count; i++) {
+      const lcec_mdp_pdo_entry_t *e = &def->rx_pdos[p].entries[i];
+      if (!lcec_mdp_analog_channels(e)) continue;
+      lcec_class_aout_options_t *opt = lcec_aout_options();
+      opt->name_prefix = lcec_mdp_name(base, "aout", ch);
+      opt->value_sidx = e->subindex;
+      slot->aout->channels[ch] = lcec_aout_register_channel(slave, ch, lcec_mdp_entry_index(fam, e, slot->id), opt);
+      if (slot->aout->channels[ch] == NULL) return -EIO;
+      ch++;
+    }
+  }
+  return 0;
+}
+
+/// @brief Register HAL pins for one slot, per its module kind.
+///
+/// Only I/O mappings contribute pins; diagnosis mappings and whole modules of
+/// kind OTHER/ENC are in the process image but pinless.
+static int lcec_mdp_register_slot(lcec_slave_t *slave, const lcec_mdp_family_t *fam, lcec_mdp_slot_t *slot, const char *base) {
+  switch (slot->def->kind) {
+    case LCEC_MDP_MOD_DIN:
+      return lcec_mdp_register_din(slave, fam, slot, base);
+    case LCEC_MDP_MOD_DOUT:
+      return lcec_mdp_register_dout(slave, fam, slot, base);
+    case LCEC_MDP_MOD_DIO: {
+      int err = lcec_mdp_register_din(slave, fam, slot, base);
+      return err != 0 ? err : lcec_mdp_register_dout(slave, fam, slot, base);
+    }
+    case LCEC_MDP_MOD_AIN:
+      return lcec_mdp_register_ain(slave, fam, slot, base);
+    case LCEC_MDP_MOD_AOUT:
+      return lcec_mdp_register_aout(slave, fam, slot, base);
+    default:
+      return 0;
+  }
 }
 
 /// @brief Write the configured module ident list (0xF030).

@@ -86,19 +86,32 @@ typedef struct {
   const char *name;  ///< entry name per ESI (used in pin naming diagnostics)
 } lcec_mdp_pdo_entry_t;
 
+/// @brief One PDO the coupler activates for a module, from the ESI.
+///
+/// A module contributes every mapping the coupler assigns by itself, not just
+/// its data mapping: an Inovance GL20 builds 0x1C12/0x1C13 from its detected
+/// module list and includes each module's diagnosis mapping, so a master that
+/// configured only the data mappings would compute every following byte
+/// offset against a shorter image than the slave actually produces.
+typedef struct {
+  uint16_t index;     ///< PDO index for slot 0
+  uint8_t index_dos;  ///< index is DependOnSlot (add slot * slot_pdo_incr)
+  uint8_t io;         ///< entries are process I/O (ETG.5001 0x6000/0x7000 ranges)
+                      ///< and may become HAL pins; 0 for diagnosis (0xA000) and
+                      ///< other status mappings, which are mapped but get no pins
+  const lcec_mdp_pdo_entry_t *entries;
+  uint16_t entry_count;
+} lcec_mdp_pdo_t;
+
 /// @brief One module type, from the ESI `<Module>` list.
 typedef struct {
   uint32_t ident;    ///< ModuleIdent, matched against <subModule ident=...>
   const char *name;  ///< type name per ESI
   lcec_mdp_modkind_t kind;
-  uint16_t tx_pdo;     ///< TxPdo index for slot 0 (0 = none)
-  uint8_t tx_pdo_dos;  ///< TxPdo index is DependOnSlot
-  const lcec_mdp_pdo_entry_t *tx_entries;
-  uint16_t tx_entry_count;
-  uint16_t rx_pdo;     ///< RxPdo index for slot 0 (0 = none)
-  uint8_t rx_pdo_dos;  ///< RxPdo index is DependOnSlot
-  const lcec_mdp_pdo_entry_t *rx_entries;
-  uint16_t rx_entry_count;
+  const lcec_mdp_pdo_t *tx_pdos;  ///< inputs, in ESI order (NULL = none)
+  uint16_t tx_pdo_count;
+  const lcec_mdp_pdo_t *rx_pdos;  ///< outputs, in ESI order (NULL = none)
+  uint16_t rx_pdo_count;
 } lcec_mdp_module_t;
 
 /// @brief One coupler family: everything scripts/esi2coupler.py extracts

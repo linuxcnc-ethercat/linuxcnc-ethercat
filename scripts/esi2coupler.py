@@ -71,6 +71,11 @@ class Pdo:
     index_dos: bool
     name: str
     entries: list = field(default_factory=list)
+    excludes: list = field(default_factory=list)  # PDO indices this one excludes
+
+    def entry_base(self):
+        """Lowest object index referenced by this mapping (0 if empty)."""
+        return min((e.index for e in self.entries), default=0)
 
 
 @dataclass
@@ -88,6 +93,7 @@ def parse_pdo(el):
         index=parse_ecnum(idx_el.text),
         index_dos=parse_bool(idx_el.get("DependOnSlot")),
         name=(el.findtext("Name") or "").strip(),
+        excludes=[parse_ecnum(x.text) for x in el.findall("Exclude") if x.text],
     )
     for entry_el in el.findall("Entry"):
         e_idx = entry_el.find("Index")
@@ -152,12 +158,134 @@ def classify(module_class):
     return "LCEC_MDP_MOD_OTHER"
 
 
-def emit_entries(out, prefix, pdo):
+def refine_digital_kind(kind, tx, rx):
+    """Promote a digital module to DIO when it maps I/O in both directions.
+
+    Inovance labels its combined modules ModuleClass="Digital Out" (0404ETP-5V,
+    0808ETN, 3232ETN), which would leave their input half mapped but pinless.
+    Only DIN/DOUT are ever promoted, so analog, serial and counter modules keep
+    the class the ESI declares.
+    """
+    if kind not in ("LCEC_MDP_MOD_DIN", "LCEC_MDP_MOD_DOUT"):
+        return kind
+    if any(pdo_is_io(p) for p in tx) and any(pdo_is_io(p) for p in rx):
+        return "LCEC_MDP_MOD_DIO"
+    return kind
+
+
+def variant_index_shift(pdo, siblings):
+    """Offset to subtract from a mapping's entry object indices.
+
+    Mutually exclusive mappings (<Exclude>) are alternative views of one and
+    the same process data -- bitwise, 8-bit packed, 16-bit.  Vendors encode
+    the variant number in the *entry* object index as well as in the PDO
+    index, but only one object exists: the one the module's <Objects> section
+    declares, which is the lowest entry index used across the exclusion
+    group.  Inovance GL20 1600END offers TxPdo 0x1A00/0x6000 (bitwise),
+    0x1A01/0x6001 (8-bit) and 0x1A02/0x6002 (16-bit), yet its dictionary
+    declares only object 0x6000, and that object's two 8-bit subindexes are
+    the 8-bit view; hardware agrees, PDO 0x1A19 (0x1A01 at slot 3) maps
+    0x60C0:01/:02 and 0x60C1 does not exist.  Emitting any variant other
+    than the group's lowest therefore has to normalize its entry indices
+    back onto the base object.
+
+    Only single-object variants are normalized: a mapping spanning several
+    objects (per-channel objects, as on GL20 4LC-PID) is not a repacking of
+    one object, so its indices are real and left alone.
+    """
+    if not pdo.excludes:
+        return 0
+    group = [p for p in siblings if p.index in pdo.excludes] + [pdo]
+    shift = pdo.entry_base() - min(p.entry_base() for p in group)
+    if shift == 0 or len({e.index for e in pdo.entries}) != 1:
+        return 0
+    return shift
+
+
+def select_pdos(pdos):
+    """Mappings the coupler activates: every non-exclusive one, plus the first
+    member of each mutual-exclusion group, in ESI document order.
+
+    Verified against an Inovance GL20 carrying 2SCOM-MDB + 2x 0016ETP + 2x
+    1600END: this reproduces the coupler's self-assembled 0x1C12/0x1C13
+    exactly, 6 RxPDOs and 11 TxPDOs, index for index and in order.  Emitting
+    only the first mapping per direction understates the image the slave
+    produces, which shifts every process-data offset past the first omission.
+    """
+    chosen, superseded = [], set()
+    for p in pdos:
+        if p.index in superseded:
+            continue
+        chosen.append(p)
+        superseded.update(p.excludes)
+    return chosen
+
+
+def drop_repeat_data_sets(pdos):
+    """Drop repeat buffer sets that exist only so a user can scale data size up.
+
+    A few modules map the same process data several times over, at object
+    indices differing only by set number.  GL20-2SCOM-MDB and 2S485-MDB offer
+    four identical sets per direction (0x1B00-0x1B03 in, 0x1700-0x1703 out).
+    Per the GL20-2SCOM/2SCOM-MDB Equipment Guide (PS00021928) the default is
+    ONE 120-byte set each way, and the per-module budget shrinks as more
+    communication modules are fitted:
+
+        communication modules fitted:  1     2     3     4
+        max PDO bytes per module:      480   240   120   120
+
+    Assigning all four sets spends a lone module's entire 480-byte budget, and
+    the guide warns that exceeding the budget makes the module report an error
+    and PDO exchange fail.  So emit the vendor default and let a user who needs
+    bigger buffers say so explicitly.
+
+    Identical entry *names* are what marks a repeat set, not identical shape:
+    GL20-2CAN and GL20-2HC also map two same-shaped sets per direction, but
+    theirs are named CAN0_/CAN1_ and "2HC CH0"/"2HC CH1" because they are two
+    physical channels, and dropping the second would lose real data.
+    """
+    seen, chosen = set(), []
+    for p in pdos:
+        sig = tuple((e.subindex, e.bitlen, e.name) for e in p.entries)
+        if sig in seen:
+            continue
+        seen.add(sig)
+        chosen.append(p)
+    return chosen
+
+
+def pdo_is_io(pdo):
+    """Does this mapping carry process I/O, or status/diagnosis data?
+
+    ETG.5001 partitions modular-device objects by role: 0x6000-0x6FFF inputs,
+    0x7000-0x7FFF outputs, 0xA000-0xAFFF diagnosis.  Only I/O may become HAL
+    pins.  Diagnosis still has to be in the process image, so the driver needs
+    the distinction flagged rather than inferred from bit widths -- a 16-bit
+    diagnosis word is indistinguishable from a packed 16-channel digital
+    register otherwise.
+    """
+    idx = [e.index for e in pdo.entries if not e.is_padding()]
+    return bool(idx) and all(0x6000 <= i <= 0x7FFF for i in idx)
+
+
+def emit_entries(out, prefix, pdo, shift=0):
+    if shift:
+        out.append(f"// {pdo.name}: exclusive-variant entry base normalized "
+                   f"0x{pdo.entry_base():04x} -> 0x{pdo.entry_base() - shift:04x}")
     out.append(f"static const lcec_mdp_pdo_entry_t {prefix}_entries[] = {{")
     for e in pdo.entries:
         pad = 1 if e.is_padding() else 0
         out.append(
-            f'    {{0x{e.index:04x}, {int(e.index_dos)}, {e.subindex}, {e.bitlen}, {pad}, "{e.name}"}},')
+            f'    {{0x{e.index - shift:04x}, {int(e.index_dos)}, {e.subindex}, {e.bitlen}, {pad}, "{e.name}"}},')
+    out.append("};")
+
+
+def emit_pdos(out, prefix, pdos):
+    """Emit the per-direction PDO list, referencing the entry arrays."""
+    out.append(f"static const lcec_mdp_pdo_t {prefix}_pdos[] = {{")
+    for n, p in enumerate(pdos):
+        out.append(f"    {{0x{p.index:04x}, {int(p.index_dos)}, {int(pdo_is_io(p))}, "
+                   f"{prefix}{n}_entries, {len(p.entries)}}},  // {p.name}")
     out.append("};")
 
 
@@ -211,34 +339,33 @@ def main():
     mod_refs = []
     for m in modules:
         mid = c_ident(m.type_name) or f"ident_{m.ident:08x}"
-        kind = classify(m.module_class)
-        # first declared PDO of each direction is the vendor default mapping
-        tx = m.txpdos[0] if m.txpdos else None
-        rx = m.rxpdos[0] if m.rxpdos else None
+        tx_sel, rx_sel = select_pdos(m.txpdos), select_pdos(m.rxpdos)
+        tx, rx = drop_repeat_data_sets(tx_sel), drop_repeat_data_sets(rx_sel)
+        kind = refine_digital_kind(classify(m.module_class), tx, rx)
+        for n, p in enumerate(tx):
+            emit_entries(out, f"{f}_{mid}_tx{n}", p, variant_index_shift(p, m.txpdos))
         if tx:
-            emit_entries(out, f"{f}_{mid}_tx", tx)
+            emit_pdos(out, f"{f}_{mid}_tx", tx)
+        for n, p in enumerate(rx):
+            emit_entries(out, f"{f}_{mid}_rx{n}", p, variant_index_shift(p, m.rxpdos))
         if rx:
-            emit_entries(out, f"{f}_{mid}_rx", rx)
-        alt_note = ""
-        if len(m.txpdos) > 1 or len(m.rxpdos) > 1:
-            alt_note = f"  // NOTE: ESI offers {len(m.txpdos)}tx/{len(m.rxpdos)}rx alternative mappings; default (first) emitted"
+            emit_pdos(out, f"{f}_{mid}_rx", rx)
+        excl = (len(m.txpdos) - len(tx_sel)) + (len(m.rxpdos) - len(rx_sel))
+        sets = (len(tx_sel) - len(tx)) + (len(rx_sel) - len(rx))
+        alt_note = f"  // NOTE: {excl} mutually exclusive mapping variant(s) not emitted" if excl else ""
+        if sets:
+            alt_note += f"  // NOTE: {sets} repeat data set(s) not emitted; vendor default is one per direction"
         mod_refs.append((m, mid, kind, tx, rx, alt_note))
         out.append("")
 
     out.append(f"static const lcec_mdp_module_t {f}_modules[] = {{")
     for m, mid, kind, tx, rx, alt_note in mod_refs:
-        tx_pdo = f"0x{tx.index:04x}" if tx else "0"
-        tx_dos = int(tx.index_dos) if tx else 0
-        rx_pdo = f"0x{rx.index:04x}" if rx else "0"
-        rx_dos = int(rx.index_dos) if rx else 0
-        tx_ref = f"{f}_{mid}_tx_entries" if tx else "NULL"
-        tx_cnt = len(tx.entries) if tx else 0
-        rx_ref = f"{f}_{mid}_rx_entries" if rx else "NULL"
-        rx_cnt = len(rx.entries) if rx else 0
+        tx_ref = f"{f}_{mid}_tx_pdos" if tx else "NULL"
+        rx_ref = f"{f}_{mid}_rx_pdos" if rx else "NULL"
         out.append(
-            f'    {{0x{m.ident:08x}, "{m.type_name}", {kind}, {tx_pdo}, {tx_dos}, {tx_ref}, {tx_cnt}, '
-            f"{rx_pdo}, {rx_dos}, {rx_ref}, {rx_cnt}}},{alt_note}")
-    out.append("    {0, NULL, LCEC_MDP_MOD_OTHER, 0, 0, NULL, 0, 0, 0, NULL, 0},")
+            f'    {{0x{m.ident:08x}, "{m.type_name}", {kind}, '
+            f"{tx_ref}, {len(tx)}, {rx_ref}, {len(rx)}}},{alt_note}")
+    out.append("    {0, NULL, LCEC_MDP_MOD_OTHER, NULL, 0, NULL, 0},")
     out.append("};")
     out.append("")
     out.append(f"static const lcec_mdp_family_t {f}_family = {{")
