@@ -76,6 +76,15 @@ jobs:
                   HAL_API: ${{ matrix.hal_api }}
               run: |
                   set -e
+                  if [ "${CODENAME}" = "bullseye" ]; then
+                      # bullseye went EOL 2026-08-31 and deb.debian.org has
+                      # started dropping bullseye-security pool files (404 on
+                      # gpgconf while the index still lists it). Pull security
+                      # straight from security.debian.org, which still serves
+                      # them.
+                      sed -i 's|deb\.debian\.org/debian-security|security.debian.org/debian-security|' \
+                          /etc/apt/sources.list
+                  fi
                   echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80-retries
                   echo 'Acquire::http::Timeout "30";' >> /etc/apt/apt.conf.d/80-retries
                   apt-get update
