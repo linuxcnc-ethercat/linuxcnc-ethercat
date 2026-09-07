@@ -85,7 +85,8 @@ jobs:
                   deb http://snapshot.debian.org/archive/debian-security/20260831T000000Z bullseye-security main
                   deb http://snapshot.debian.org/archive/debian/20260831T000000Z bullseye-updates main
                   EOF
-                      echo 'Acquire::Check-Valid-Until "false";' >> /etc/apt/apt.conf.d/80-retries
+                      # Own conf file: 80-retries gets truncated below.
+                      echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/90-no-valid-until
                   fi
                   echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80-retries
                   echo 'Acquire::http::Timeout "30";' >> /etc/apt/apt.conf.d/80-retries
