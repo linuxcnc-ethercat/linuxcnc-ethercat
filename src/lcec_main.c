@@ -68,7 +68,7 @@ static const lcec_pindesc_t master_pins[] = {
     {HAL_S32, HAL_IN, offsetof(lcec_master_data_t, drift_mode), "%s.drift-mode"},
     {HAL_S32, HAL_IN, offsetof(lcec_master_data_t, pll_drift), "%s.pll-drift"},
     {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_final), "%s.pll-final"},
-    {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_raw), "%s.pll-raw"},
+    {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, dc_ref_err), "%s.dc-ref-err"},
 #endif
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, wkc), "%s.wkc"},
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, wkc_min), "%s.wkc-min"},
@@ -376,6 +376,9 @@ int rtapi_app_main(void) {
     LCEC_PARAM_U32_SET(master->hal_data->pll_max_err, master->app_time_period);
     // Initialize auto-drift delay counter (wait 100 cycles before applying)
     master->hal_data->auto_drift_delay = 100;
+    // dc-phased dwell: ~200 ms worth of cycles before the pin may transition
+    master->hal_data->phase_lock_dwell =
+        (master->app_time_period > 0) ? (int32_t)(200000000LL / master->app_time_period) : 200;
 #endif
     // DC synchrony convergence threshold: 4% of period (10 us at 4 kHz);
     // app_time_period can be 0 here when the XML omits appTimePeriod.
@@ -1567,7 +1570,9 @@ void lcec_write_master(void *arg, long period) {
   hal_data = master->hal_data;
   LCEC_PIN_S32_SET(hal_data->pll_err, 0);
   LCEC_PIN_S32_SET(hal_data->pll_out, 0);
-  LCEC_PIN_BIT_SET(hal_data->dc_phased, 0);
+  LCEC_PIN_S32_SET(hal_data->dc_ref_err, 0);
+  // Note: dc_phased is deliberately NOT cleared here; it is a dwell-filtered
+  // lock indicator with state, assigned explicitly in every path below.
 
   // Calculate app_phase: our execution position in local cycle
   // This is relative to dc_ref_time (the time we set at activation)
@@ -1583,6 +1588,8 @@ void lcec_write_master(void *arg, long period) {
 #define PHASE_MEASURE_CYCLES 100
 
     if (!hal_data->phase_calibrated) {
+      // Not locked while measuring
+      LCEC_PIN_BIT_SET(hal_data->dc_phased, 0);
       // Phase 1: Measure app_phase jitter over PHASE_MEASURE_CYCLES cycles
       if (hal_data->phase_measure_cnt == 0) {
         // First measurement - initialize
@@ -1630,6 +1637,9 @@ void lcec_write_master(void *arg, long period) {
 
         hal_data->phase_target = target;
         hal_data->phase_calibrated = 1;
+        hal_data->phase_locked = 0;
+        hal_data->phase_lock_cnt = 0;
+        hal_data->phase_unlock_cnt = 0;
 
         rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "Phase calibration complete: jitter=%d target=%d\n", hal_data->phase_jitter,
             hal_data->phase_target);
@@ -1645,30 +1655,51 @@ void lcec_write_master(void *arg, long period) {
       // Negative error (app_phase < target) means we need to slow down to increase app_phase
       int32_t phase_error = current_app_phase - hal_data->phase_target;
 
-      // Set pll_err for monitoring
-      //LCEC_PIN_S32_SET(hal_data->pll_err, raw_offset + drift);
+      // In R2M mode this is the error actually being controlled, report it
+      // on pll_err (the raw app-vs-DC offset below is M2R-only)
+      LCEC_PIN_S32_SET(hal_data->pll_err, phase_error);
 
-      // Check if locked (within 10% of jitter or 1% of app_period, whichever is larger)
-      int32_t lock_threshold = 0;  // hal_data->phase_jitter;
-      if (lock_threshold < app_period / 100) {
-        lock_threshold = app_period / 100;
-      }
-      if (abs(phase_error) < abs(LCEC_PARAM_U32_GET(hal_data->pll_step)) * 3) {
-        LCEC_PIN_BIT_SET(hal_data->dc_phased, 1);
-      } else if (abs(phase_error) > abs(LCEC_PARAM_U32_GET(hal_data->pll_step)) * 20) {
-        LCEC_PIN_BIT_SET(hal_data->dc_phased, 0);
+      // Instantaneous lock state with true hysteresis, decoupled from
+      // pll_step so the pll-step=0 diagnostic freeze does not break lock
+      // detection. Lock within period/100, unlock beyond period/20.
+      int32_t lock_win = app_period / 100;
+      int32_t unlock_win = app_period / 20;
+      if (abs(phase_error) < lock_win) {
+        hal_data->phase_locked = 1;
+      } else if (abs(phase_error) > unlock_win) {
+        hal_data->phase_locked = 0;
       }
 
       // BANG-BANG control: small steps to move towards target
       // Positive pll_out = slow down = app_phase increases
       // Negative pll_out = speed up = app_phase decreases
-      if (LCEC_PIN_BIT_GET(hal_data->dc_phased)) {
+      if (hal_data->phase_locked) {
         LCEC_PIN_S32_SET(hal_data->pll_out, 0);
       } else {
         if (phase_error > 0) {
           LCEC_PIN_S32_SET(hal_data->pll_out, -(LCEC_PARAM_U32_GET(hal_data->pll_step)));  // Speed up to reduce app_phase
         } else if (phase_error < 0) {
           LCEC_PIN_S32_SET(hal_data->pll_out, LCEC_PARAM_U32_GET(hal_data->pll_step));  // Slow down to increase app_phase
+        }
+      }
+
+      // dc-phased pin: dwell-filtered version of the lock state. The pin is
+      // wired into machine-enable logic by users, so it must not strobe on
+      // single latency spikes: it sets only after phase_lock_dwell (~200 ms)
+      // consecutive locked cycles and clears only after ~200 ms unlocked.
+      if (hal_data->phase_locked) {
+        hal_data->phase_unlock_cnt = 0;
+        if (hal_data->phase_lock_cnt < hal_data->phase_lock_dwell) {
+          hal_data->phase_lock_cnt++;
+        } else {
+          LCEC_PIN_BIT_SET(hal_data->dc_phased, 1);
+        }
+      } else {
+        hal_data->phase_lock_cnt = 0;
+        if (hal_data->phase_unlock_cnt < hal_data->phase_lock_dwell) {
+          hal_data->phase_unlock_cnt++;
+        } else {
+          LCEC_PIN_BIT_SET(hal_data->dc_phased, 0);
         }
       }
 
@@ -1682,28 +1713,36 @@ void lcec_write_master(void *arg, long period) {
     }
   }
 
-  // the first read dc_time value seems to be invalid, so wait for two successive successful reads
+  // Raw offset between app_time and the DC reference clock. Published on
+  // dc-ref-err in both modes (diagnostic only; in R2M this is the re-anchor
+  // wave that previously polluted pll-err). Control use below is M2R-only.
+  int32_t raw_offset = 0;
   if (dc_time_valid && master->dc_time_valid_last) {
-    // Raw offset between app_time and dc_time (this is what varies at each startup)
-    int32_t raw_offset = master->app_time_last - dc_time;
-    LCEC_PIN_S32_SET(hal_data->pll_raw, raw_offset);
+    raw_offset = master->app_time_last - dc_time;
+    LCEC_PIN_S32_SET(hal_data->dc_ref_err, raw_offset);
+  }
 
+  // the first read dc_time value seems to be invalid, so wait for two successive successful reads
+  // This block is M2R-only: in R2M mode the master is the clock source and
+  // the raw app_time-vs-dc_time offset is arbitrary, unbounded and not
+  // corrected by anything. Publishing it on pll_err and keying dc_phased on
+  // it made dc_phased flicker every time the drifting offset crossed the
+  // lock window, and suppressed the phase-calibration correction above.
+  if (dc_time_valid && master->dc_time_valid_last && master->sync_to_ref_clock) {
     // Apply drift compensation based on drift-mode:
     //   0 = simple: (app_period - app_phase) % app_period
     //   1 = manual: use pll-drift pin value
     //   other = same as 1 (manual)
     int32_t drift = 0;
     int32_t mode = LCEC_PIN_S32_GET(hal_data->drift_mode);
-    if (master->sync_to_ref_clock) {
-      if (mode == 0) {
-        // Mode 0: simple - (app_period - app_phase) % app_period
-        int32_t calc_val = (app_period - current_app_phase) % app_period;
-        if (calc_val < 0) calc_val += app_period;
-        if (hal_data->auto_drift_delay > 0) {
-          hal_data->auto_drift_delay--;
-        } else {
-          drift = calc_val;
-        }
+    if (mode == 0) {
+      // Mode 0: simple - (app_period - app_phase) % app_period
+      int32_t calc_val = (app_period - current_app_phase) % app_period;
+      if (calc_val < 0) calc_val += app_period;
+      if (hal_data->auto_drift_delay > 0) {
+        hal_data->auto_drift_delay--;
+      } else {
+        drift = calc_val;
       }
     }
     // Mode 1 or other: use manual pll-drift value
@@ -1727,52 +1766,48 @@ void lcec_write_master(void *arg, long period) {
 
     // PLL is considered phased if error is within 10% of period
     int32_t lock_threshold = master->app_time_period / 10;
-    if (abs(LCEC_PIN_S32_GET(hal_data->pll_err)) < lock_threshold) {
-      LCEC_PIN_BIT_SET(hal_data->dc_phased, 1);
-    }
+    LCEC_PIN_BIT_SET(hal_data->dc_phased, (abs(pll_err) < lock_threshold) ? 1 : 0);
 
-    // Only run automatic PLL adjustment when sync_to_ref_clock is enabled
-    // When sync_to_ref_clock = false, master is the clock source, DC syncs to us
-    // When sync_to_ref_clock = true, DC is the clock source, we sync to DC
-    if (master->sync_to_ref_clock) {
-      // Watchdog on the physical offset, not the folded error: the
-      // controller regulates only the folded error, so raw_offset
-      // random-walks by whole periods. Tripping at a full period lets the
-      // walk park one jitter wiggle from the threshold and burst resyncs.
-      // Trip at half a period (or pll-max-err if lower) and remove the
-      // nearest whole periods, landing the offset a full lap away from the
-      // next trip.
-      uint32_t threshold = LCEC_PARAM_U32_GET(hal_data->pll_max_err);
-      if (threshold > (uint32_t)(app_period / 2)) {
-        threshold = app_period / 2;
-      }
-      if (abs(raw_offset) > (int32_t)threshold) {
-        // nearest whole periods; a sub-period pll-max-err yields zero, keep
-        // the plain jump-resync for that case
-        int64_t resync_corr;
-        if (raw_offset >= 0) {
-          resync_corr = ((int64_t)raw_offset + app_period / 2) / app_period * app_period;
-        } else {
-          resync_corr = -((-(int64_t)raw_offset + app_period / 2) / app_period * app_period);
-        }
-        if (resync_corr == 0) {
-          resync_corr = raw_offset;
-        }
-        // force resync of master time
-        master->dc_ref -= resync_corr;
-        // skip next control cycle to allow resync
-        dc_time_valid = 0;
-        // increment reset counter to document this event
-        LCEC_PIN_U32_SET(hal_data->pll_reset_cnt, LCEC_PIN_U32_GET(hal_data->pll_reset_cnt) + 1);
-        // Reset auto-drift delay on resync
-        if (LCEC_PIN_S32_GET(hal_data->drift_mode) == 0) {
-          hal_data->auto_drift_delay = 100;
-        }
+    // Watchdog on the physical offset, not the folded error: the
+    // controller regulates only the folded error, so raw_offset
+    // random-walks by whole periods. Tripping at a full period lets the
+    // walk park one jitter wiggle from the threshold and burst resyncs.
+    // Trip at half a period (or pll-max-err if lower) and remove the
+    // nearest whole periods, landing the offset a full lap away from the
+    // next trip.
+    uint32_t threshold = LCEC_PARAM_U32_GET(hal_data->pll_max_err);
+    if (threshold > (uint32_t)(app_period / 2)) {
+      threshold = app_period / 2;
+    }
+    if (abs(raw_offset) > (int32_t)threshold) {
+      // nearest whole periods; a sub-period pll-max-err yields zero, keep
+      // the plain jump-resync for that case
+      int64_t resync_corr;
+      if (raw_offset >= 0) {
+        resync_corr = ((int64_t)raw_offset + app_period / 2) / app_period * app_period;
       } else {
-        LCEC_PIN_S32_SET(hal_data->pll_out, (pll_err < 0) ? -(LCEC_PARAM_U32_GET(hal_data->pll_step)) : (LCEC_PARAM_U32_GET(hal_data->pll_step)));
+        resync_corr = -((-(int64_t)raw_offset + app_period / 2) / app_period * app_period);
       }
+      if (resync_corr == 0) {
+        resync_corr = raw_offset;
+      }
+      // force resync of master time
+      master->dc_ref -= resync_corr;
+      // skip next control cycle to allow resync
+      dc_time_valid = 0;
+      // increment reset counter to document this event
+      LCEC_PIN_U32_SET(hal_data->pll_reset_cnt, LCEC_PIN_U32_GET(hal_data->pll_reset_cnt) + 1);
+      // Reset auto-drift delay on resync
+      if (LCEC_PIN_S32_GET(hal_data->drift_mode) == 0) {
+        hal_data->auto_drift_delay = 100;
+      }
+    } else {
+      LCEC_PIN_S32_SET(hal_data->pll_out, (pll_err < 0) ? -(LCEC_PARAM_U32_GET(hal_data->pll_step)) : (LCEC_PARAM_U32_GET(hal_data->pll_step)));
     }
     // Note: When sync_to_ref_clock = false, pll_out is set in the phase calibration code above
+  } else if (master->sync_to_ref_clock) {
+    // M2R without valid DC time reads: not phased
+    LCEC_PIN_BIT_SET(hal_data->dc_phased, 0);
   }
 
   // Apply PLL correction with debug offset
@@ -1784,8 +1819,10 @@ void lcec_write_master(void *arg, long period) {
     // sync_to_ref_clock = true: always use PLL output for continuous sync
     pll_correction = LCEC_PIN_S32_GET(hal_data->pll_out) + LCEC_PIN_S32_GET(hal_data->pll_drift);
   } else {
-    // sync_to_ref_clock = false: stop adjusting once locked
-    if (LCEC_PIN_BIT_GET(hal_data->dc_phased)) {
+    // sync_to_ref_clock = false: stop adjusting once locked. Gate on the
+    // instantaneous lock state, not the dwell-filtered dc-phased pin, so
+    // correction resumes immediately when the phase leaves the window.
+    if (hal_data->phase_locked) {
       pll_correction = LCEC_PIN_S32_GET(hal_data->pll_drift);
     } else {
       pll_correction = LCEC_PIN_S32_GET(hal_data->pll_out) + LCEC_PIN_S32_GET(hal_data->pll_drift);
