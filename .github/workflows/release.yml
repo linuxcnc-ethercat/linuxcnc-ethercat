@@ -168,7 +168,6 @@ jobs:
 
             - name: Build deb package
               run: |
-                  touch TODO
                   dpkg-buildpackage -d -us -uc -b
                   mkdir -p dist
                   for src in ../*.deb; do
@@ -216,35 +215,18 @@ jobs:
 
                       `linuxcnc-ethercat_<version>[+getset]-<rev>+deb<NN>u<M>_<arch>.deb`
 
-                      1. **Debian release** - `+deb11u1` bullseye, `+deb12u1`
-                         bookworm, `+deb13u1` trixie.
-                      2. **Architecture** - `_amd64` (PC) or `_arm64`
-                         (Raspberry Pi 4/5 and other 64-bit ARM boards).
-                         `dpkg --print-architecture` tells you which you have.
-                      3. **HAL API flavor** - each distro/arch ships two builds
-                         of the same source:
-                         - **plain** (e.g. `linuxcnc-ethercat_1.43.0-1+deb13u1`):
-                           LinuxCNC 2.9.x, or 2.10 built from source before the
-                           HAL getter/setter API change (July 2026).
-                         - **+getset** (e.g.
-                           `linuxcnc-ethercat_1.43.0+getset-1+deb13u1`):
-                           LinuxCNC 2.10 built from current master, which has
-                           the new HAL getter/setter API.
+                      1. **Debian release** - `+deb11u1` bullseye, `+deb12u1` bookworm, `+deb13u1` trixie.
+                      2. **Architecture** - `_amd64` (PC) or `_arm64` (Raspberry Pi 4/5 and other 64-bit ARM boards). `dpkg --print-architecture` tells you which you have.
+                      3. **HAL API flavor** - each distro/arch ships two builds of the same source:
+                         - **plain** (e.g. `linuxcnc-ethercat_1.43.0-1+deb13u1`): LinuxCNC 2.9.x, or 2.10 built from source before the HAL getter/setter API change (July 2026).
+                         - **+getset** (e.g. `linuxcnc-ethercat_1.43.0+getset-1+deb13u1`): LinuxCNC 2.10 built from current master, which has the new HAL getter/setter API.
 
                       Notes:
 
-                      - bullseye ships plain only - new-API LinuxCNC needs a
-                        newer compiler than bullseye provides.
-                      - If your self-built 2.10 predates 2026-07-19, update and
-                        rebuild LinuxCNC before installing a +getset deb; it
-                        references HAL symbols older master builds do not have.
+                      - bullseye ships plain only - new-API LinuxCNC needs a newer compiler than bullseye provides.
+                      - If your self-built 2.10 predates 2026-07-19, update and rebuild LinuxCNC before installing a +getset deb; it references HAL symbols older master builds do not have.
 
-                      With the apt repository, the `main` component always
-                      serves the plain flavor - nothing to choose on 2.9-era
-                      systems. On a new-API 2.10 system, enable the `getset`
-                      component (`... trixie main getset` in the sources line)
-                      and apt upgrades you to the +getset build in place. See
-                      https://github.com/linuxcnc-ethercat/apt for setup.
+                      With the apt repository, the `main` component always serves the plain flavor - nothing to choose on 2.9-era systems. On a new-API 2.10 system, enable the `getset` component (`... trixie main getset` in the sources line) and apt upgrades you to the +getset build in place. See https://github.com/linuxcnc-ethercat/apt for setup.
                   prerelease: ${{ contains(github.ref_name, '~pre') || contains(github.ref_name, '-pre') }}
 
             - name: Trigger apt-repo ingestion
