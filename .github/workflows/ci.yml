@@ -148,7 +148,6 @@ jobs:
 
             - name: Build deb package
               run: |
-                  touch TODO
                   dpkg-buildpackage -d -us -uc -b
                   mkdir -p dist
                   for src in ../*.deb; do
