@@ -1,3 +1,34 @@
+linuxcnc-ethercat (1.44.0-1) unstable; urgency=low
+
+  * fix(main): trip the M2R resync watchdog at half a period and remove
+    the nearest whole periods. The folded-error controller lets the
+    physical offset random-walk by whole periods; with the trip at one
+    full period it parked one jitter wiggle from the threshold and
+    burst resyncs (bench: 363 resyncs in 30 min, up to 48/min, on
+    9x L7EC + VFD + 10 I/O; zero with this fix). Thanks to aitalmac for
+    the analysis and the bench data.
+  * fix(main): make the pll-err/dc-phased raw-offset block M2R-only;
+    in R2M it published an arbitrary, uncorrected offset and strobed
+    dc-phased. R2M now converges on hardware where master never locked
+    (bench: dc-sync-diff p99 151 ms -> 4.9 us, dc-phased transitions
+    250 -> 1 per 30 min).
+  * feat(main): dwell-filtered dc-phased pin with pll-step-independent
+    hysteresis windows; the PLL correction gate uses the instantaneous
+    lock state, so correction still resumes immediately.
+  * feat(main): add dc-ref-err diagnostic pin (raw app_time vs DC
+    reference offset, both modes).
+  * feat(main): export DC app time / monotonic time correlation pins
+    (app-time-*, mono-time-*) so external processes can map
+    CLOCK_MONOTONIC timestamps into the DC time domain. Thanks to
+    griffin-sisk.
+  * feat(configgen): add -modparam NAME=VALUE flag.
+  * feat(wecon): add driver for VD3E EtherCAT servo drives.
+  * fix(lichuan): drop 0x6077 torque PDO mapping on CL57E-4A.
+  * fix(debian): drop debian/docs referencing the long-deleted TODO
+    file; local dpkg-buildpackage works again.
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Tue, 08 Sep 2026 19:00:50 +0800
+
 linuxcnc-ethercat (1.43.0-1) unstable; urgency=low
 
   * feat(hal): support the new LinuxCNC HAL getter/setter API
