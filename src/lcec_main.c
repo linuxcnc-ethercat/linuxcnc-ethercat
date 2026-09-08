@@ -68,6 +68,7 @@ static const lcec_pindesc_t master_pins[] = {
     {HAL_S32, HAL_IN, offsetof(lcec_master_data_t, drift_mode), "%s.drift-mode"},
     {HAL_S32, HAL_IN, offsetof(lcec_master_data_t, pll_drift), "%s.pll-drift"},
     {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_final), "%s.pll-final"},
+    {HAL_S32, HAL_OUT, offsetof(lcec_master_data_t, pll_raw), "%s.pll-raw"},
 #endif
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, wkc), "%s.wkc"},
     {HAL_U32, HAL_OUT, offsetof(lcec_master_data_t, wkc_min), "%s.wkc-min"},
@@ -1685,6 +1686,7 @@ void lcec_write_master(void *arg, long period) {
   if (dc_time_valid && master->dc_time_valid_last) {
     // Raw offset between app_time and dc_time (this is what varies at each startup)
     int32_t raw_offset = master->app_time_last - dc_time;
+    LCEC_PIN_S32_SET(hal_data->pll_raw, raw_offset);
 
     // Apply drift compensation based on drift-mode:
     //   0 = simple: (app_period - app_phase) % app_period
@@ -1733,15 +1735,28 @@ void lcec_write_master(void *arg, long period) {
     // When sync_to_ref_clock = false, master is the clock source, DC syncs to us
     // When sync_to_ref_clock = true, DC is the clock source, we sync to DC
     if (master->sync_to_ref_clock) {
-      // Watchdog on the physical offset, not the folded error: folded,
-      // |pll_err| <= period/2 could never reach the default threshold, and
-      // a whole-period displacement would go undetected. Remove only whole
-      // periods; the controller drives the remainder to zero.
-      if (abs(raw_offset) > LCEC_PARAM_U32_GET(hal_data->pll_max_err)) {
-        int32_t resync_corr = raw_offset;
-        if (raw_offset >= app_period || raw_offset <= -app_period) {
-          // the division runs only on the cycle a resync fires
-          resync_corr = (raw_offset / app_period) * app_period;
+      // Watchdog on the physical offset, not the folded error: the
+      // controller regulates only the folded error, so raw_offset
+      // random-walks by whole periods. Tripping at a full period lets the
+      // walk park one jitter wiggle from the threshold and burst resyncs.
+      // Trip at half a period (or pll-max-err if lower) and remove the
+      // nearest whole periods, landing the offset a full lap away from the
+      // next trip.
+      uint32_t threshold = LCEC_PARAM_U32_GET(hal_data->pll_max_err);
+      if (threshold > (uint32_t)(app_period / 2)) {
+        threshold = app_period / 2;
+      }
+      if (abs(raw_offset) > (int32_t)threshold) {
+        // nearest whole periods; a sub-period pll-max-err yields zero, keep
+        // the plain jump-resync for that case
+        int64_t resync_corr;
+        if (raw_offset >= 0) {
+          resync_corr = ((int64_t)raw_offset + app_period / 2) / app_period * app_period;
+        } else {
+          resync_corr = -((-(int64_t)raw_offset + app_period / 2) / app_period * app_period);
+        }
+        if (resync_corr == 0) {
+          resync_corr = raw_offset;
         }
         // force resync of master time
         master->dc_ref -= resync_corr;
