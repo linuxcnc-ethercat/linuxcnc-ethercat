@@ -1519,10 +1519,10 @@ void lcec_write_master(void *arg, long period) {
   // sampled with rtapi_get_time() adjacent to the app_time computation, so
   // external processes can map CLOCK_MONOTONIC timestamps into the DC time
   // domain: dc(T) = app_time + (T - mono_time)
-  *(master->hal_data->app_time_lo) = (hal_u32_t)(app_time & 0xffffffffull);
-  *(master->hal_data->app_time_hi) = (hal_u32_t)(app_time >> 32);
-  *(master->hal_data->mono_time_lo) = (hal_u32_t)((uint64_t)now & 0xffffffffull);
-  *(master->hal_data->mono_time_hi) = (hal_u32_t)((uint64_t)now >> 32);
+  LCEC_PIN_U32_SET(master->hal_data->app_time_lo, (hal_u32_t)(app_time & 0xffffffffull));
+  LCEC_PIN_U32_SET(master->hal_data->app_time_hi, (hal_u32_t)(app_time >> 32));
+  LCEC_PIN_U32_SET(master->hal_data->mono_time_lo, (hal_u32_t)((uint64_t)now & 0xffffffffull));
+  LCEC_PIN_U32_SET(master->hal_data->mono_time_hi, (hal_u32_t)((uint64_t)now >> 32));
 
   // Read DC reference clock time (must be before sync_slave_clocks which
   // re-queues the sync datagram and overwrites the received data).
