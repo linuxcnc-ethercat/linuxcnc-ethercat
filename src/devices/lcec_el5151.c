@@ -219,12 +219,12 @@ static int lcec_el5151_init(int comp_id, lcec_slave_t *slave) {
   }
 
   // initialize pins
-  *(hal_data->pos_scale) = 1.0;
+  LCEC_PIN_FLOAT_SET(hal_data->pos_scale, 1.0);
 
   // initialize variables
   hal_data->do_init = 1;
   hal_data->last_count = 0;
-  hal_data->old_scale = *(hal_data->pos_scale) + 1.0;
+  hal_data->old_scale = LCEC_PIN_FLOAT_GET(hal_data->pos_scale) + 1.0;
   hal_data->scale = 1.0;
 
   return 0;
@@ -244,28 +244,28 @@ static void lcec_el5151_read(lcec_slave_t *slave, long period) {
   }
 
   // check for change in scale value
-  if (*(hal_data->pos_scale) != hal_data->old_scale) {
+  if (LCEC_PIN_FLOAT_GET(hal_data->pos_scale) != hal_data->old_scale) {
     // scale value has changed, test and update it
-    if ((*(hal_data->pos_scale) < 1e-20) && (*(hal_data->pos_scale) > -1e-20)) {
+    if ((LCEC_PIN_FLOAT_GET(hal_data->pos_scale) < 1e-20) && (LCEC_PIN_FLOAT_GET(hal_data->pos_scale) > -1e-20)) {
       // value too small, divide by zero is a bad thing
-      *(hal_data->pos_scale) = 1.0;
+      LCEC_PIN_FLOAT_SET(hal_data->pos_scale, 1.0);
     }
     // save new scale to detect future changes
-    hal_data->old_scale = *(hal_data->pos_scale);
+    hal_data->old_scale = LCEC_PIN_FLOAT_GET(hal_data->pos_scale);
     // we actually want the reciprocal
-    hal_data->scale = 1.0 / *(hal_data->pos_scale);
+    hal_data->scale = 1.0 / LCEC_PIN_FLOAT_GET(hal_data->pos_scale);
   }
 
   // get bit states
-  *(hal_data->ina) = EC_READ_BIT(&pd[hal_data->ina_pdo_os], hal_data->ina_pdo_bp);
-  *(hal_data->inb) = EC_READ_BIT(&pd[hal_data->inb_pdo_os], hal_data->inb_pdo_bp);
-  *(hal_data->inc) = EC_READ_BIT(&pd[hal_data->inc_pdo_os], hal_data->inc_pdo_bp);
-  *(hal_data->inext) = EC_READ_BIT(&pd[hal_data->inext_pdo_os], hal_data->inext_pdo_bp);
-  *(hal_data->expol_stall) = EC_READ_BIT(&pd[hal_data->expol_stall_pdo_os], hal_data->expol_stall_pdo_bp);
-  *(hal_data->sync_err) = EC_READ_BIT(&pd[hal_data->sync_err_pdo_os], hal_data->sync_err_pdo_bp);
-  *(hal_data->latch_c_valid) = EC_READ_BIT(&pd[hal_data->latch_c_valid_pdo_os], hal_data->latch_c_valid_pdo_bp);
-  *(hal_data->latch_ext_valid) = EC_READ_BIT(&pd[hal_data->latch_ext_valid_pdo_os], hal_data->latch_ext_valid_pdo_bp);
-  *(hal_data->tx_toggle) = EC_READ_BIT(&pd[hal_data->tx_toggle_pdo_os], hal_data->tx_toggle_pdo_bp);
+  LCEC_PIN_BIT_SET(hal_data->ina, EC_READ_BIT(&pd[hal_data->ina_pdo_os], hal_data->ina_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->inb, EC_READ_BIT(&pd[hal_data->inb_pdo_os], hal_data->inb_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->inc, EC_READ_BIT(&pd[hal_data->inc_pdo_os], hal_data->inc_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->inext, EC_READ_BIT(&pd[hal_data->inext_pdo_os], hal_data->inext_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->expol_stall, EC_READ_BIT(&pd[hal_data->expol_stall_pdo_os], hal_data->expol_stall_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->sync_err, EC_READ_BIT(&pd[hal_data->sync_err_pdo_os], hal_data->sync_err_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->latch_c_valid, EC_READ_BIT(&pd[hal_data->latch_c_valid_pdo_os], hal_data->latch_c_valid_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->latch_ext_valid, EC_READ_BIT(&pd[hal_data->latch_ext_valid_pdo_os], hal_data->latch_ext_valid_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->tx_toggle, EC_READ_BIT(&pd[hal_data->tx_toggle_pdo_os], hal_data->tx_toggle_pdo_bp));
 
   // read raw values
   raw_count = EC_READ_S32(&pd[hal_data->count_pdo_os]);
@@ -280,47 +280,47 @@ static void lcec_el5151_read(lcec_slave_t *slave, long period) {
   // check for counter set done
   if (EC_READ_BIT(&pd[hal_data->set_count_done_pdo_os], hal_data->set_count_done_pdo_bp)) {
     hal_data->last_count = raw_count;
-    *(hal_data->set_raw_count) = 0;
+    LCEC_PIN_BIT_SET(hal_data->set_raw_count, 0);
   }
 
   // update raw values
-  if (!*(hal_data->set_raw_count)) {
-    *(hal_data->raw_count) = raw_count;
-    *(hal_data->raw_period) = raw_period;
+  if (!LCEC_PIN_BIT_GET(hal_data->set_raw_count)) {
+    LCEC_PIN_S32_SET(hal_data->raw_count, raw_count);
+    LCEC_PIN_U32_SET(hal_data->raw_period, raw_period);
   }
 
   // handle initialization
-  if (hal_data->do_init || *(hal_data->reset)) {
+  if (hal_data->do_init || LCEC_PIN_BIT_GET(hal_data->reset)) {
     hal_data->do_init = 0;
     hal_data->last_count = raw_count;
-    *(hal_data->count) = 0;
+    LCEC_PIN_S32_SET(hal_data->count, 0);
   }
 
   // handle index
-  if (*(hal_data->latch_ext_valid)) {
-    *(hal_data->raw_latch) = raw_latch;
+  if (LCEC_PIN_BIT_GET(hal_data->latch_ext_valid)) {
+    LCEC_PIN_S32_SET(hal_data->raw_latch, raw_latch);
     hal_data->last_count = raw_latch;
-    *(hal_data->count) = 0;
-    *(hal_data->ena_latch_ext_pos) = 0;
-    *(hal_data->ena_latch_ext_neg) = 0;
+    LCEC_PIN_S32_SET(hal_data->count, 0);
+    LCEC_PIN_BIT_SET(hal_data->ena_latch_ext_pos, 0);
+    LCEC_PIN_BIT_SET(hal_data->ena_latch_ext_neg, 0);
   }
-  if (*(hal_data->latch_c_valid)) {
-    *(hal_data->raw_latch) = raw_latch;
+  if (LCEC_PIN_BIT_GET(hal_data->latch_c_valid)) {
+    LCEC_PIN_S32_SET(hal_data->raw_latch, raw_latch);
     hal_data->last_count = raw_latch;
-    *(hal_data->count) = 0;
-    *(hal_data->ena_latch_c) = 0;
+    LCEC_PIN_S32_SET(hal_data->count, 0);
+    LCEC_PIN_BIT_SET(hal_data->ena_latch_c, 0);
   }
 
   // compute net counts
   raw_delta = raw_count - hal_data->last_count;
   hal_data->last_count = raw_count;
-  *(hal_data->count) += raw_delta;
+  LCEC_PIN_S32_SET(hal_data->count, LCEC_PIN_S32_GET(hal_data->count) + raw_delta);
 
   // scale count to make floating point position
-  *(hal_data->pos) = *(hal_data->count) * hal_data->scale;
+  LCEC_PIN_FLOAT_SET(hal_data->pos, LCEC_PIN_S32_GET(hal_data->count) * hal_data->scale);
 
   // scale period
-  *(hal_data->period) = ((double)(*(hal_data->raw_period))) * LCEC_EL5151_PERIOD_SCALE;
+  LCEC_PIN_FLOAT_SET(hal_data->period, ((double)(LCEC_PIN_U32_GET(hal_data->raw_period))) * LCEC_EL5151_PERIOD_SCALE);
 
   hal_data->last_operational = 1;
 }
@@ -331,9 +331,9 @@ static void lcec_el5151_write(lcec_slave_t *slave, long period) {
   uint8_t *pd = master->process_data;
 
   // set output data
-  EC_WRITE_BIT(&pd[hal_data->set_count_pdo_os], hal_data->set_count_pdo_bp, *(hal_data->set_raw_count));
-  EC_WRITE_BIT(&pd[hal_data->ena_latch_c_pdo_os], hal_data->ena_latch_c_pdo_bp, *(hal_data->ena_latch_c));
-  EC_WRITE_BIT(&pd[hal_data->ena_latch_ext_pos_pdo_os], hal_data->ena_latch_ext_pos_pdo_bp, *(hal_data->ena_latch_ext_pos));
-  EC_WRITE_BIT(&pd[hal_data->ena_latch_ext_neg_pdo_os], hal_data->ena_latch_ext_neg_pdo_bp, *(hal_data->ena_latch_ext_neg));
-  EC_WRITE_S32(&pd[hal_data->set_count_val_pdo_os], *(hal_data->set_raw_count_val));
+  EC_WRITE_BIT(&pd[hal_data->set_count_pdo_os], hal_data->set_count_pdo_bp, LCEC_PIN_BIT_GET(hal_data->set_raw_count));
+  EC_WRITE_BIT(&pd[hal_data->ena_latch_c_pdo_os], hal_data->ena_latch_c_pdo_bp, LCEC_PIN_BIT_GET(hal_data->ena_latch_c));
+  EC_WRITE_BIT(&pd[hal_data->ena_latch_ext_pos_pdo_os], hal_data->ena_latch_ext_pos_pdo_bp, LCEC_PIN_BIT_GET(hal_data->ena_latch_ext_pos));
+  EC_WRITE_BIT(&pd[hal_data->ena_latch_ext_neg_pdo_os], hal_data->ena_latch_ext_neg_pdo_bp, LCEC_PIN_BIT_GET(hal_data->ena_latch_ext_neg));
+  EC_WRITE_S32(&pd[hal_data->set_count_val_pdo_os], LCEC_PIN_S32_GET(hal_data->set_raw_count_val));
 }

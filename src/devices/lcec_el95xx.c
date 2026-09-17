@@ -86,6 +86,6 @@ static void lcec_el95xx_read(lcec_slave_t *slave, long period) {
   }
 
   // check inputs
-  *(hal_data->power_ok) = EC_READ_BIT(&pd[hal_data->power_ok_pdo_os], hal_data->power_ok_pdo_bp);
-  *(hal_data->overload) = EC_READ_BIT(&pd[hal_data->overload_pdo_os], hal_data->overload_pdo_bp);
+  LCEC_PIN_BIT_SET(hal_data->power_ok, EC_READ_BIT(&pd[hal_data->power_ok_pdo_os], hal_data->power_ok_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->overload, EC_READ_BIT(&pd[hal_data->overload_pdo_os], hal_data->overload_pdo_bp));
 }

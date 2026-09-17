@@ -21,18 +21,15 @@
 ///
 /// Supports OL57E-4A (open loop, PID 0x6000) and CL57E-4A (closed
 /// loop, PID 0x6100). Both share the same multi-axis CiA 402 protocol
-/// (SDO offset 0x800, PDO index increment 0x10). The closed-loop
-/// variant additionally exposes 0x6077 (Torque Actual Value).
+/// (SDO offset 0x800, PDO index increment 0x10).
 
 #include "../lcec.h"
 #include "lcec_class_cia402.h"
 
 #define AXES(flags)         ((flags >> 60) & 0xf)
 #define PDOINCREMENT(flags) ((flags >> 52) & 0xff)
-#define F_TORQUE_BIT        ((uint64_t)1 << 51)
 #define F_AXES(axes)        ((uint64_t)axes << 60)
 #define F_PDOINCREMENT(inc) ((uint64_t)inc << 52)
-#define F_TORQUE            F_TORQUE_BIT
 
 static int lcec_lichuan_init(int comp_id, lcec_slave_t *slave);
 
@@ -54,7 +51,7 @@ static const lcec_modparam_doc_t base_docs[] = {
 
 static lcec_typelist_t types[] = {
     {"OL57E-4A", LCEC_LICHUAN_VID, 0x00006000, 0, NULL, lcec_lichuan_init, NULL, F_AXES(4) | F_PDOINCREMENT(0x10)},
-    {"CL57E-4A", LCEC_LICHUAN_VID, 0x00006100, 0, NULL, lcec_lichuan_init, NULL, F_AXES(4) | F_PDOINCREMENT(0x10) | F_TORQUE},
+    {"CL57E-4A", LCEC_LICHUAN_VID, 0x00006100, 0, NULL, lcec_lichuan_init, NULL, F_AXES(4) | F_PDOINCREMENT(0x10)},
     {NULL},
 };
 ADD_TYPES_WITH_CIA402_MODPARAMS(types, 4, modparams_perchannel, modparams_base, chan_docs, base_docs)
@@ -106,9 +103,7 @@ static int lcec_lichuan_init(int comp_id, lcec_slave_t *slave) {
     options->pdo_increment = 1;
   }
 
-  // 0x6077 (actual torque) is exposed only by the closed-loop CL57E-4A
-  // (F_TORQUE). Each axis has 3 DI and 2 DO per the CL57E-4A manual.
-  int enable_torque = (slave->flags & F_TORQUE_BIT) != 0;
+  // Each axis has 3 DI and 2 DO per the CL57E-4A manual.
   for (channel = 0; channel < options->channels; channel++) {
     options->channel[channel]->enable_csp = 1;
     options->channel[channel]->enable_csv = 1;
@@ -117,7 +112,6 @@ static int lcec_lichuan_init(int comp_id, lcec_slave_t *slave) {
     options->channel[channel]->enable_hm = 1;
     options->channel[channel]->enable_actual_following_error = 1;
     options->channel[channel]->enable_error_code = 1;
-    options->channel[channel]->enable_actual_torque = enable_torque;
     options->channel[channel]->enable_digital_input = 1;
     options->channel[channel]->digital_in_channels = 3;
     options->channel[channel]->enable_digital_output = 1;

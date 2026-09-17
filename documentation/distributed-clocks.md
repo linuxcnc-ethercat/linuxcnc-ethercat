@@ -102,6 +102,11 @@ If `pll-reset-count` increases, the difference in speed between
 the clocks is large. Increasing `pll-step` might help. `pll-step` is limited
 to 1% of appTimePeriod.
 
+To verify that the slaves' clocks themselves are in sync (as opposed
+to the servo thread tracking the reference clock), see the
+`dc-sync-diff` / `dc-sync-converged` pins in
+[Master HAL Pins](master-pins.md#dc-synchrony-monitoring).
+
 
 ## Slave settings
 
@@ -175,6 +180,37 @@ These shift the Sync0 and Sync1 interrupts by a fixed number of ns.
 Presumably shifting various devices slightly could result in reduced
 jitter and less contention on the network, although it's not clear
 that it really matters to us.  Many examples seem to just use 0.
+
+## Process-data Sync Units
+
+Distributed Clock cycles and process-data exchange cycles are separate.
+The optional `syncUnit` and `syncUnitCycle` slave attributes group slaves into
+separate EtherCAT domains that may be queued at different integer multiples of
+the master cycle:
+
+```xml
+  <master idx="0" appTimePeriod="1000000" refClockSyncCycles="-1">
+    <slave idx="0" type="generic" vid="00000002" pid="00000001"
+           syncUnit="slow" syncUnitCycle="*2">
+      ...
+    </slave>
+    <slave idx="1" type="generic" vid="00000002" pid="00000002"
+           syncUnit="fast" syncUnitCycle="*1">
+      ...
+    </slave>
+  </master>
+```
+
+Here the master still runs every 1 ms, but the `slow` domain is exchanged every
+2 ms and the `fast` domain every 1 ms. All domains are exchanged every master
+cycle during startup until the master reaches OP once. Omitting both attributes
+keeps the previous behavior: the slave belongs to the `default` domain and is
+exchanged every master cycle.
+
+For a DC-capable slave, configure `dcConf` independently and keep its hardware
+cycle consistent with the Sync Unit cycle. Slaves that exchange coupled data,
+including an FSoE logic device and its safety slaves, should remain in the same
+Sync Unit.
 
 ## Drivers and DC Clocks
 

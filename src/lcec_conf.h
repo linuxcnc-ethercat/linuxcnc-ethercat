@@ -21,8 +21,8 @@
 #ifndef _LCEC_CONF_H_
 #define _LCEC_CONF_H_
 
-#include "ecrt.h"
-#include "hal.h"
+#include <ecrt.h>
+#include <hal.h>
 
 #define LCEC_MODULE_NAME "lcec"
 
@@ -94,6 +94,8 @@ typedef struct {
   size_t sdoConfigLength;
   size_t idnConfigLength;
   unsigned int modParamCount;
+  uint32_t syncUnitCycle;
+  char syncUnit[LCEC_CONF_STR_MAXLEN];
   char name[LCEC_CONF_STR_MAXLEN];
 } LCEC_CONF_SLAVE_T;
 

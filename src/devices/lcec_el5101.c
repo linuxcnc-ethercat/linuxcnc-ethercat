@@ -182,17 +182,17 @@ static int lcec_el5101_init(int comp_id, lcec_slave_t *slave) {
   }
 
   // initialize pins
-  *(hal_data->pos_scale) = 1.0;
+  LCEC_PIN_FLOAT_SET(hal_data->pos_scale, 1.0);
 
   // initialize variables
   hal_data->do_init = 1;
   hal_data->last_count = 0;
-  hal_data->old_scale = *(hal_data->pos_scale) + 1.0;
+  hal_data->old_scale = LCEC_PIN_FLOAT_GET(hal_data->pos_scale) + 1.0;
   hal_data->scale = 1.0;
 
   // This should really be 1e-2 (0.001), but this driver has had the wrong value here for years.  It produces incorrect results, but
   // presumably people are expecting that at this point?
-  *(hal_data->frequency_scale) = 5e-2;
+  LCEC_PIN_FLOAT_SET(hal_data->frequency_scale, 5e-2);
 
   return 0;
 }
@@ -213,25 +213,25 @@ static void lcec_el5101_read(lcec_slave_t *slave, long period) {
   }
 
   // check for change in scale value
-  if (*(hal_data->pos_scale) != hal_data->old_scale) {
+  if (LCEC_PIN_FLOAT_GET(hal_data->pos_scale) != hal_data->old_scale) {
     // scale value has changed, test and update it
-    if ((*(hal_data->pos_scale) < 1e-20) && (*(hal_data->pos_scale) > -1e-20)) {
+    if ((LCEC_PIN_FLOAT_GET(hal_data->pos_scale) < 1e-20) && (LCEC_PIN_FLOAT_GET(hal_data->pos_scale) > -1e-20)) {
       // value too small, divide by zero is a bad thing
-      *(hal_data->pos_scale) = 1.0;
+      LCEC_PIN_FLOAT_SET(hal_data->pos_scale, 1.0);
     }
     // save new scale to detect future changes
-    hal_data->old_scale = *(hal_data->pos_scale);
+    hal_data->old_scale = LCEC_PIN_FLOAT_GET(hal_data->pos_scale);
     // we actually want the reciprocal
-    hal_data->scale = 1.0 / *(hal_data->pos_scale);
+    hal_data->scale = 1.0 / LCEC_PIN_FLOAT_GET(hal_data->pos_scale);
   }
 
   // get bit states
   raw_status = EC_READ_U8(&pd[hal_data->status_pdo_os]);
-  *(hal_data->inext) = raw_status & LCEC_EL5101_STATUS_INPUT;
-  *(hal_data->overflow) = raw_status & LCEC_EL5101_STATUS_OVERFLOW;
-  *(hal_data->underflow) = raw_status & LCEC_EL5101_STATUS_UNDERFLOW;
-  *(hal_data->latch_ext_valid) = raw_status & LCEC_EL5101_STATUS_LAT_EXT_VAL;
-  *(hal_data->latch_c_valid) = raw_status & LCEC_EL5101_STATUS_LATC_VAL;
+  LCEC_PIN_BIT_SET(hal_data->inext, raw_status & LCEC_EL5101_STATUS_INPUT);
+  LCEC_PIN_BIT_SET(hal_data->overflow, raw_status & LCEC_EL5101_STATUS_OVERFLOW);
+  LCEC_PIN_BIT_SET(hal_data->underflow, raw_status & LCEC_EL5101_STATUS_UNDERFLOW);
+  LCEC_PIN_BIT_SET(hal_data->latch_ext_valid, raw_status & LCEC_EL5101_STATUS_LAT_EXT_VAL);
+  LCEC_PIN_BIT_SET(hal_data->latch_c_valid, raw_status & LCEC_EL5101_STATUS_LATC_VAL);
 
   // read raw values
   raw_count = EC_READ_S16(&pd[hal_data->value_pdo_os]);
@@ -248,50 +248,50 @@ static void lcec_el5101_read(lcec_slave_t *slave, long period) {
   // check for counter set done
   if (raw_status & LCEC_EL5101_STATUS_CNTSET_ACC) {
     hal_data->last_count = raw_count;
-    *(hal_data->set_raw_count) = 0;
+    LCEC_PIN_BIT_SET(hal_data->set_raw_count, 0);
   }
 
   // update raw values
-  if (!*(hal_data->set_raw_count)) {
-    *(hal_data->raw_count) = raw_count;
-    *(hal_data->raw_frequency) = raw_frequency;
-    *(hal_data->raw_period) = raw_period;
-    *(hal_data->raw_window) = raw_window;
+  if (!LCEC_PIN_BIT_GET(hal_data->set_raw_count)) {
+    LCEC_PIN_S32_SET(hal_data->raw_count, raw_count);
+    LCEC_PIN_U32_SET(hal_data->raw_frequency, raw_frequency);
+    LCEC_PIN_U32_SET(hal_data->raw_period, raw_period);
+    LCEC_PIN_U32_SET(hal_data->raw_window, raw_window);
   }
 
   // handle initialization
-  if (hal_data->do_init || *(hal_data->reset)) {
+  if (hal_data->do_init || LCEC_PIN_BIT_GET(hal_data->reset)) {
     hal_data->do_init = 0;
     hal_data->last_count = raw_count;
-    *(hal_data->count) = 0;
+    LCEC_PIN_S32_SET(hal_data->count, 0);
   }
 
   // handle index
-  if (*(hal_data->latch_ext_valid)) {
-    *(hal_data->raw_latch) = raw_latch;
+  if (LCEC_PIN_BIT_GET(hal_data->latch_ext_valid)) {
+    LCEC_PIN_S32_SET(hal_data->raw_latch, raw_latch);
     hal_data->last_count = raw_latch;
-    *(hal_data->count) = 0;
-    *(hal_data->ena_latch_ext_pos) = 0;
-    *(hal_data->ena_latch_ext_neg) = 0;
+    LCEC_PIN_S32_SET(hal_data->count, 0);
+    LCEC_PIN_BIT_SET(hal_data->ena_latch_ext_pos, 0);
+    LCEC_PIN_BIT_SET(hal_data->ena_latch_ext_neg, 0);
   }
-  if (*(hal_data->latch_c_valid)) {
-    *(hal_data->raw_latch) = raw_latch;
+  if (LCEC_PIN_BIT_GET(hal_data->latch_c_valid)) {
+    LCEC_PIN_S32_SET(hal_data->raw_latch, raw_latch);
     hal_data->last_count = raw_latch;
-    *(hal_data->count) = 0;
-    *(hal_data->ena_latch_c) = 0;
+    LCEC_PIN_S32_SET(hal_data->count, 0);
+    LCEC_PIN_BIT_SET(hal_data->ena_latch_c, 0);
   }
 
   // compute net counts
   raw_delta = raw_count - hal_data->last_count;
   hal_data->last_count = raw_count;
-  *(hal_data->count) += raw_delta;
+  LCEC_PIN_S32_SET(hal_data->count, LCEC_PIN_S32_GET(hal_data->count) + raw_delta);
 
   // scale count to make floating point position
-  *(hal_data->pos) = *(hal_data->count) * hal_data->scale;
+  LCEC_PIN_FLOAT_SET(hal_data->pos, LCEC_PIN_S32_GET(hal_data->count) * hal_data->scale);
 
   // scale period
-  *(hal_data->frequency) = ((double)(*(hal_data->raw_frequency))) * (*hal_data->frequency_scale);
-  *(hal_data->period) = ((double)(*(hal_data->raw_period))) * LCEC_EL5101_PERIOD_SCALE;
+  LCEC_PIN_FLOAT_SET(hal_data->frequency, ((double)(LCEC_PIN_U32_GET(hal_data->raw_frequency))) * LCEC_PIN_FLOAT_GET(hal_data->frequency_scale));
+  LCEC_PIN_FLOAT_SET(hal_data->period, ((double)(LCEC_PIN_U32_GET(hal_data->raw_period))) * LCEC_EL5101_PERIOD_SCALE);
 
   hal_data->last_operational = 1;
 }
@@ -304,20 +304,20 @@ static void lcec_el5101_write(lcec_slave_t *slave, long period) {
 
   // build control byte
   raw_ctrl = 0;
-  if (*(hal_data->ena_latch_ext_neg)) {
+  if (LCEC_PIN_BIT_GET(hal_data->ena_latch_ext_neg)) {
     raw_ctrl |= LCEC_EL5101_CTRL_EN_LATCH_EXTN;
   }
-  if (*(hal_data->set_raw_count)) {
+  if (LCEC_PIN_BIT_GET(hal_data->set_raw_count)) {
     raw_ctrl |= LCEC_EL5101_CTRL_CNT_SET;
   }
-  if (*(hal_data->ena_latch_ext_pos)) {
+  if (LCEC_PIN_BIT_GET(hal_data->ena_latch_ext_pos)) {
     raw_ctrl |= LCEC_EL5101_CTRL_EN_LATCH_EXTP;
   }
-  if (*(hal_data->ena_latch_c)) {
+  if (LCEC_PIN_BIT_GET(hal_data->ena_latch_c)) {
     raw_ctrl |= LCEC_EL5101_CTRL_EN_LATC;
   }
 
   // set output data
   EC_WRITE_U8(&pd[hal_data->control_pdo_os], raw_ctrl);
-  EC_WRITE_S16(&pd[hal_data->setval_pdo_os], *(hal_data->set_raw_count_val));
+  EC_WRITE_S16(&pd[hal_data->setval_pdo_os], LCEC_PIN_S32_GET(hal_data->set_raw_count_val));
 }

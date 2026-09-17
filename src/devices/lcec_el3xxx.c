@@ -308,7 +308,7 @@ static int set_sensor_type(lcec_slave_t *slave, char *sensortype, lcec_class_ain
 
   if (setting != -1) {
     // See if this sensor type needs a non-default scale, otherwise default to 0.1.
-    *(chan->scale) = lcec_lookupdouble_i(temp_sensors_scale, sensortype, 0.1);
+    LCEC_PIN_FLOAT_SET(chan->scale, lcec_lookupdouble_i(temp_sensors_scale, sensortype, 0.1));
 
     // See if this sensor type is unsigned.  Otherwise signed.
     chan->is_unsigned = lcec_lookupint_i(temp_sensors_unsigned, sensortype, 0);
@@ -330,7 +330,7 @@ static int set_resolution(lcec_slave_t *slave, char *resolution_name, lcec_class
 
   if (setting != -1) {
     // See if this resolution type needs a non-default scale, otherwise leave it at 1.0.
-    *(chan->scale) = *(chan->scale) * lcec_lookupdouble_i(temp_resolutions_scale, resolution_name, 1.0);
+    LCEC_PIN_FLOAT_SET(chan->scale, LCEC_PIN_FLOAT_GET(chan->scale) * lcec_lookupdouble_i(temp_resolutions_scale, resolution_name, 1.0));
     if (lcec_write_sdo8(slave, idx, sidx, setting) != 0) {
       rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to configure slave %s.%s sdo resolution!\n", slave->master->name, slave->name);
       return -1;

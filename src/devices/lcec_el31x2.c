@@ -119,7 +119,7 @@ static int lcec_el31x2_init(int comp_id, lcec_slave_t *slave) {
     }
 
     // initialize pins
-    *(chan->scale) = 1.0;
+    LCEC_PIN_FLOAT_SET(chan->scale, 1.0);
   }
 
   return 0;
@@ -145,13 +145,13 @@ static void lcec_el31x2_read(lcec_slave_t *slave, long period) {
 
     // update state
     state = pd[chan->state_pdo_os];
-    *(chan->error) = (state >> 6) & 0x01;
-    *(chan->overrange) = (state >> 1) & 0x01;
-    *(chan->underrange) = (state >> 0) & 0x01;
+    LCEC_PIN_BIT_SET(chan->error, (state >> 6) & 0x01);
+    LCEC_PIN_BIT_SET(chan->overrange, (state >> 1) & 0x01);
+    LCEC_PIN_BIT_SET(chan->underrange, (state >> 0) & 0x01);
 
     // update value
     value = EC_READ_S16(&pd[chan->val_pdo_os]);
-    *(chan->raw_val) = value;
-    *(chan->val) = *(chan->bias) + *(chan->scale) * (double)value * ((double)1 / (double)0x7fff);
+    LCEC_PIN_S32_SET(chan->raw_val, value);
+    LCEC_PIN_FLOAT_SET(chan->val, LCEC_PIN_FLOAT_GET(chan->bias) + LCEC_PIN_FLOAT_GET(chan->scale) * (double)value * ((double)1 / (double)0x7fff));
   }
 }

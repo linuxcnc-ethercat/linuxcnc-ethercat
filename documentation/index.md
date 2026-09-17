@@ -8,6 +8,9 @@
 
 - [Configuration Reference](configuration-reference.md)
 - [Distributed Clocks](distributed-clocks.md)
+- [Master HAL Pins](master-pins.md)
+- [Runtime slave re-initialization](runtime-reinit.md) -- re-applying
+  driver configuration to a slave that was power-cycled while LinuxCNC runs.
 
 ## Development Documentation
 
@@ -28,7 +31,9 @@
 - [EL3xxx: Beckhoff analog input devices](el3xxx.md)
 - [EL4xxx: Beckhoff analog output devices](el4xxx.md)
 - [EL7041: Beckhoff EL7041 stepper drives](el7041.md)
+- [Inovance IS620N and SV660 servo drives](inovance.md)
 - [Leadshine stepper drives](leadshine_stepper.md)
 - [Omron MX2 VFD](ommx2.md)
 - [RTelligent ECR and ECT stepper drives](rtec.md)
 - [RTelligent DRV DC servo drives](rtdrv.md)
+- [Wecon VD3E servo drives](wecon.md)

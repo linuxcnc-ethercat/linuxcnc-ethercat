@@ -260,7 +260,7 @@ typedef struct {
   // In.
   PDO_PIN(statusword, hal_u32_t);
   PDO_PIN(opmode_display, hal_s32_t);
-  hal_s32_t *supported_modes;
+  hal_u32_t *supported_modes;
   hal_bit_t *supports_mode_pp, *supports_mode_vl, *supports_mode_pv, *supports_mode_tq, *supports_mode_hm, *supports_mode_ip,
       *supports_mode_csp, *supports_mode_csv, *supports_mode_cst;
 

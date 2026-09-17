@@ -59,8 +59,8 @@ static int lcec_el9410_init(int comp_id, lcec_slave_t *slave) {
     return err;
   }
 
-  *(hal_data->us_undervoltage) = 0;
-  *(hal_data->up_undervoltage) = 0;
+  LCEC_PIN_BIT_SET(hal_data->us_undervoltage, 0);
+  LCEC_PIN_BIT_SET(hal_data->up_undervoltage, 0);
 
   slave->proc_read = lcec_el9410_read;
   return 0;
@@ -76,6 +76,6 @@ static void lcec_el9410_read(lcec_slave_t *slave, long period) {
     return;
   }
 
-  *(hal_data->us_undervoltage) = EC_READ_BIT(&pd[hal_data->us_undervoltage_os], hal_data->us_undervoltage_bp);
-  *(hal_data->up_undervoltage) = EC_READ_BIT(&pd[hal_data->up_undervoltage_os], hal_data->up_undervoltage_bp);
+  LCEC_PIN_BIT_SET(hal_data->us_undervoltage, EC_READ_BIT(&pd[hal_data->us_undervoltage_os], hal_data->us_undervoltage_bp));
+  LCEC_PIN_BIT_SET(hal_data->up_undervoltage, EC_READ_BIT(&pd[hal_data->up_undervoltage_os], hal_data->up_undervoltage_bp));
 }

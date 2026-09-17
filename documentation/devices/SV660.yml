@@ -1,0 +1,11 @@
+---
+Device: SV660
+VendorID: "0x00100000"
+VendorName: "Inovance"
+PID: "0x000c010d"
+Description: "Inovance SV660 single-axis EtherCAT servo drive"
+DocumentationURL: "https://www.inovance.com/"
+DeviceType: "Servo Drive"
+Notes: "Same H-code architecture as the IS620N; distinct product code. Supports EoE in addition to CoE."
+SrcFile: src/devices/lcec_inovance.c
+TestingStatus: "Tested and working @yurc"

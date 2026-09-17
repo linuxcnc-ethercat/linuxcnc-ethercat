@@ -120,13 +120,13 @@ lcec_class_aout_channel_t *lcec_aout_register_channel(lcec_slave_t *slave, int i
   }
 
   // Set default values for scale and bias.
-  *(data->scale) = 1.0;
-  if (opt->default_scale != 0) *(data->scale) = opt->default_scale;
-  if (opt->default_offset != 0) *(data->offset) = opt->default_offset;
-  *(data->max_dc) = 1.0;
-  *(data->min_dc) = -1.0;
-  data->old_scale = *(data->scale) + 1.0;
-  data->scale_recip = 1.0 / *(data->scale);
+  LCEC_PIN_FLOAT_SET(data->scale, 1.0);
+  if (opt->default_scale != 0) LCEC_PIN_FLOAT_SET(data->scale, opt->default_scale);
+  if (opt->default_offset != 0) LCEC_PIN_FLOAT_SET(data->offset, opt->default_offset);
+  LCEC_PIN_FLOAT_SET(data->max_dc, 1.0);
+  LCEC_PIN_FLOAT_SET(data->min_dc, -1.0);
+  data->old_scale = LCEC_PIN_FLOAT_GET(data->scale) + 1.0;
+  data->scale_recip = 1.0 / LCEC_PIN_FLOAT_GET(data->scale);
 
   return data;
 }
@@ -145,53 +145,53 @@ void lcec_aout_write(lcec_slave_t *slave, lcec_class_aout_channel_t *data) {
 
   // validate duty cycle limits, both limits must be between
   // 0.0 and 1.0 (inclusive) and max must be greater then min
-  if (*(data->max_dc) > 1.0) {
-    *(data->max_dc) = 1.0;
+  if (LCEC_PIN_FLOAT_GET(data->max_dc) > 1.0) {
+    LCEC_PIN_FLOAT_SET(data->max_dc, 1.0);
   }
-  if (*(data->min_dc) > *(data->max_dc)) {
-    *(data->min_dc) = *(data->max_dc);
+  if (LCEC_PIN_FLOAT_GET(data->min_dc) > LCEC_PIN_FLOAT_GET(data->max_dc)) {
+    LCEC_PIN_FLOAT_SET(data->min_dc, LCEC_PIN_FLOAT_GET(data->max_dc));
   }
-  if (*(data->min_dc) < -1.0) {
-    *(data->min_dc) = -1.0;
+  if (LCEC_PIN_FLOAT_GET(data->min_dc) < -1.0) {
+    LCEC_PIN_FLOAT_SET(data->min_dc, -1.0);
   }
-  if (*(data->max_dc) < *(data->min_dc)) {
-    *(data->max_dc) = *(data->min_dc);
+  if (LCEC_PIN_FLOAT_GET(data->max_dc) < LCEC_PIN_FLOAT_GET(data->min_dc)) {
+    LCEC_PIN_FLOAT_SET(data->max_dc, LCEC_PIN_FLOAT_GET(data->min_dc));
   }
 
   // do scale calcs only when scale changes
-  if (*(data->scale) != data->old_scale) {
+  if (LCEC_PIN_FLOAT_GET(data->scale) != data->old_scale) {
     // validate the new scale value
-    if ((*(data->scale) < 1e-20) && (*(data->scale) > -1e-20)) {
+    if ((LCEC_PIN_FLOAT_GET(data->scale) < 1e-20) && (LCEC_PIN_FLOAT_GET(data->scale) > -1e-20)) {
       // value too small, divide by zero is a bad thing
-      *(data->scale) = 1.0;
+      LCEC_PIN_FLOAT_SET(data->scale, 1.0);
     }
     // get ready to detect future scale changes
-    data->old_scale = *(data->scale);
+    data->old_scale = LCEC_PIN_FLOAT_GET(data->scale);
     // we will need the reciprocal
-    data->scale_recip = 1.0 / *(data->scale);
+    data->scale_recip = 1.0 / LCEC_PIN_FLOAT_GET(data->scale);
   }
 
   // get command
-  tmpval = *(data->value);
-  if (*(data->absmode) && (tmpval < 0)) {
+  tmpval = LCEC_PIN_FLOAT_GET(data->value);
+  if (LCEC_PIN_BIT_GET(data->absmode) && (tmpval < 0)) {
     tmpval = -tmpval;
   }
 
   // convert value command to duty cycle
-  tmpdc = tmpval * data->scale_recip + *(data->offset);
-  if (tmpdc < *(data->min_dc)) {
-    tmpdc = *(data->min_dc);
+  tmpdc = tmpval * data->scale_recip + LCEC_PIN_FLOAT_GET(data->offset);
+  if (tmpdc < LCEC_PIN_FLOAT_GET(data->min_dc)) {
+    tmpdc = LCEC_PIN_FLOAT_GET(data->min_dc);
   }
-  if (tmpdc > *(data->max_dc)) {
-    tmpdc = *(data->max_dc);
+  if (tmpdc > LCEC_PIN_FLOAT_GET(data->max_dc)) {
+    tmpdc = LCEC_PIN_FLOAT_GET(data->max_dc);
   }
 
   // set output values
-  if (*(data->enable) == 0) {
+  if (LCEC_PIN_BIT_GET(data->enable) == 0) {
     raw_val = 0;
-    *(data->pos) = 0;
-    *(data->neg) = 0;
-    *(data->curr_dc) = 0;
+    LCEC_PIN_BIT_SET(data->pos, 0);
+    LCEC_PIN_BIT_SET(data->neg, 0);
+    LCEC_PIN_FLOAT_SET(data->curr_dc, 0);
   } else {
     raw_val = (double)max_value * tmpdc;
     if (raw_val > (double)max_value) {
@@ -200,14 +200,14 @@ void lcec_aout_write(lcec_slave_t *slave, lcec_class_aout_channel_t *data) {
     if (raw_val < (double)-max_value) {
       raw_val = (double)-max_value;
     }
-    *(data->pos) = (*(data->value) > 0);
-    *(data->neg) = (*(data->value) < 0);
-    *(data->curr_dc) = tmpdc;
+    LCEC_PIN_BIT_SET(data->pos, (LCEC_PIN_FLOAT_GET(data->value) > 0));
+    LCEC_PIN_BIT_SET(data->neg, (LCEC_PIN_FLOAT_GET(data->value) < 0));
+    LCEC_PIN_FLOAT_SET(data->curr_dc, tmpdc);
   }
 
   // update value
   EC_WRITE_S16(&pd[data->val_pdo_os], (int16_t)raw_val);
-  *(data->raw_val) = (int32_t)raw_val;
+  LCEC_PIN_S32_SET(data->raw_val, (int32_t)raw_val);
 }
 
 /// @brief Writess data to all analog out ports.

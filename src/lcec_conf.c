@@ -29,11 +29,11 @@
 #include <sys/eventfd.h>
 #include <unistd.h>
 
-#include "hal.h"
+#include <hal.h>
 #include "lcec.h"
 #include "lcec_conf_priv.h"
 #include "lcec_rtapi.h"
-#include "rtapi.h"
+#include <rtapi.h>
 
 typedef struct {
   hal_u32_t *master_count;
@@ -141,6 +141,18 @@ int main(int argc, char **argv) {
   }
 
   // register pins
+#ifdef LCEC_HAL_NEW_API
+  if (hal_pin_new_ui32(hal_comp_id, HAL_OUT, (hal_uint_t *)&(conf_hal_data->master_count), 0, "%s.conf.master-count",
+          LCEC_MODULE_NAME) != 0) {
+    fprintf(stderr, "%s: ERROR: unable to register pin %s.conf.master-count\n", modname, LCEC_MODULE_NAME);
+    goto fail1;
+  }
+  if (hal_pin_new_ui32(hal_comp_id, HAL_OUT, (hal_uint_t *)&(conf_hal_data->slave_count), 0, "%s.conf.slave-count",
+          LCEC_MODULE_NAME) != 0) {
+    fprintf(stderr, "%s: ERROR: unable to register pin %s.conf.slave-count\n", modname, LCEC_MODULE_NAME);
+    goto fail1;
+  }
+#else
   if (hal_pin_u32_newf(HAL_OUT, &(conf_hal_data->master_count), hal_comp_id, "%s.conf.master-count", LCEC_MODULE_NAME) != 0) {
     fprintf(stderr, "%s: ERROR: unable to register pin %s.conf.master-count\n", modname, LCEC_MODULE_NAME);
     goto fail1;
@@ -149,8 +161,9 @@ int main(int argc, char **argv) {
     fprintf(stderr, "%s: ERROR: unable to register pin %s.conf.slave-count\n", modname, LCEC_MODULE_NAME);
     goto fail1;
   }
-  *(conf_hal_data->master_count) = 0;
-  *(conf_hal_data->slave_count) = 0;
+#endif
+  LCEC_PIN_U32_SET(conf_hal_data->master_count, 0);
+  LCEC_PIN_U32_SET(conf_hal_data->slave_count, 0);
 
   // initialize signal handling
   exitEvent = eventfd(0, 0);
@@ -371,12 +384,13 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
     snprintf(p->name, LCEC_CONF_STR_MAXLEN, "%d", p->index);
   }
 
-  (*(conf_hal_data->master_count))++;
+  LCEC_PIN_U32_SET(conf_hal_data->master_count, LCEC_PIN_U32_GET(conf_hal_data->master_count) + 1);
   state->currMaster = p;
 }
 
 static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **attr) {
   const lcec_typelist_t *slaveType;
+  int syncUnitCycle;
 
   LCEC_CONF_XML_STATE_T *state = (LCEC_CONF_XML_STATE_T *)inst;
 
@@ -387,6 +401,8 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
   }
 
   p->confType = lcecConfTypeSlave;
+  strncpy(p->syncUnit, "default", LCEC_CONF_STR_MAXLEN);
+  p->syncUnitCycle = state->currMaster->appTimePeriod;
 
   int valid = 0;
 
@@ -422,6 +438,7 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
     // set slave type_name
     if (strcmp(name, "type") == 0) {
       strncpy(p->type_name, val, LCEC_CONF_STR_MAXLEN);
+      p->type_name[LCEC_CONF_STR_MAXLEN - 1] = 0;
       continue;
     }
 
@@ -435,6 +452,23 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
     if (strcmp(name, "name") == 0) {
       strncpy(p->name, val, LCEC_CONF_STR_MAXLEN);
       p->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
+      continue;
+    }
+
+    if (strcmp(name, "syncUnit") == 0) {
+      strncpy(p->syncUnit, val, LCEC_CONF_STR_MAXLEN);
+      p->syncUnit[LCEC_CONF_STR_MAXLEN - 1] = 0;
+      continue;
+    }
+
+    if (strcmp(name, "syncUnitCycle") == 0) {
+      syncUnitCycle = parseSyncCycle(state, val);
+      if (syncUnitCycle <= 0) {
+        fprintf(stderr, "%s: ERROR: Invalid syncUnitCycle %s\n", modname, val);
+        XML_StopParser(inst->parser, 0);
+        return;
+      }
+      p->syncUnitCycle = syncUnitCycle;
       continue;
     }
 
@@ -470,6 +504,19 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
     snprintf(p->name, LCEC_CONF_STR_MAXLEN, "%d", p->index);
   }
 
+  if (p->syncUnit[0] == 0) {
+    fprintf(stderr, "%s: ERROR: Slave %s has empty syncUnit attribute\n", modname, p->name);
+    XML_StopParser(inst->parser, 0);
+    return;
+  }
+
+  if (p->syncUnitCycle == 0 || state->currMaster->appTimePeriod == 0 || (p->syncUnitCycle % state->currMaster->appTimePeriod) != 0) {
+    fprintf(stderr, "%s: ERROR: Slave %s syncUnitCycle %u is not a positive multiple of appTimePeriod %u\n", modname, p->name,
+        p->syncUnitCycle, state->currMaster->appTimePeriod);
+    XML_StopParser(inst->parser, 0);
+    return;
+  }
+
   // type is required
   if (!valid) {
     fprintf(stderr, "%s: ERROR: Slave type is invalid\n", modname);
@@ -477,7 +524,7 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
     return;
   }
 
-  (*(conf_hal_data->slave_count))++;
+  LCEC_PIN_U32_SET(conf_hal_data->slave_count, LCEC_PIN_U32_GET(conf_hal_data->slave_count) + 1);
   state->currSlaveType = slaveType;
   state->currSlave = p;
   state->currSubModule = NULL;

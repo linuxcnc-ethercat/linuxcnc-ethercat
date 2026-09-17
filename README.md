@@ -22,7 +22,7 @@ apt repository at <https://linuxcnc-ethercat.github.io/apt/>, served
 from GitHub Pages.  It ships both `linuxcnc-ethercat` and the matching
 `ethercat-master` (the IgH EtherLab master rebuilt with fixes that
 have not been picked up upstream) for **Debian 11 / 12 / 13** on
-**amd64**.
+**amd64 and arm64**.
 
 > The previously-recommended openSUSE `science:EtherLab` repository is
 > no longer the preferred source: it serves the unmodified IgH build
@@ -56,6 +56,14 @@ apt update
 apt install -y linux-headers-$(uname -r) ethercat-master linuxcnc-ethercat
 ```
 
+> [!WARNING]
+> If you recently ran `apt upgrade` and a new kernel was installed but
+> you have not rebooted yet, **reboot first**. The `ethercat` DKMS
+> module is built only for the running kernel, so installing mid-update
+> leaves you without a working module after your next reboot. If this
+> already happened, run `sudo dkms autoinstall` and
+> `sudo systemctl restart ethercat`.
+
 **Note:** If you previously followed older instructions and added the
 openSUSE `science:EtherLab` source, you can leave it in place — apt
 will prefer our packages because of the version epoch — or remove it
@@ -84,6 +92,15 @@ sudo apt install -y linux-headers-$(uname -r)
 to get the matching headers, otherwise the `ethercat` DKMS module
 cannot rebuild against the new kernel. Reboot or
 `sudo systemctl start ethercat` afterwards.
+
+If EtherCAT still fails to start after a reboot into a new kernel, the
+DKMS module may have been built for the previously running kernel
+only. Rebuild it against the current kernel and restart the service:
+
+```
+sudo dkms autoinstall
+sudo systemctl restart ethercat
+```
 
 ### Manual Installation
 
@@ -125,6 +142,10 @@ but more difficult than using a pre-written driver.
 A [reference guide to LinuxCNC-Ethercat's XML
 configuration](documentation/configuration-reference.md) file is
 available.
+
+Slaves can also be grouped into named process-data Sync Units when one master
+must exchange different groups at different integer-multiple cycle times. See
+the [distributed-clock and Sync Unit guide](documentation/distributed-clocks.md#process-data-sync-units).
 
 Several examples are available in the [`examples/`](examples/)
 directory, but they're somewhat dated.  The [LinuxCNC

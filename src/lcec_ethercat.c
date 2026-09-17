@@ -536,12 +536,42 @@ static int lcec_param_newfv(hal_type_t type, hal_param_dir_t dir, void *data_add
     return -ENOMEM;
   }
 
+#ifdef LCEC_HAL_NEW_API
+  // New API: typed creators. Storage is HAL-owned and the creator applies
+  // the default and writes the opaque reference into the param field (which
+  // is an lcec_param_*_t reference under the new API - see lcec_hal_compat.h).
+  switch (type) {
+    case HAL_BIT:
+      err = hal_param_new_bool(lcec_comp_id, dir, (hal_bool_t *)data_addr, 0, "%s", name);
+      break;
+    case HAL_FLOAT:
+      err = hal_param_new_real(lcec_comp_id, dir, (hal_real_t *)data_addr, 0.0, "%s", name);
+      break;
+    case HAL_S32:
+      err = hal_param_new_si32(lcec_comp_id, dir, (hal_sint_t *)data_addr, 0, "%s", name);
+      break;
+    case HAL_U32:
+      err = hal_param_new_ui32(lcec_comp_id, dir, (hal_uint_t *)data_addr, 0, "%s", name);
+      break;
+    default:
+      err = -EINVAL;
+      break;
+  }
+  if (err) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting param %s failed\n", name);
+    return err;
+  }
+#else
   err = hal_param_new(name, type, dir, data_addr, lcec_comp_id);
   if (err) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "exporting param %s failed\n", name);
     return err;
   }
 
+  // Old API: params use caller-provided value storage (unlike pins, whose
+  // storage is HAL's 8-byte slot). Keep these writes narrow - the new-API
+  // setters always write the full 64-bit slot and would overflow the
+  // struct field (upstream's "parameter trap").
   switch (type) {
     case HAL_BIT:
       *((hal_bit_t *)data_addr) = 0;
@@ -558,6 +588,7 @@ static int lcec_param_newfv(hal_type_t type, hal_param_dir_t dir, void *data_add
     default:
       break;
   }
+#endif
 
   return 0;
 }
@@ -689,6 +720,156 @@ int lcec_append_pdo_entry_reg(lcec_pdo_entry_reg_t *dest, lcec_pdo_entry_reg_t *
   for (int i = 0; i < src->current; i++) {
     dest->pdo_entry_regs[dest->current] = src->pdo_entry_regs[i];
     dest->current++;
+  }
+  return 0;
+}
+
+/// @brief Write the plain (non complete-access) XML `<sdoConfig>` entries.
+/// Used at init and on runtime re-initialization.
+/// @return 0 if every entry was written, <0 otherwise (all are attempted).
+int lcec_slave_apply_sdo_config(lcec_slave_t *slave) {
+  lcec_slave_sdoconf_t *sdo_config;
+  int result = 0, err;
+
+  if (slave->sdo_config == NULL) {
+    return 0;
+  }
+
+  for (sdo_config = slave->sdo_config; sdo_config->index != 0xffff;
+      sdo_config = (lcec_slave_sdoconf_t *)&sdo_config->data[sdo_config->length]) {
+    if (sdo_config->subindex == LCEC_CONF_SDO_COMPLETE_SUBIDX) {
+      continue;  // handled by ecrt_slave_config_complete_sdo() at init
+    }
+    if ((err = lcec_write_sdo(slave, sdo_config->index, sdo_config->subindex, &sdo_config->data[0], sdo_config->length)) != 0) {
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to configure slave %s.%s sdo %04x:%02x\n", slave->master->name, slave->name,
+          sdo_config->index, sdo_config->subindex);
+      result = err;
+    }
+  }
+
+  return result;
+}
+
+// ------------------------------------------------------------------
+// SII (EEPROM) access
+// ------------------------------------------------------------------
+
+/// @brief Read one 16-bit word from a slave's SII image.
+/// @return 0 for success, <0 for failure (-ENOSYS without SII support).
+int lcec_sii_read16(lcec_slave_t *slave, uint16_t word_offset, uint16_t *value) {
+#ifdef EC_HAVE_SII_ACCESS
+  uint16_t raw;
+  int err = ecrt_master_sii_read(slave->master->master, slave->index, word_offset, &raw, 1);
+  if (err != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s: SII read of word 0x%04x failed (%d)\n", slave->master->name, slave->name,
+        word_offset, err);
+    return err;
+  }
+  *value = EC_READ_U16(&raw);
+  return 0;
+#else
+  (void)word_offset;
+  (void)value;
+  rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s: SII access needs a libethercat with EC_HAVE_SII_ACCESS\n", slave->master->name,
+      slave->name);
+  return -ENOSYS;
+#endif
+}
+
+/// @brief Write one 16-bit word to a slave's SII (EEPROM).  Blocks; any AL
+/// state.  No checksum handling for words 0..7.
+/// @return 0 for success, <0 for failure.
+int lcec_sii_write16(lcec_slave_t *slave, uint16_t word_offset, uint16_t value) {
+#ifdef EC_HAVE_SII_ACCESS
+  uint16_t raw;
+  int err;
+  EC_WRITE_U16(&raw, value);
+  if ((err = ecrt_master_sii_write(slave->master->master, slave->index, word_offset, &raw, 1)) != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s: SII write of word 0x%04x failed (%d)\n", slave->master->name, slave->name,
+        word_offset, err);
+    return err;
+  }
+  return 0;
+#else
+  (void)word_offset;
+  (void)value;
+  rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s: SII access needs a libethercat with EC_HAVE_SII_ACCESS\n", slave->master->name,
+      slave->name);
+  return -ENOSYS;
+#endif
+}
+
+/// @brief Locate an SII category (ETG.1000.6) by walking the list from
+/// `LCEC_SII_FIRST_CATEGORY`; offsets vary per device.
+/// @param word_offset Receives the offset of the category data (after the 2-word header).
+/// @return 0 if found, -ENOENT if absent, other <0 on read errors.
+int lcec_sii_find_category(lcec_slave_t *slave, uint16_t cat_type, uint16_t *word_offset, uint16_t *word_count) {
+  uint32_t pos = LCEC_SII_FIRST_CATEGORY;  // 32-bit so a corrupt size cannot wrap
+  uint16_t type, size;
+  int err;
+
+  while (pos + 2 <= 0xffff) {  // 0xFFFF terminates the list
+    if ((err = lcec_sii_read16(slave, pos, &type)) != 0) {
+      return err;
+    }
+    if (type == 0xffff) {
+      return -ENOENT;
+    }
+    if ((err = lcec_sii_read16(slave, pos + 1, &size)) != 0) {
+      return err;
+    }
+    if ((type & 0x7fff) == cat_type) {
+      *word_offset = pos + 2;
+      *word_count = size;
+      return 0;
+    }
+    pos += 2 + (uint32_t)size;
+  }
+  return -ENOENT;
+}
+
+/// @brief Read-modify-write the CoE details byte in the SII general category
+/// (`LCEC_SII_COE_*` masks), preserving other bits.  Writes only on change.
+/// @param changed If non-NULL, receives 1 when a write was performed.
+/// @return 0 for success, <0 for failure.
+int lcec_sii_update_coe_details(lcec_slave_t *slave, uint8_t set_mask, uint8_t clear_mask, int *changed) {
+  uint16_t gen_offset, gen_words, word, new_word;
+  uint8_t coe;
+  int err;
+
+  if (changed != NULL) {
+    *changed = 0;
+  }
+
+  if ((err = lcec_sii_find_category(slave, LCEC_SII_CAT_GENERAL, &gen_offset, &gen_words)) != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s: SII general category not found (%d)\n", slave->master->name, slave->name, err);
+    return err;
+  }
+  if (gen_words <= LCEC_SII_GENERAL_COE_WORD) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s: SII general category too short (%u words)\n", slave->master->name, slave->name,
+        gen_words);
+    return -EINVAL;
+  }
+
+  if ((err = lcec_sii_read16(slave, gen_offset + LCEC_SII_GENERAL_COE_WORD, &word)) != 0) {
+    return err;
+  }
+  coe = (word >> 8) & 0xff;
+  coe = (coe | set_mask) & ~clear_mask;
+  new_word = (word & 0x00ff) | ((uint16_t)coe << 8);
+
+  if (new_word == word) {
+    rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "slave %s.%s: SII CoE details already 0x%02x\n", slave->master->name, slave->name, coe);
+    return 0;
+  }
+
+  rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "slave %s.%s: updating SII CoE details 0x%02x -> 0x%02x (word 0x%04x)\n",
+      slave->master->name, slave->name, (word >> 8) & 0xff, coe, gen_offset + LCEC_SII_GENERAL_COE_WORD);
+  if ((err = lcec_sii_write16(slave, gen_offset + LCEC_SII_GENERAL_COE_WORD, new_word)) != 0) {
+    return err;
+  }
+  if (changed != NULL) {
+    *changed = 1;
   }
   return 0;
 }

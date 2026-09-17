@@ -87,14 +87,14 @@ static void lcec_ex260_write(lcec_slave_t *slave, long period) {
 
   // set outputs
   for (i = 0, pin = hal_data; i < slave->flags; i++, pin++) {
-    s = *(pin->sol_1a);
-    s |= *(pin->sol_1b) << 1;
-    s |= *(pin->sol_2a) << 2;
-    s |= *(pin->sol_2b) << 3;
-    s |= *(pin->sol_3a) << 4;
-    s |= *(pin->sol_3b) << 5;
-    s |= *(pin->sol_4a) << 6;
-    s |= *(pin->sol_4b) << 7;
+    s = LCEC_PIN_BIT_GET(pin->sol_1a);
+    s |= LCEC_PIN_BIT_GET(pin->sol_1b) << 1;
+    s |= LCEC_PIN_BIT_GET(pin->sol_2a) << 2;
+    s |= LCEC_PIN_BIT_GET(pin->sol_2b) << 3;
+    s |= LCEC_PIN_BIT_GET(pin->sol_3a) << 4;
+    s |= LCEC_PIN_BIT_GET(pin->sol_3b) << 5;
+    s |= LCEC_PIN_BIT_GET(pin->sol_4a) << 6;
+    s |= LCEC_PIN_BIT_GET(pin->sol_4b) << 7;
     EC_WRITE_U8(&pd[pin->pdo_os], s);
   }
 }

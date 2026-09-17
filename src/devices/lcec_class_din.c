@@ -153,8 +153,8 @@ void lcec_din_read(lcec_slave_t *slave, lcec_class_din_channel_t *data) {
   }
 
   s = EC_READ_BIT(&pd[os], bp);
-  *(data->in) = s;
-  *(data->in_not) = !s;
+  LCEC_PIN_BIT_SET(data->in, s);
+  LCEC_PIN_BIT_SET(data->in_not, !s);
 }
 
 /// @brief reads data from all digital in ports.

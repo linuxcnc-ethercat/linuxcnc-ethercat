@@ -172,18 +172,18 @@ static void lcec_ax5805_read(lcec_slave_t *slave, long period) {
 
   copy_fsoe_data(slave, hal_data->fsoe_slave_cmd_os, hal_data->fsoe_master_cmd_os);
 
-  *(hal_data->fsoe_master_cmd) = EC_READ_U8(&pd[hal_data->fsoe_master_cmd_os]);
-  *(hal_data->fsoe_master_connid) = EC_READ_U16(&pd[hal_data->fsoe_master_connid_os]);
-  *(hal_data->fsoe_slave_cmd) = EC_READ_U8(&pd[hal_data->fsoe_slave_cmd_os]);
-  *(hal_data->fsoe_slave_connid) = EC_READ_U16(&pd[hal_data->fsoe_slave_connid_os]);
+  LCEC_PIN_U32_SET(hal_data->fsoe_master_cmd, EC_READ_U8(&pd[hal_data->fsoe_master_cmd_os]));
+  LCEC_PIN_U32_SET(hal_data->fsoe_master_connid, EC_READ_U16(&pd[hal_data->fsoe_master_connid_os]));
+  LCEC_PIN_U32_SET(hal_data->fsoe_slave_cmd, EC_READ_U8(&pd[hal_data->fsoe_slave_cmd_os]));
+  LCEC_PIN_U32_SET(hal_data->fsoe_slave_connid, EC_READ_U16(&pd[hal_data->fsoe_slave_connid_os]));
 
-  *(hal_data->fsoe_master_crc0) = EC_READ_U16(&pd[hal_data->fsoe_master_crc0_os]);
-  *(hal_data->fsoe_slave_crc0) = EC_READ_U16(&pd[hal_data->fsoe_slave_crc0_os]);
-  *(hal_data->fsoe_in_sto0) = EC_READ_BIT(&pd[hal_data->fsoe_in_sto0_os], hal_data->fsoe_in_sto0_bp);
+  LCEC_PIN_U32_SET(hal_data->fsoe_master_crc0, EC_READ_U16(&pd[hal_data->fsoe_master_crc0_os]));
+  LCEC_PIN_U32_SET(hal_data->fsoe_slave_crc0, EC_READ_U16(&pd[hal_data->fsoe_slave_crc0_os]));
+  LCEC_PIN_BIT_SET(hal_data->fsoe_in_sto0, EC_READ_BIT(&pd[hal_data->fsoe_in_sto0_os], hal_data->fsoe_in_sto0_bp));
 
   if (slave->fsoeConf->data_channels >= 2) {
-    *(hal_data->fsoe_master_crc1) = EC_READ_U16(&pd[hal_data->fsoe_master_crc1_os]);
-    *(hal_data->fsoe_slave_crc1) = EC_READ_U16(&pd[hal_data->fsoe_slave_crc1_os]);
-    *(hal_data->fsoe_in_sto1) = EC_READ_BIT(&pd[hal_data->fsoe_in_sto1_os], hal_data->fsoe_in_sto1_bp);
+    LCEC_PIN_U32_SET(hal_data->fsoe_master_crc1, EC_READ_U16(&pd[hal_data->fsoe_master_crc1_os]));
+    LCEC_PIN_U32_SET(hal_data->fsoe_slave_crc1, EC_READ_U16(&pd[hal_data->fsoe_slave_crc1_os]));
+    LCEC_PIN_BIT_SET(hal_data->fsoe_in_sto1, EC_READ_BIT(&pd[hal_data->fsoe_in_sto1_os], hal_data->fsoe_in_sto1_bp));
   }
 }

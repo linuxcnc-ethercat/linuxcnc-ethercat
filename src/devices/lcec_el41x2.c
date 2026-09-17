@@ -114,12 +114,12 @@ static int lcec_el41x2_init(int comp_id, lcec_slave_t *slave) {
     }
 
     // set default pin values
-    *(chan->scale) = 1.0;
-    *(chan->min_dc) = -1.0;
-    *(chan->max_dc) = 1.0;
+    LCEC_PIN_FLOAT_SET(chan->scale, 1.0);
+    LCEC_PIN_FLOAT_SET(chan->min_dc, -1.0);
+    LCEC_PIN_FLOAT_SET(chan->max_dc, 1.0);
 
     // init other fields
-    chan->old_scale = *(chan->scale) + 1.0;
+    chan->old_scale = LCEC_PIN_FLOAT_GET(chan->scale) + 1.0;
     chan->scale_recip = 1.0;
   }
 
@@ -140,53 +140,53 @@ static void lcec_el41x2_write(lcec_slave_t *slave, long period) {
 
     // validate duty cycle limits, both limits must be between
     // 0.0 and 1.0 (inclusive) and max must be greater then min
-    if (*(chan->max_dc) > 1.0) {
-      *(chan->max_dc) = 1.0;
+    if (LCEC_PIN_FLOAT_GET(chan->max_dc) > 1.0) {
+      LCEC_PIN_FLOAT_SET(chan->max_dc, 1.0);
     }
-    if (*(chan->min_dc) > *(chan->max_dc)) {
-      *(chan->min_dc) = *(chan->max_dc);
+    if (LCEC_PIN_FLOAT_GET(chan->min_dc) > LCEC_PIN_FLOAT_GET(chan->max_dc)) {
+      LCEC_PIN_FLOAT_SET(chan->min_dc, LCEC_PIN_FLOAT_GET(chan->max_dc));
     }
-    if (*(chan->min_dc) < -1.0) {
-      *(chan->min_dc) = -1.0;
+    if (LCEC_PIN_FLOAT_GET(chan->min_dc) < -1.0) {
+      LCEC_PIN_FLOAT_SET(chan->min_dc, -1.0);
     }
-    if (*(chan->max_dc) < *(chan->min_dc)) {
-      *(chan->max_dc) = *(chan->min_dc);
+    if (LCEC_PIN_FLOAT_GET(chan->max_dc) < LCEC_PIN_FLOAT_GET(chan->min_dc)) {
+      LCEC_PIN_FLOAT_SET(chan->max_dc, LCEC_PIN_FLOAT_GET(chan->min_dc));
     }
 
     // do scale calcs only when scale changes
-    if (*(chan->scale) != chan->old_scale) {
+    if (LCEC_PIN_FLOAT_GET(chan->scale) != chan->old_scale) {
       // validate the new scale value
-      if ((*(chan->scale) < 1e-20) && (*(chan->scale) > -1e-20)) {
+      if ((LCEC_PIN_FLOAT_GET(chan->scale) < 1e-20) && (LCEC_PIN_FLOAT_GET(chan->scale) > -1e-20)) {
         // value too small, divide by zero is a bad thing
-        *(chan->scale) = 1.0;
+        LCEC_PIN_FLOAT_SET(chan->scale, 1.0);
       }
       // get ready to detect future scale changes
-      chan->old_scale = *(chan->scale);
+      chan->old_scale = LCEC_PIN_FLOAT_GET(chan->scale);
       // we will need the reciprocal
-      chan->scale_recip = 1.0 / *(chan->scale);
+      chan->scale_recip = 1.0 / LCEC_PIN_FLOAT_GET(chan->scale);
     }
 
     // get command
-    tmpval = *(chan->value);
-    if (*(chan->absmode) && (tmpval < 0)) {
+    tmpval = LCEC_PIN_FLOAT_GET(chan->value);
+    if (LCEC_PIN_BIT_GET(chan->absmode) && (tmpval < 0)) {
       tmpval = -tmpval;
     }
 
     // convert value command to duty cycle
-    tmpdc = tmpval * chan->scale_recip + *(chan->offset);
-    if (tmpdc < *(chan->min_dc)) {
-      tmpdc = *(chan->min_dc);
+    tmpdc = tmpval * chan->scale_recip + LCEC_PIN_FLOAT_GET(chan->offset);
+    if (tmpdc < LCEC_PIN_FLOAT_GET(chan->min_dc)) {
+      tmpdc = LCEC_PIN_FLOAT_GET(chan->min_dc);
     }
-    if (tmpdc > *(chan->max_dc)) {
-      tmpdc = *(chan->max_dc);
+    if (tmpdc > LCEC_PIN_FLOAT_GET(chan->max_dc)) {
+      tmpdc = LCEC_PIN_FLOAT_GET(chan->max_dc);
     }
 
     // set output values
-    if (*(chan->enable) == 0) {
+    if (LCEC_PIN_BIT_GET(chan->enable) == 0) {
       raw_val = 0;
-      *(chan->pos) = 0;
-      *(chan->neg) = 0;
-      *(chan->curr_dc) = 0;
+      LCEC_PIN_BIT_SET(chan->pos, 0);
+      LCEC_PIN_BIT_SET(chan->neg, 0);
+      LCEC_PIN_FLOAT_SET(chan->curr_dc, 0);
     } else {
       raw_val = (double)0x7fff * tmpdc;
       if (raw_val > (double)0x7fff) {
@@ -195,13 +195,13 @@ static void lcec_el41x2_write(lcec_slave_t *slave, long period) {
       if (raw_val < (double)-0x7fff) {
         raw_val = (double)-0x7fff;
       }
-      *(chan->pos) = (*(chan->value) > 0);
-      *(chan->neg) = (*(chan->value) < 0);
-      *(chan->curr_dc) = tmpdc;
+      LCEC_PIN_BIT_SET(chan->pos, (LCEC_PIN_FLOAT_GET(chan->value) > 0));
+      LCEC_PIN_BIT_SET(chan->neg, (LCEC_PIN_FLOAT_GET(chan->value) < 0));
+      LCEC_PIN_FLOAT_SET(chan->curr_dc, tmpdc);
     }
 
     // update value
     EC_WRITE_S16(&pd[chan->val_pdo_os], (int16_t)raw_val);
-    *(chan->raw_val) = (int32_t)raw_val;
+    LCEC_PIN_S32_SET(chan->raw_val, (int32_t)raw_val);
   }
 }

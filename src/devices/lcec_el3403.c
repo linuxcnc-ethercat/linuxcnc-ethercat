@@ -224,8 +224,8 @@ static int lcec_el3403_init(int comp_id, lcec_slave_t *slave) {
   hal_data->last_operational = 0;
 
   // initialize pins
-  *(hal_data->sync_error_status) = 0;
-  *(hal_data->phase_sequence_error) = 0;
+  LCEC_PIN_BIT_SET(hal_data->sync_error_status, 0);
+  LCEC_PIN_BIT_SET(hal_data->phase_sequence_error, 0);
 
   // initialize channel L1/L2/L3
   for (i = 0; i < LCEC_EL3403_CHANS; i++) {
@@ -248,18 +248,18 @@ static int lcec_el3403_init(int comp_id, lcec_slave_t *slave) {
     }
 
     // initialize pins
-    *(chan->sync_error) = 0;
-    *(chan->txpdo_toggle) = 0;
-    *(chan->current) = 0.0;
-    *(chan->voltage) = 0.0;
-    *(chan->active_power) = 0.0;
-    *(chan->apparent_power) = 0.0;
-    *(chan->reactive_power) = 0.0;
-    *(chan->energy) = 0.0;
-    *(chan->cosphi) = 0.0;
-    *(chan->frequency) = 0.0;
-    *(chan->energy_negative) = 0.0;
-    *(chan->missing_zero_crossing) = 0;
+    LCEC_PIN_BIT_SET(chan->sync_error, 0);
+    LCEC_PIN_BIT_SET(chan->txpdo_toggle, 0);
+    LCEC_PIN_FLOAT_SET(chan->current, 0.0);
+    LCEC_PIN_FLOAT_SET(chan->voltage, 0.0);
+    LCEC_PIN_FLOAT_SET(chan->active_power, 0.0);
+    LCEC_PIN_FLOAT_SET(chan->apparent_power, 0.0);
+    LCEC_PIN_FLOAT_SET(chan->reactive_power, 0.0);
+    LCEC_PIN_FLOAT_SET(chan->energy, 0.0);
+    LCEC_PIN_FLOAT_SET(chan->cosphi, 0.0);
+    LCEC_PIN_FLOAT_SET(chan->frequency, 0.0);
+    LCEC_PIN_FLOAT_SET(chan->energy_negative, 0.0);
+    LCEC_PIN_BIT_SET(chan->missing_zero_crossing, 0);
   }
   return 0;
 }
@@ -285,21 +285,21 @@ static void lcec_el3403_read(lcec_slave_t *slave, long period) {
     chan = &hal_data->chans[i];
 
     // Update Status
-    *(chan->sync_error) = EC_READ_BIT(&pd[chan->sync_error_pdo_os], chan->sync_error_pdo_bp);
-    *(chan->txpdo_toggle) = EC_READ_BIT(&pd[chan->txpdo_toggle_pdo_os], chan->txpdo_toggle_pdo_bp);
-    *(chan->missing_zero_crossing) = EC_READ_BIT(&pd[chan->missing_zero_crossing_pdo_os], chan->missing_zero_crossing_pdo_bp);
+    LCEC_PIN_BIT_SET(chan->sync_error, EC_READ_BIT(&pd[chan->sync_error_pdo_os], chan->sync_error_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->txpdo_toggle, EC_READ_BIT(&pd[chan->txpdo_toggle_pdo_os], chan->txpdo_toggle_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->missing_zero_crossing, EC_READ_BIT(&pd[chan->missing_zero_crossing_pdo_os], chan->missing_zero_crossing_pdo_bp));
 
     // Update Current Channel
     current = EC_READ_S32(&pd[chan->current_pdo_os]);
-    *(chan->current) = (double)current * EL3403_FACTOR_CURRENT;
+    LCEC_PIN_FLOAT_SET(chan->current, (double)current * EL3403_FACTOR_CURRENT);
 
     // Update voltage Channel
     voltage = EC_READ_S32(&pd[chan->voltage_pdo_os]);
-    *(chan->voltage) = (double)voltage * EL3403_FACTOR_VOLTAGE;
+    LCEC_PIN_FLOAT_SET(chan->voltage, (double)voltage * EL3403_FACTOR_VOLTAGE);
 
     // Update Active Power Channel
     active_power = EC_READ_S32(&pd[chan->active_power_pdo_os]);
-    *(chan->active_power) = (double)active_power * EL3403_FACTOR_ACTIVE_POWER;
+    LCEC_PIN_FLOAT_SET(chan->active_power, (double)active_power * EL3403_FACTOR_ACTIVE_POWER);
 
     for (hal_data->index = 0; hal_data->index < 5; hal_data->index++) {
       EC_WRITE_U8(&pd[chan->index_pdo_os], hal_data->index);
@@ -308,35 +308,35 @@ static void lcec_el3403_read(lcec_slave_t *slave, long period) {
       switch (ovc) {
         case 0:
           apparent_power = EC_READ_S32(&pd[chan->variable_pdo_os]);
-          *(chan->apparent_power) = (double)apparent_power * EL3403_FACTOR_APPARENT_POWER;
+          LCEC_PIN_FLOAT_SET(chan->apparent_power, (double)apparent_power * EL3403_FACTOR_APPARENT_POWER);
           break;
         case 1:
           reactive_power = EC_READ_S32(&pd[chan->variable_pdo_os]);
-          *(chan->reactive_power) = (double)reactive_power * EL3403_FACTOR_REACTIVE_POWER;
+          LCEC_PIN_FLOAT_SET(chan->reactive_power, (double)reactive_power * EL3403_FACTOR_REACTIVE_POWER);
           break;
         case 2:
           energy = EC_READ_S32(&pd[chan->variable_pdo_os]);
-          *(chan->energy) = (double)energy * EL3403_FACTOR_ENERGY;
+          LCEC_PIN_FLOAT_SET(chan->energy, (double)energy * EL3403_FACTOR_ENERGY);
           break;
         case 3:
           cosphi = EC_READ_S32(&pd[chan->variable_pdo_os]);
-          *(chan->cosphi) = (double)cosphi * EL3403_FACTOR_COSPHI;
+          LCEC_PIN_FLOAT_SET(chan->cosphi, (double)cosphi * EL3403_FACTOR_COSPHI);
           break;
         case 4:
           frequency = EC_READ_S32(&pd[chan->variable_pdo_os]);
-          *(chan->frequency) = (double)frequency * EL3403_FACTOR_FREQUENCY;
+          LCEC_PIN_FLOAT_SET(chan->frequency, (double)frequency * EL3403_FACTOR_FREQUENCY);
           break;
         case 5:
           energy_negative = EC_READ_S32(&pd[chan->variable_pdo_os]);
-          *(chan->energy_negative) = (double)energy_negative * EL3403_FACTOR_ENERGY_NEGATIVE;
+          LCEC_PIN_FLOAT_SET(chan->energy_negative, (double)energy_negative * EL3403_FACTOR_ENERGY_NEGATIVE);
           break;
       }
     }
   }
 
   // Update Status
-  *(hal_data->sync_error_status) = EC_READ_BIT(&pd[hal_data->sync_error_status_pdo_os], hal_data->sync_error_status_pdo_bp);
-  *(hal_data->phase_sequence_error) = EC_READ_BIT(&pd[hal_data->phase_sequence_error_pdo_os], hal_data->phase_sequence_error_pdo_bp);
+  LCEC_PIN_BIT_SET(hal_data->sync_error_status, EC_READ_BIT(&pd[hal_data->sync_error_status_pdo_os], hal_data->sync_error_status_pdo_bp));
+  LCEC_PIN_BIT_SET(hal_data->phase_sequence_error, EC_READ_BIT(&pd[hal_data->phase_sequence_error_pdo_os], hal_data->phase_sequence_error_pdo_bp));
 
   hal_data->last_operational = 1;
 }

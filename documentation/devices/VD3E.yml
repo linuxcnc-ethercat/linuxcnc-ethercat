@@ -1,0 +1,11 @@
+---
+Device: VD3E
+VendorID: "0x00000eff"
+VendorName: "Wecon"
+PID: "0x0d3e0001"
+Description: "Wecon VD3E single-axis EtherCAT servo drive"
+DocumentationURL: "https://docs.we-con.com.cn/bin/view/Servo/"
+DeviceType: "Servo Drive"
+Notes: "CoE only. One RxPDO and one TxPDO, 10 entries max per mapping. 0x608f/0x6092 absent (encoder 2^23 counts/rev). SDO complete access NAKed."
+SrcFile: src/devices/lcec_wecon.c
+TestingStatus: "Tested live 2026-08-13: OP on a five-slave bus, runs a mill spindle in CSV. DC converges only with refClockSyncCycles=-1 (103 ns)."

@@ -179,7 +179,7 @@ static int lcec_el3255_init(int comp_id, lcec_slave_t *slave) {
     }
 
     // initialize pins
-    *(chan->scale) = 1.0;
+    LCEC_PIN_FLOAT_SET(chan->scale, 1.0);
   }
 
   return 0;
@@ -203,14 +203,14 @@ static void lcec_el3255_read(lcec_slave_t *slave, long period) {
     chan = &hal_data->chans[i];
 
     // update state
-    *(chan->overrange) = EC_READ_BIT(&pd[chan->ovr_pdo_os], chan->ovr_pdo_bp);
-    *(chan->underrange) = EC_READ_BIT(&pd[chan->udr_pdo_os], chan->udr_pdo_bp);
-    *(chan->error) = EC_READ_BIT(&pd[chan->error_pdo_os], chan->error_pdo_bp);
-    *(chan->sync_err) = EC_READ_BIT(&pd[chan->sync_err_pdo_os], chan->sync_err_pdo_bp);
+    LCEC_PIN_BIT_SET(chan->overrange, EC_READ_BIT(&pd[chan->ovr_pdo_os], chan->ovr_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->underrange, EC_READ_BIT(&pd[chan->udr_pdo_os], chan->udr_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->error, EC_READ_BIT(&pd[chan->error_pdo_os], chan->error_pdo_bp));
+    LCEC_PIN_BIT_SET(chan->sync_err, EC_READ_BIT(&pd[chan->sync_err_pdo_os], chan->sync_err_pdo_bp));
 
     // update value
     value = EC_READ_S16(&pd[chan->val_pdo_os]);
-    *(chan->raw_val) = value;
-    *(chan->val) = *(chan->bias) + *(chan->scale) * (double)value * ((double)1 / (double)0x7fff);
+    LCEC_PIN_S32_SET(chan->raw_val, value);
+    LCEC_PIN_FLOAT_SET(chan->val, LCEC_PIN_FLOAT_GET(chan->bias) + LCEC_PIN_FLOAT_GET(chan->scale) * (double)value * ((double)1 / (double)0x7fff));
   }
 }

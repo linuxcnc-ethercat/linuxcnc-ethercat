@@ -305,25 +305,25 @@ void lcec_el6900_read(lcec_slave_t *slave, long period) {
   lcec_slave_t *fsoe_slave;
   const LCEC_CONF_FSOE_T *fsoeConf;
 
-  *(hal_data->state) = EC_READ_U8(&pd[hal_data->state_os]) & 0x03;
-  *(hal_data->login_active) = EC_READ_BIT(&pd[hal_data->login_active_os], hal_data->login_active_bp);
-  *(hal_data->input_size_missmatch) = EC_READ_BIT(&pd[hal_data->input_size_missmatch_os], hal_data->input_size_missmatch_bp);
-  *(hal_data->output_size_missmatch) = EC_READ_BIT(&pd[hal_data->output_size_missmatch_os], hal_data->output_size_missmatch_bp);
+  LCEC_PIN_U32_SET(hal_data->state, EC_READ_U8(&pd[hal_data->state_os]) & 0x03);
+  LCEC_PIN_BIT_SET(hal_data->login_active, EC_READ_BIT(&pd[hal_data->login_active_os], hal_data->login_active_bp));
+  LCEC_PIN_BIT_SET(hal_data->input_size_missmatch, EC_READ_BIT(&pd[hal_data->input_size_missmatch_os], hal_data->input_size_missmatch_bp));
+  LCEC_PIN_BIT_SET(hal_data->output_size_missmatch, EC_READ_BIT(&pd[hal_data->output_size_missmatch_os], hal_data->output_size_missmatch_bp));
 
   for (i = 0, io = hal_data->std_outs; i < hal_data->std_outs_count; i++, io++) {
-    *(io->pin) = EC_READ_BIT(&pd[io->os], io->bp);
+    LCEC_PIN_BIT_SET(io->pin, EC_READ_BIT(&pd[io->os], io->bp));
   }
 
   for (i = 0, fsoe_data = hal_data->fsoe; i < hal_data->fsoe_count; i++, fsoe_data++) {
     fsoe_slave = fsoe_data->fsoe_slave;
     fsoeConf = fsoe_slave->fsoeConf;
-    *(fsoe_data->fsoe_master_cmd) = EC_READ_U8(&pd[fsoe_data->fsoe_master_cmd_os]);
-    *(fsoe_data->fsoe_master_connid) = EC_READ_U16(&pd[fsoe_data->fsoe_master_connid_os]);
-    *(fsoe_data->fsoe_slave_cmd) = EC_READ_U8(&pd[fsoe_data->fsoe_slave_cmd_os]);
-    *(fsoe_data->fsoe_slave_connid) = EC_READ_U16(&pd[fsoe_data->fsoe_slave_connid_os]);
+    LCEC_PIN_U32_SET(fsoe_data->fsoe_master_cmd, EC_READ_U8(&pd[fsoe_data->fsoe_master_cmd_os]));
+    LCEC_PIN_U32_SET(fsoe_data->fsoe_master_connid, EC_READ_U16(&pd[fsoe_data->fsoe_master_connid_os]));
+    LCEC_PIN_U32_SET(fsoe_data->fsoe_slave_cmd, EC_READ_U8(&pd[fsoe_data->fsoe_slave_cmd_os]));
+    LCEC_PIN_U32_SET(fsoe_data->fsoe_slave_connid, EC_READ_U16(&pd[fsoe_data->fsoe_slave_connid_os]));
     for (crc_idx = 0, crc = fsoe_data->fsoe_crc; crc_idx < fsoeConf->data_channels; crc_idx++, crc++) {
-      *(crc->fsoe_master_crc) = EC_READ_U16(&pd[crc->fsoe_master_crc_os]);
-      *(crc->fsoe_slave_crc) = EC_READ_U16(&pd[crc->fsoe_slave_crc_os]);
+      LCEC_PIN_U32_SET(crc->fsoe_master_crc, EC_READ_U16(&pd[crc->fsoe_master_crc_os]));
+      LCEC_PIN_U32_SET(crc->fsoe_slave_crc, EC_READ_U16(&pd[crc->fsoe_slave_crc_os]));
     }
   }
 }
@@ -335,9 +335,9 @@ void lcec_el6900_write(lcec_slave_t *slave, long period) {
   lcec_el6900_fsoe_io_t *io;
   int i;
 
-  EC_WRITE_U16(&pd[hal_data->control_os], *(hal_data->control));
+  EC_WRITE_U16(&pd[hal_data->control_os], LCEC_PIN_U32_GET(hal_data->control));
 
   for (i = 0, io = hal_data->std_ins; i < hal_data->std_ins_count; i++, io++) {
-    EC_WRITE_BIT(&pd[io->os], io->bp, *(io->pin));
+    EC_WRITE_BIT(&pd[io->os], io->bp, LCEC_PIN_BIT_GET(io->pin));
   }
 }

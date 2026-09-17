@@ -26,13 +26,14 @@
 extern "C" {
 #endif
 
-#include "ecrt.h"
-#include "hal.h"
+#include <ecrt.h>
+#include <hal.h>
 #include "lcec_conf.h"
+#include "lcec_hal_compat.h"
 #include "lcec_rtapi.h"
-#include "rtapi_ctype.h"
-#include "rtapi_math.h"
-#include "rtapi_string.h"
+#include <rtapi_ctype.h>
+#include <rtapi_math.h>
+#include <rtapi_string.h>
 
 #ifdef __cplusplus
 }
@@ -70,9 +71,15 @@ extern "C" {
 #define LCEC_LICHUAN_VID    0x00000a79
 #define LCEC_RTELLIGENT_VID 0x00000a88
 #define LCEC_LEADSHINE_VID  0x00004321
+#define LCEC_WECON_VID      0x00000eff
+#define LCEC_INOVANCE_VID   0x00100000
 
 // State update period (ns)
 #define LCEC_STATE_UPDATE_PERIOD 1000000000LL
+
+// Consecutive missing DC sync monitor datagrams tolerated before the
+// dc-sync pins are invalidated (see lcec_read_master)
+#define LCEC_DC_SYNC_MISS_MAX 10
 
 // IDN builder
 #define LCEC_IDN_TYPE_P 0x8000
@@ -125,6 +132,11 @@ typedef int (*lcec_slave_preinit_t)(lcec_slave_t *slave);
 typedef int (*lcec_slave_init_t)(int comp_id, lcec_slave_t *slave);
 typedef void (*lcec_slave_cleanup_t)(lcec_slave_t *slave);
 typedef void (*lcec_slave_rw_t)(lcec_slave_t *slave, long period);
+/// @brief Runtime re-initialization hook (documentation/runtime-reinit.md).
+/// Non-realtime; slave held in PREOP after returning to the bus.  Re-apply
+/// every SDO/SII write `_init` did, idempotently; no HAL pins, no
+/// `lcec_pdo_init()`.  Non-zero keeps the slave held and is retried.
+typedef int (*lcec_slave_reinit_t)(lcec_slave_t *slave);
 
 typedef enum {
   MODPARAM_TYPE_BIT,    ///< Modparam value is a single bit.
@@ -172,6 +184,7 @@ typedef struct {
   uint64_t flags;                         ///< Flags, passed through to `proc_init` as `slave->flags`.
   const char *sourcefile;                 ///< Source filename, autopopulated.
   const lcec_submodule_desc_t *modules;   /// XXX: added slave submodule or channels*(could be implemented later)
+  lcec_slave_reinit_t proc_reinit;        ///< Optional runtime re-init hook (NULL = no PREOP hold, today's behavior).
 } lcec_typelist_t;
 
 /// @brief Linked list for holding device type definitions.
@@ -197,8 +210,8 @@ typedef struct lcec_master_data {
 #ifdef RTAPI_TASK_PLL_SUPPORT
   hal_s32_t *pll_err;
   hal_s32_t *pll_out;
-  hal_u32_t pll_step;
-  hal_u32_t pll_max_err;
+  lcec_param_u32_t pll_step;
+  lcec_param_u32_t pll_max_err;
   hal_u32_t *pll_reset_cnt;
   hal_u32_t dc_phase_max_err;
   hal_s32_t *app_phase;         // Our execution phase in local cycle (ns, real-time)
@@ -207,8 +220,34 @@ typedef struct lcec_master_data {
   hal_s32_t *drift_mode;        // Input: 0=simple, 1=manual
   hal_s32_t *pll_drift;         // Input: debug offset added to PLL correction (ns)
   hal_s32_t *pll_final;         // Output: final PLL correction value sent to rtapi (ns)
+  hal_s32_t *dc_ref_err;        // Output: raw app_time vs DC reference clock offset (ns), diagnostic only
   int32_t auto_drift_delay;     // Internal: auto-drift delay counter
+  int32_t phase_locked;         // Internal: instantaneous phase-lock state (hysteresis)
+  int32_t phase_lock_cnt;       // Internal: consecutive locked cycles (dc-phased dwell)
+  int32_t phase_unlock_cnt;     // Internal: consecutive unlocked cycles (dc-phased dwell)
+  int32_t phase_lock_dwell;     // Internal: dwell cycles for dc-phased transitions (~200 ms)
 #endif
+  // Domain working counter monitoring
+  hal_u32_t *wkc;             // Output: current domain working counter
+  hal_u32_t *wkc_min;         // Output: min WKC since first complete exchange
+  hal_u32_t *wkc_change_cnt;  // Output: WKC change count since first complete exchange
+  hal_s32_t *wkc_state;       // Output: 0=zero, 1=incomplete, 2=complete (ec_wc_state_t)
+  hal_bit_t *wkc_reset;       // IO: set to 1 to clear min/change stats; self-clears
+  uint32_t wkc_last;          // Internal: previous WKC value
+  int wkc_full_seen;          // Internal: domain reached EC_WC_COMPLETE at least once
+  // DC synchrony monitoring (broadcast read of 0x092C system time difference)
+  hal_u32_t *dc_sync_diff;       // Output: upper estimate of max slave time diff (ns)
+  hal_bit_t *dc_sync_converged;  // Output: dc_sync_diff below dc-sync-max threshold
+  lcec_param_u32_t dc_sync_max;         // Param: convergence threshold (ns)
+  lcec_param_bit_t dc_sync_monitor;     // Param: enable the per-cycle monitor datagram (default on)
+  int dc_sync_miss_cnt;          // Internal: consecutive cycles without a monitor response
+  // Cycle time correlation: DC app time and the OS monotonic clock, sampled
+  // back-to-back each cycle, so external processes can map timestamps taken
+  // with clock_gettime(CLOCK_MONOTONIC) into the DC time domain
+  hal_u32_t *app_time_lo;   // Output: DC app time of this cycle, low 32 bits (ns)
+  hal_u32_t *app_time_hi;   // Output: DC app time of this cycle, high 32 bits
+  hal_u32_t *mono_time_lo;  // Output: monotonic time sampled with app time, low 32 bits (ns)
+  hal_u32_t *mono_time_hi;  // Output: monotonic time sampled with app time, high 32 bits
   // Phase calibration for sync_to_ref_clock=false mode
   int32_t phase_measure_cnt;  // Internal: measurement cycle counter
   int32_t phase_min;          // Internal: minimum app_phase during measurement
@@ -226,7 +265,33 @@ typedef struct lcec_slave_state {
   hal_bit_t *state_preop;   ///< Is the device in state `PREOP`?  Equivalant to the `.slave-state-preop` HAL pin.
   hal_bit_t *state_safeop;  ///< Is the device in state `SAFEOP`?  Equivalant to the `.slave-state-safeop` HAL pin.
   hal_bit_t *state_op;      ///< Is the device in state `OP`?  Equivalant to the `.slave-state-op` HAL pin.
+  hal_bit_t *reconfig;        ///< Held in PREOP / being re-initialized.  `.slave-reconfig` pin.
+  hal_bit_t *reconfig_error;  ///< Last re-init failed or the hold timed out.  `.slave-reconfig-error` pin.
+  hal_u32_t *reconfig_count;  ///< Successful runtime re-inits.  `.slave-reconfig-count` pin.
 } lcec_slave_state_t;
+
+typedef struct lcec_pdo_entry_reg {
+  int current;
+  int max;
+  ec_pdo_entry_reg_t *pdo_entry_regs;
+} lcec_pdo_entry_reg_t;
+
+typedef struct lcec_sync_unit {
+  struct lcec_sync_unit *prev;
+  struct lcec_sync_unit *next;
+  char name[LCEC_CONF_STR_MAXLEN];
+  uint32_t cycle_time;
+  unsigned int cycle_divider;
+  unsigned int cycle_counter;
+  int pdo_entry_count;
+  lcec_pdo_entry_reg_t *regs;
+  ec_domain_t *domain;
+  uint8_t *process_data;
+  int process_data_len;
+  int queued;
+  int process;
+  int write;
+} lcec_sync_unit_t;
 
 typedef struct lcec_master {
   lcec_master_t *prev;              ///< Next master.
@@ -239,6 +304,9 @@ typedef struct lcec_master {
   ec_domain_t *domain;
   uint8_t *process_data;
   int process_data_len;
+  lcec_sync_unit_t *first_sync_unit;
+  lcec_sync_unit_t *last_sync_unit;
+  int sync_units_started;
   lcec_slave_t *first_slave;
   lcec_slave_t *last_slave;
   lcec_master_data_t *hal_data;
@@ -261,12 +329,6 @@ typedef struct lcec_master {
   int dc_time_valid_last;  // Previous cycle's dc_time_valid (for detecting consecutive valid reads)
 #endif
 } lcec_master_t;
-
-typedef struct lcec_pdo_entry_reg {
-  int current;
-  int max;
-  ec_pdo_entry_reg_t *pdo_entry_regs;
-} lcec_pdo_entry_reg_t;
 
 /// @brief Slave Distributed Clock configuration.
 typedef struct {
@@ -318,39 +380,48 @@ typedef struct lcec_slave_submodule {
 
 /// @brief EtherCAT slave.
 typedef struct lcec_slave {
-  lcec_slave_t *prev;                        ///< Next slave
-  lcec_slave_t *next;                        ///< Previous slave
-  lcec_master_t *master;                     ///< Master for this slave
-  int index;                                 ///< Index of this slave.
-  char name[LCEC_CONF_STR_MAXLEN];           ///< Slave name.
-  uint32_t vid;                              ///< Slave's vendor ID
-  uint32_t pid;                              ///< Slave's EtherCAT PID/device ID.
-  ec_sync_info_t *sync_info;                 ///< Sync Manager configuration.
-  ec_slave_config_t *config;                 ///< Configuration data.
-  ec_slave_config_state_t state;             ///< Slave state.
-  lcec_slave_dc_t *dc_conf;                  ///< Distributed Clock configuration.
-  lcec_slave_watchdog_t *wd_conf;            ///< Watchdog configuration.
-  lcec_slave_preinit_t proc_preinit;         ///< Callback for pre-init, if any.
-  lcec_slave_init_t proc_init;               ///< Callback for initializing device.
-  lcec_slave_cleanup_t proc_cleanup;         ///< Calback for cleaning up the device.
-  lcec_slave_rw_t proc_read;                 ///< Callback for reading from the device.
-  lcec_slave_rw_t proc_write;                ///< Callback for writing to the device.
-  lcec_slave_state_t *hal_state_data;        ///< HAL state data.
-  void *hal_data;                            ///< HAL data, device driver specific.
-  int generic_pdo_entry_count;               ///< The number of generic PDO entries.
-  ec_pdo_entry_info_t *generic_pdo_entries;  ///< Generic PDO entries.
-  ec_pdo_info_t *generic_pdos;               ///< Generic PDOs.
-  ec_sync_info_t *generic_sync_managers;     ///< Generic sync managers.
-  lcec_slave_sdoconf_t *sdo_config;          ///< SDO config.
-  lcec_slave_idnconf_t *idn_config;          ///< IDN config.
-  lcec_slave_modparam_t *modparams;          ///< modParams.
-  lcec_slave_submodule_t *submodules;        ///<  XXX: submodule implementation
-                                             ///
-  const LCEC_CONF_FSOE_T *fsoeConf;          ///< Safety config.
-  int is_fsoe_logic;                         ///< Device supports FSoE safety logic.
-  unsigned int *fsoe_slave_offset;           ///< FSoE slave offset.
-  unsigned int *fsoe_master_offset;          ///< FSoE master offset.
-  uint64_t flags;                            ///< Flags, as defined by the driver itself.
+  lcec_slave_t *prev;                         ///< Next slave
+  lcec_slave_t *next;                         ///< Previous slave
+  lcec_master_t *master;                      ///< Master for this slave
+  lcec_sync_unit_t *sync_unit;                ///< Process-data Sync Unit containing this slave.
+  int index;                                  ///< Index of this slave.
+  char name[LCEC_CONF_STR_MAXLEN];            ///< Slave name.
+  char sync_unit_name[LCEC_CONF_STR_MAXLEN];  ///< Configured Sync Unit name.
+  uint32_t sync_unit_cycle;                   ///< Configured process-data cycle in ns.
+  uint32_t vid;                               ///< Slave's vendor ID
+  uint32_t pid;                               ///< Slave's EtherCAT PID/device ID.
+  ec_sync_info_t *sync_info;                  ///< Sync Manager configuration.
+  ec_slave_config_t *config;                  ///< Configuration data.
+  ec_slave_config_state_t state;              ///< Slave state.
+  lcec_slave_dc_t *dc_conf;                   ///< Distributed Clock configuration.
+  lcec_slave_watchdog_t *wd_conf;             ///< Watchdog configuration.
+  lcec_slave_preinit_t proc_preinit;          ///< Callback for pre-init, if any.
+  lcec_slave_init_t proc_init;                ///< Callback for initializing device.
+  lcec_slave_cleanup_t proc_cleanup;          ///< Calback for cleaning up the device.
+  lcec_slave_rw_t proc_read;                  ///< Callback for reading from the device.
+  lcec_slave_rw_t proc_write;                 ///< Callback for writing to the device.
+  lcec_slave_reinit_t proc_reinit;            ///< Callback for runtime re-initialization, if any.
+  int reinit_requested;                       ///< RT thread: master reports a PREOP hold (or timeout).
+  int reinit_in_progress;                     ///< Helper thread: `proc_reinit` running.
+  int reinit_error;                           ///< Last re-init or release failed.
+  uint32_t reinit_count;                      ///< Successful runtime re-inits.
+  long reinit_last_attempt;                   ///< Ticks of the last attempt (retry pacing).
+  long reinit_released;                       ///< Ticks of the last release (stale-state filter).
+  lcec_slave_state_t *hal_state_data;         ///< HAL state data.
+  void *hal_data;                             ///< HAL data, device driver specific.
+  int generic_pdo_entry_count;                ///< The number of generic PDO entries.
+  ec_pdo_entry_info_t *generic_pdo_entries;   ///< Generic PDO entries.
+  ec_pdo_info_t *generic_pdos;                ///< Generic PDOs.
+  ec_sync_info_t *generic_sync_managers;      ///< Generic sync managers.
+  lcec_slave_sdoconf_t *sdo_config;           ///< SDO config.
+  lcec_slave_idnconf_t *idn_config;           ///< IDN config.
+  lcec_slave_modparam_t *modparams;           ///< modParams.
+  lcec_slave_submodule_t *submodules;         ///< Configured <subModule>s (modular couplers), or NULL.
+  const LCEC_CONF_FSOE_T *fsoeConf;           ///< Safety config.
+  int is_fsoe_logic;                          ///< Device supports FSoE safety logic.
+  unsigned int *fsoe_slave_offset;            ///< FSoE slave offset.
+  unsigned int *fsoe_master_offset;           ///< FSoE master offset.
+  uint64_t flags;                             ///< Flags, as defined by the driver itself.
   lcec_pdo_entry_reg_t *regs;
 } lcec_slave_t;
 
@@ -362,12 +433,12 @@ typedef struct {
   const char *fmt;    ///< Format string for generating pin names via sprintf().
 } lcec_pindesc_t;
 
-/// @brief HAL pin description.
+/// @brief HAL parameter description.
 typedef struct {
-  hal_type_t type;      ///< HAL type of this pin (`HAL_BIT`, `HAL_FLOAT`, `HAL_S32`, or `HAL_U32`).
-  hal_param_dir_t dir;  ///< Direction for this pin (`HAL_IN`, `HAL_OUT`, or `HAL_IO`).
-  int offset;           ///< Offset for this pin's data in `hal_data`.
-  const char *fmt;      ///< Format string for generating pin names via sprintf().
+  hal_type_t type;      ///< HAL type of this parameter (`HAL_BIT`, `HAL_FLOAT`, `HAL_S32`, or `HAL_U32`).
+  hal_param_dir_t dir;  ///< Direction for this parameter (`HAL_RO` or `HAL_RW`).
+  int offset;           ///< Offset for this parameter's data in `hal_data`.
+  const char *fmt;      ///< Format string for generating parameter names via sprintf().
 } lcec_paramdesc_t;
 
 /// @brief Sync manager configuration.
@@ -427,6 +498,29 @@ int lcec_write_sdo32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint
 int lcec_write_sdo8_modparam(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint8_t value, const char *mpname);
 int lcec_write_sdo16_modparam(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint16_t value, const char *mpname);
 int lcec_write_sdo32_modparam(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint32_t value, const char *mpname);
+
+// SII (EEPROM) access, 16-bit word offsets as in `ethercat sii_read`.
+// Needs a libethercat with EC_HAVE_SII_ACCESS, else -ENOSYS.
+#define LCEC_SII_FIRST_CATEGORY 0x40  ///< Word offset of the first SII category header.
+#define LCEC_SII_CAT_STRINGS    0x000A
+#define LCEC_SII_CAT_GENERAL    0x001E
+#define LCEC_SII_CAT_FMMU       0x0028
+#define LCEC_SII_CAT_SYNCM      0x0029
+#define LCEC_SII_CAT_TXPDO      0x0032
+#define LCEC_SII_CAT_RXPDO      0x0033
+#define LCEC_SII_GENERAL_COE_WORD 2  ///< Word inside the general category holding the CoE details byte (high byte).
+// CoE details bits (ETG.1000.6 SII general category, byte 5).
+#define LCEC_SII_COE_ENABLE_SDO             0x01
+#define LCEC_SII_COE_ENABLE_SDO_INFO        0x02
+#define LCEC_SII_COE_ENABLE_PDO_ASSIGN      0x04
+#define LCEC_SII_COE_ENABLE_PDO_CONFIG      0x08
+#define LCEC_SII_COE_ENABLE_UPLOAD_AT_START 0x10
+#define LCEC_SII_COE_ENABLE_SDO_COMPLETE    0x20
+int lcec_sii_read16(lcec_slave_t *slave, uint16_t word_offset, uint16_t *value);
+int lcec_sii_write16(lcec_slave_t *slave, uint16_t word_offset, uint16_t value);
+int lcec_sii_find_category(lcec_slave_t *slave, uint16_t cat_type, uint16_t *word_offset, uint16_t *word_count);
+int lcec_sii_update_coe_details(lcec_slave_t *slave, uint8_t set_mask, uint8_t clear_mask, int *changed);
+int lcec_slave_apply_sdo_config(lcec_slave_t *slave);
 
 int lcec_pin_newf(hal_type_t type, hal_pin_dir_t dir, void **data_ptr_addr, const char *fmt, ...);
 int lcec_pin_newf_list(void *base, const lcec_pindesc_t *list, ...);

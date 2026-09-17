@@ -26,7 +26,7 @@
 typedef struct {
   const char *name;            ///< Used for debugging only
   hal_bit_t *out;              ///< -dout-X pin in LinuxCNC
-  hal_bit_t invert;            ///< Is the value inverted?
+  lcec_param_bit_t invert;            ///< Is the value inverted?
   unsigned int pdo_os;         ///< Byte offset in PDO data struct
   unsigned int pdo_bp;         ///< Bit offset in PDO data byte
   unsigned int pdo_bp_packed;  ///< Controls is this is a packed-bit port, where more than one channel is found in a single PDO entry.

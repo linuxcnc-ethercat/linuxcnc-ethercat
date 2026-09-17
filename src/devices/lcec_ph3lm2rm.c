@@ -42,7 +42,7 @@ typedef struct {
   hal_bit_t *latch_state;
   hal_bit_t *latch_state_not;
 
-  hal_float_t scale;
+  lcec_param_float_t scale;
 
   lcec_class_enc_data_t enc;
 
@@ -68,8 +68,8 @@ typedef struct {
   hal_bit_t *signal_level_warn;
   hal_bit_t *signal_level_err;
 
-  hal_u32_t signal_level_warn_val;
-  hal_u32_t signal_level_err_val;
+  lcec_param_u32_t signal_level_warn_val;
+  lcec_param_u32_t signal_level_err_val;
 
   unsigned int signal_level_os;
 } lcec_ph3lm2rm_lm_data_t;
@@ -204,7 +204,7 @@ static int lcec_ph3lm2rm_enc_init(lcec_slave_t *slave, lcec_ph3lm2rm_enc_data_t 
   }
 
   // initialize variables
-  hal_data->scale = scale;
+  LCEC_PARAM_FLOAT_SET(hal_data->scale, scale);
 
   return 0;
 }
@@ -276,13 +276,13 @@ static void lcec_ph3lm2rm_read(lcec_slave_t *slave, long period) {
   lcec_ph3lm2rm_rm_data_t *rm;
   lcec_ph3lm2rm_lm_data_t *lm;
 
-  *(hal_data->sync_locked) = EC_READ_BIT(&pd[hal_data->sync_locked_os], hal_data->sync_locked_bp);
+  LCEC_PIN_BIT_SET(hal_data->sync_locked, EC_READ_BIT(&pd[hal_data->sync_locked_os], hal_data->sync_locked_bp));
 
   for (i = 0, lm = hal_data->lms; i < LCEC_PH3LM2RM_LM_COUNT; i++, lm++) {
     lcec_ph3lm2rm_enc_read(pd, &lm->ch);
-    *(lm->signal_level) = EC_READ_U32(&pd[lm->signal_level_os]);
-    *(lm->signal_level_warn) = lm->signal_level_warn_val > 0 && *(lm->signal_level) < lm->signal_level_warn_val;
-    *(lm->signal_level_err) = lm->signal_level_err_val > 0 && *(lm->signal_level) < lm->signal_level_err_val;
+    LCEC_PIN_U32_SET(lm->signal_level, EC_READ_U32(&pd[lm->signal_level_os]));
+    LCEC_PIN_BIT_SET(lm->signal_level_warn, LCEC_PARAM_U32_GET(lm->signal_level_warn_val) > 0 && LCEC_PIN_U32_GET(lm->signal_level) < LCEC_PARAM_U32_GET(lm->signal_level_warn_val));
+    LCEC_PIN_BIT_SET(lm->signal_level_err, LCEC_PARAM_U32_GET(lm->signal_level_err_val) > 0 && LCEC_PIN_U32_GET(lm->signal_level) < LCEC_PARAM_U32_GET(lm->signal_level_err_val));
   }
 
   for (i = 0, rm = hal_data->rms; i < LCEC_PH3LM2RM_RM_COUNT; i++, rm++) {
@@ -294,22 +294,22 @@ static void lcec_ph3lm2rm_enc_read(uint8_t *pd, lcec_ph3lm2rm_enc_data_t *ch) {
   uint32_t counter, latch;
 
   // read bit values
-  *(ch->error) = EC_READ_BIT(&pd[ch->error_os], ch->error_bp);
-  *(ch->latch_valid) = EC_READ_BIT(&pd[ch->latch_valid_os], ch->latch_valid_bp);
-  *(ch->latch_state) = EC_READ_BIT(&pd[ch->latch_state_os], ch->latch_state_bp);
-  *(ch->latch_state_not) = !*(ch->latch_state);
+  LCEC_PIN_BIT_SET(ch->error, EC_READ_BIT(&pd[ch->error_os], ch->error_bp));
+  LCEC_PIN_BIT_SET(ch->latch_valid, EC_READ_BIT(&pd[ch->latch_valid_os], ch->latch_valid_bp));
+  LCEC_PIN_BIT_SET(ch->latch_state, EC_READ_BIT(&pd[ch->latch_state_os], ch->latch_state_bp));
+  LCEC_PIN_BIT_SET(ch->latch_state_not, !LCEC_PIN_BIT_GET(ch->latch_state));
 
   // read counter values
   counter = EC_READ_U32(&pd[ch->counter_os]);
   latch = EC_READ_U32(&pd[ch->latch_os]);
 
   // update encoder
-  class_enc_update(&ch->enc, 0, ch->scale, counter, latch, *(ch->latch_valid));
+  class_enc_update(&ch->enc, 0, LCEC_PARAM_FLOAT_GET(ch->scale), counter, latch, LCEC_PIN_BIT_GET(ch->latch_valid));
 
   // reset latch enable, if captured
-  if (*(ch->latch_valid)) {
-    *(ch->latch_ena_pos) = 0;
-    *(ch->latch_ena_neg) = 0;
+  if (LCEC_PIN_BIT_GET(ch->latch_valid)) {
+    LCEC_PIN_BIT_SET(ch->latch_ena_pos, 0);
+    LCEC_PIN_BIT_SET(ch->latch_ena_neg, 0);
   }
 }
 
@@ -321,7 +321,7 @@ static void lcec_ph3lm2rm_write(lcec_slave_t *slave, long period) {
   lcec_ph3lm2rm_rm_data_t *rm;
   lcec_ph3lm2rm_lm_data_t *lm;
 
-  EC_WRITE_BIT(&pd[hal_data->err_reset_os], hal_data->err_reset_bp, *(hal_data->err_reset));
+  EC_WRITE_BIT(&pd[hal_data->err_reset_os], hal_data->err_reset_bp, LCEC_PIN_BIT_GET(hal_data->err_reset));
 
   for (i = 0, lm = hal_data->lms; i < LCEC_PH3LM2RM_LM_COUNT; i++, lm++) {
     lcec_ph3lm2rm_enc_write(pd, &lm->ch);
@@ -329,12 +329,12 @@ static void lcec_ph3lm2rm_write(lcec_slave_t *slave, long period) {
 
   for (i = 0, rm = hal_data->rms; i < LCEC_PH3LM2RM_RM_COUNT; i++, rm++) {
     lcec_ph3lm2rm_enc_write(pd, &rm->ch);
-    EC_WRITE_BIT(&pd[rm->latch_sel_idx_os], rm->latch_sel_idx_bp, *(rm->latch_sel_idx));
+    EC_WRITE_BIT(&pd[rm->latch_sel_idx_os], rm->latch_sel_idx_bp, LCEC_PIN_BIT_GET(rm->latch_sel_idx));
   }
 }
 
 static void lcec_ph3lm2rm_enc_write(uint8_t *pd, lcec_ph3lm2rm_enc_data_t *ch) {
   // write bit values
-  EC_WRITE_BIT(&pd[ch->latch_ena_pos_os], ch->latch_ena_pos_bp, *(ch->latch_ena_pos));
-  EC_WRITE_BIT(&pd[ch->latch_ena_neg_os], ch->latch_ena_neg_bp, *(ch->latch_ena_neg));
+  EC_WRITE_BIT(&pd[ch->latch_ena_pos_os], ch->latch_ena_pos_bp, LCEC_PIN_BIT_GET(ch->latch_ena_pos));
+  EC_WRITE_BIT(&pd[ch->latch_ena_neg_os], ch->latch_ena_neg_bp, LCEC_PIN_BIT_GET(ch->latch_ena_neg));
 }

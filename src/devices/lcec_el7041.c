@@ -574,19 +574,19 @@ static int lcec_el7041_init(int comp_id, lcec_slave_t *s) {
   }
 
   // initialize pins
-  *(hd->pos_scale) = 1.0;
+  LCEC_PIN_FLOAT_SET(hd->pos_scale, 1.0);
 
-  *(hd->dcm_scale) = 1.0;
-  *(hd->dcm_min_dc) = -1.0;
-  *(hd->dcm_max_dc) = 1.0;
+  LCEC_PIN_FLOAT_SET(hd->dcm_scale, 1.0);
+  LCEC_PIN_FLOAT_SET(hd->dcm_min_dc, -1.0);
+  LCEC_PIN_FLOAT_SET(hd->dcm_max_dc, 1.0);
 
   // initialize variables
   hd->enc_do_init = 1;
   hd->enc_last_count = 0;
-  hd->enc_old_scale = *(hd->pos_scale) + 1.0;
+  hd->enc_old_scale = LCEC_PIN_FLOAT_GET(hd->pos_scale) + 1.0;
   hd->enc_scale_recip = 1.0;
 
-  hd->dcm_old_scale = *(hd->dcm_scale) + 1.0;
+  hd->dcm_old_scale = LCEC_PIN_FLOAT_GET(hd->dcm_scale) + 1.0;
   hd->dcm_scale_recip = 1.0;
 
   hd->internal_fault = 0;
@@ -615,44 +615,44 @@ static void lcec_el7041_read(lcec_slave_t *s, long period) {
   // check inputs
 
   // check for change in scale value
-  if (*(hd->pos_scale) != hd->enc_old_scale) {
+  if (LCEC_PIN_FLOAT_GET(hd->pos_scale) != hd->enc_old_scale) {
     // scale value has changed, test and update it
-    if ((*(hd->pos_scale) < 1e-20) && (*(hd->pos_scale) > -1e-20)) {
+    if ((LCEC_PIN_FLOAT_GET(hd->pos_scale) < 1e-20) && (LCEC_PIN_FLOAT_GET(hd->pos_scale) > -1e-20)) {
       // value too small, divide by zero is a bad thing
-      *(hd->pos_scale) = 1.0;
+      LCEC_PIN_FLOAT_SET(hd->pos_scale, 1.0);
     }
     // save new scale to detect future changes
-    hd->enc_old_scale = *(hd->pos_scale);
+    hd->enc_old_scale = LCEC_PIN_FLOAT_GET(hd->pos_scale);
     // we actually want the reciprocal
-    hd->enc_scale_recip = 1.0 / *(hd->pos_scale);
+    hd->enc_scale_recip = 1.0 / LCEC_PIN_FLOAT_GET(hd->pos_scale);
   }
 
   // get bit states
-  *(hd->ina) = EC_READ_BIT(&pd[hd->ina_pdo_os], hd->ina_pdo_bp);
-  *(hd->inb) = EC_READ_BIT(&pd[hd->inb_pdo_os], hd->inb_pdo_bp);
-  *(hd->inc) = EC_READ_BIT(&pd[hd->inc_pdo_os], hd->inc_pdo_bp);
-  *(hd->inext) = EC_READ_BIT(&pd[hd->inext_pdo_os], hd->inext_pdo_bp);
-  *(hd->sync_err) = EC_READ_BIT(&pd[hd->sync_err_pdo_os], hd->sync_err_pdo_bp);
-  *(hd->expol_stall) = EC_READ_BIT(&pd[hd->expol_stall_pdo_os], hd->expol_stall_pdo_bp);
-  *(hd->tx_toggle) = EC_READ_BIT(&pd[hd->tx_toggle_pdo_os], hd->tx_toggle_pdo_bp);
-  *(hd->count_overflow) = EC_READ_BIT(&pd[hd->count_overflow_pdo_os], hd->count_overflow_pdo_bp);
-  *(hd->count_underflow) = EC_READ_BIT(&pd[hd->count_underflow_pdo_os], hd->count_underflow_pdo_bp);
-  *(hd->latch_c_valid) = EC_READ_BIT(&pd[hd->latch_c_valid_pdo_os], hd->latch_c_valid_pdo_bp);
-  *(hd->latch_ext_valid) = EC_READ_BIT(&pd[hd->latch_ext_valid_pdo_os], hd->latch_ext_valid_pdo_bp);
+  LCEC_PIN_BIT_SET(hd->ina, EC_READ_BIT(&pd[hd->ina_pdo_os], hd->ina_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->inb, EC_READ_BIT(&pd[hd->inb_pdo_os], hd->inb_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->inc, EC_READ_BIT(&pd[hd->inc_pdo_os], hd->inc_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->inext, EC_READ_BIT(&pd[hd->inext_pdo_os], hd->inext_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->sync_err, EC_READ_BIT(&pd[hd->sync_err_pdo_os], hd->sync_err_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->expol_stall, EC_READ_BIT(&pd[hd->expol_stall_pdo_os], hd->expol_stall_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->tx_toggle, EC_READ_BIT(&pd[hd->tx_toggle_pdo_os], hd->tx_toggle_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->count_overflow, EC_READ_BIT(&pd[hd->count_overflow_pdo_os], hd->count_overflow_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->count_underflow, EC_READ_BIT(&pd[hd->count_underflow_pdo_os], hd->count_underflow_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->latch_c_valid, EC_READ_BIT(&pd[hd->latch_c_valid_pdo_os], hd->latch_c_valid_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->latch_ext_valid, EC_READ_BIT(&pd[hd->latch_ext_valid_pdo_os], hd->latch_ext_valid_pdo_bp));
 
-  *(hd->dcm_ready_to_enable) = EC_READ_BIT(&pd[hd->dcm_ready_to_enable_pdo_os], hd->dcm_ready_to_enable_pdo_bp);
-  *(hd->dcm_ready) = EC_READ_BIT(&pd[hd->dcm_ready_pdo_os], hd->dcm_ready_pdo_bp);
-  *(hd->dcm_warning) = EC_READ_BIT(&pd[hd->dcm_warning_pdo_os], hd->dcm_warning_pdo_bp);
-  *(hd->dcm_error) = EC_READ_BIT(&pd[hd->dcm_error_pdo_os], hd->dcm_error_pdo_bp);
-  *(hd->dcm_move_pos) = EC_READ_BIT(&pd[hd->dcm_move_pos_pdo_os], hd->dcm_move_pos_pdo_bp);
-  *(hd->dcm_move_neg) = EC_READ_BIT(&pd[hd->dcm_move_neg_pdo_os], hd->dcm_move_neg_pdo_bp);
-  *(hd->dcm_torque_reduced) = EC_READ_BIT(&pd[hd->dcm_torque_reduced_pdo_os], hd->dcm_torque_reduced_pdo_bp);
-  *(hd->dcm_din1) = EC_READ_BIT(&pd[hd->dcm_din1_pdo_os], hd->dcm_din1_pdo_bp);
-  *(hd->dcm_din2) = EC_READ_BIT(&pd[hd->dcm_din2_pdo_os], hd->dcm_din2_pdo_bp);
-  *(hd->dcm_sync_err) = EC_READ_BIT(&pd[hd->dcm_sync_err_pdo_os], hd->dcm_sync_err_pdo_bp);
-  *(hd->dcm_tx_toggle) = EC_READ_BIT(&pd[hd->dcm_tx_toggle_pdo_os], hd->dcm_tx_toggle_pdo_bp);
+  LCEC_PIN_BIT_SET(hd->dcm_ready_to_enable, EC_READ_BIT(&pd[hd->dcm_ready_to_enable_pdo_os], hd->dcm_ready_to_enable_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->dcm_ready, EC_READ_BIT(&pd[hd->dcm_ready_pdo_os], hd->dcm_ready_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->dcm_warning, EC_READ_BIT(&pd[hd->dcm_warning_pdo_os], hd->dcm_warning_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->dcm_error, EC_READ_BIT(&pd[hd->dcm_error_pdo_os], hd->dcm_error_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->dcm_move_pos, EC_READ_BIT(&pd[hd->dcm_move_pos_pdo_os], hd->dcm_move_pos_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->dcm_move_neg, EC_READ_BIT(&pd[hd->dcm_move_neg_pdo_os], hd->dcm_move_neg_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->dcm_torque_reduced, EC_READ_BIT(&pd[hd->dcm_torque_reduced_pdo_os], hd->dcm_torque_reduced_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->dcm_din1, EC_READ_BIT(&pd[hd->dcm_din1_pdo_os], hd->dcm_din1_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->dcm_din2, EC_READ_BIT(&pd[hd->dcm_din2_pdo_os], hd->dcm_din2_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->dcm_sync_err, EC_READ_BIT(&pd[hd->dcm_sync_err_pdo_os], hd->dcm_sync_err_pdo_bp));
+  LCEC_PIN_BIT_SET(hd->dcm_tx_toggle, EC_READ_BIT(&pd[hd->dcm_tx_toggle_pdo_os], hd->dcm_tx_toggle_pdo_bp));
 
-  hd->internal_fault = *(hd->dcm_error);
+  hd->internal_fault = LCEC_PIN_BIT_GET(hd->dcm_error);
 
   // read raw values
   raw_count = EC_READ_S16(&pd[hd->count_pdo_os]);
@@ -666,19 +666,19 @@ static void lcec_el7041_read(lcec_slave_t *s, long period) {
   // check for counter set done
   if (EC_READ_BIT(&pd[hd->set_count_done_pdo_os], hd->set_count_done_pdo_bp)) {
     hd->enc_last_count = raw_count;
-    *(hd->set_raw_count) = 0;
+    LCEC_PIN_BIT_SET(hd->set_raw_count, 0);
   }
 
   // update raw values
-  if (!*(hd->set_raw_count)) {
-    *(hd->raw_count) = raw_count;
+  if (!LCEC_PIN_BIT_GET(hd->set_raw_count)) {
+    LCEC_PIN_S32_SET(hd->raw_count, raw_count);
   }
 
   // handle initialization
-  if (hd->enc_do_init || *(hd->reset)) {
+  if (hd->enc_do_init || LCEC_PIN_BIT_GET(hd->reset)) {
     hd->enc_do_init = 0;
     hd->enc_last_count = raw_count;
-    *(hd->count) = 0;
+    LCEC_PIN_S32_SET(hd->count, 0);
   }
 
   // clear pending fault reset if no fault
@@ -697,27 +697,27 @@ static void lcec_el7041_read(lcec_slave_t *s, long period) {
         hd->fault_reset_retry--;
       }
     }
-    *(hd->fault) = 0;
+    LCEC_PIN_BIT_SET(hd->fault, 0);
   } else {
-    *(hd->fault) = hd->internal_fault;
+    LCEC_PIN_BIT_SET(hd->fault, hd->internal_fault);
   }
 
   // handle index
-  if (*(hd->latch_ext_valid)) {
-    *(hd->raw_latch) = raw_latch;
+  if (LCEC_PIN_BIT_GET(hd->latch_ext_valid)) {
+    LCEC_PIN_S32_SET(hd->raw_latch, raw_latch);
     hd->enc_last_count = raw_latch;
-    *(hd->count) = 0;
-    *(hd->ena_latch_ext_pos) = 0;
-    *(hd->ena_latch_ext_neg) = 0;
+    LCEC_PIN_S32_SET(hd->count, 0);
+    LCEC_PIN_BIT_SET(hd->ena_latch_ext_pos, 0);
+    LCEC_PIN_BIT_SET(hd->ena_latch_ext_neg, 0);
   }
 
   // compute net counts
   raw_delta = raw_count - hd->enc_last_count;
   hd->enc_last_count = raw_count;
-  *(hd->count) += raw_delta;
+  LCEC_PIN_S32_SET(hd->count, LCEC_PIN_S32_GET(hd->count) + raw_delta);
 
   // scale count to make floating point position
-  *(hd->pos) = *(hd->count) * hd->enc_scale_recip;
+  LCEC_PIN_FLOAT_SET(hd->pos, LCEC_PIN_S32_GET(hd->count) * hd->enc_scale_recip);
 
   hd->last_operational = 1;
 }
@@ -732,8 +732,8 @@ static void lcec_el7041_write(lcec_slave_t *s, long period) {
   // set outputs
 
   // check for enable edge
-  enable_on_edge = *(hd->dcm_enable) && !hd->last_dcm_enable;
-  hd->last_dcm_enable = *(hd->dcm_enable);
+  enable_on_edge = LCEC_PIN_BIT_GET(hd->dcm_enable) && !hd->last_dcm_enable;
+  hd->last_dcm_enable = LCEC_PIN_BIT_GET(hd->dcm_enable);
 
   // check for autoreset
   if (enable_on_edge && hd->internal_fault) {
@@ -744,51 +744,51 @@ static void lcec_el7041_write(lcec_slave_t *s, long period) {
 
   // validate duty cycle limits, both limits must be between
   // 0.0 and 1.0 (inclusive) and max must be greater then min
-  if (*(hd->dcm_max_dc) > 1.0) {
-    *(hd->dcm_max_dc) = 1.0;
+  if (LCEC_PIN_FLOAT_GET(hd->dcm_max_dc) > 1.0) {
+    LCEC_PIN_FLOAT_SET(hd->dcm_max_dc, 1.0);
   }
-  if (*(hd->dcm_min_dc) > *(hd->dcm_max_dc)) {
-    *(hd->dcm_min_dc) = *(hd->dcm_max_dc);
+  if (LCEC_PIN_FLOAT_GET(hd->dcm_min_dc) > LCEC_PIN_FLOAT_GET(hd->dcm_max_dc)) {
+    LCEC_PIN_FLOAT_SET(hd->dcm_min_dc, LCEC_PIN_FLOAT_GET(hd->dcm_max_dc));
   }
-  if (*(hd->dcm_min_dc) < -1.0) {
-    *(hd->dcm_min_dc) = -1.0;
+  if (LCEC_PIN_FLOAT_GET(hd->dcm_min_dc) < -1.0) {
+    LCEC_PIN_FLOAT_SET(hd->dcm_min_dc, -1.0);
   }
-  if (*(hd->dcm_max_dc) < *(hd->dcm_min_dc)) {
-    *(hd->dcm_max_dc) = *(hd->dcm_min_dc);
+  if (LCEC_PIN_FLOAT_GET(hd->dcm_max_dc) < LCEC_PIN_FLOAT_GET(hd->dcm_min_dc)) {
+    LCEC_PIN_FLOAT_SET(hd->dcm_max_dc, LCEC_PIN_FLOAT_GET(hd->dcm_min_dc));
   }
 
   // do scale calcs only when scale changes
-  if (*(hd->dcm_scale) != hd->dcm_old_scale) {
+  if (LCEC_PIN_FLOAT_GET(hd->dcm_scale) != hd->dcm_old_scale) {
     // validate the new scale value
-    if ((*(hd->dcm_scale) < 1e-20) && (*(hd->dcm_scale) > -1e-20)) {
+    if ((LCEC_PIN_FLOAT_GET(hd->dcm_scale) < 1e-20) && (LCEC_PIN_FLOAT_GET(hd->dcm_scale) > -1e-20)) {
       // value too small, divide by zero is a bad thing
-      *(hd->dcm_scale) = 1.0;
+      LCEC_PIN_FLOAT_SET(hd->dcm_scale, 1.0);
     }
     // get ready to detect future scale changes
-    hd->dcm_old_scale = *(hd->dcm_scale);
+    hd->dcm_old_scale = LCEC_PIN_FLOAT_GET(hd->dcm_scale);
     // we will need the reciprocal
-    hd->dcm_scale_recip = 1.0 / *(hd->dcm_scale);
+    hd->dcm_scale_recip = 1.0 / LCEC_PIN_FLOAT_GET(hd->dcm_scale);
   }
 
   // get command
-  tmpval = *(hd->dcm_value);
-  if (*(hd->dcm_absmode) && (tmpval < 0)) {
+  tmpval = LCEC_PIN_FLOAT_GET(hd->dcm_value);
+  if (LCEC_PIN_BIT_GET(hd->dcm_absmode) && (tmpval < 0)) {
     tmpval = -tmpval;
   }
 
   // convert value command to duty cycle
-  tmpdc = tmpval * hd->dcm_scale_recip + *(hd->dcm_offset);
-  if (tmpdc < *(hd->dcm_min_dc)) {
-    tmpdc = *(hd->dcm_min_dc);
+  tmpdc = tmpval * hd->dcm_scale_recip + LCEC_PIN_FLOAT_GET(hd->dcm_offset);
+  if (tmpdc < LCEC_PIN_FLOAT_GET(hd->dcm_min_dc)) {
+    tmpdc = LCEC_PIN_FLOAT_GET(hd->dcm_min_dc);
   }
-  if (tmpdc > *(hd->dcm_max_dc)) {
-    tmpdc = *(hd->dcm_max_dc);
+  if (tmpdc > LCEC_PIN_FLOAT_GET(hd->dcm_max_dc)) {
+    tmpdc = LCEC_PIN_FLOAT_GET(hd->dcm_max_dc);
   }
 
   // set output values
-  if (*(hd->dcm_enable) == 0) {
+  if (LCEC_PIN_BIT_GET(hd->dcm_enable) == 0) {
     raw_val = 0;
-    *(hd->dcm_curr_dc) = 0;
+    LCEC_PIN_FLOAT_SET(hd->dcm_curr_dc, 0);
   } else {
     raw_val = (double)0x7fff * tmpdc;
     if (raw_val > (double)0x7fff) {
@@ -797,37 +797,37 @@ static void lcec_el7041_write(lcec_slave_t *s, long period) {
     if (raw_val < (double)-0x7fff) {
       raw_val = (double)-0x7fff;
     }
-    *(hd->dcm_curr_dc) = tmpdc;
+    LCEC_PIN_FLOAT_SET(hd->dcm_curr_dc, tmpdc);
   }
 
   // update value
-  *(hd->dcm_raw_val) = (int32_t)raw_val;
+  LCEC_PIN_S32_SET(hd->dcm_raw_val, (int32_t)raw_val);
 
   // fault reset
-  if (*(hd->fault_reset)) {
-    *(hd->dcm_reset) = 1;
+  if (LCEC_PIN_BIT_GET(hd->fault_reset)) {
+    LCEC_PIN_BIT_SET(hd->dcm_reset, 1);
   }
 
   if (hd->fault_reset_retry > 0) {
     if (hd->fault_reset_state) {
-      *(hd->dcm_reset) = 1;
+      LCEC_PIN_BIT_SET(hd->dcm_reset, 1);
     }
   } else {
-    if (*(hd->dcm_enable)) {
-      *(hd->dcm_reset) = 0;
+    if (LCEC_PIN_BIT_GET(hd->dcm_enable)) {
+      LCEC_PIN_BIT_SET(hd->dcm_reset, 0);
     }
-    *(hd->fault_reset) = 0;
+    LCEC_PIN_BIT_SET(hd->fault_reset, 0);
   }
 
   // set output data
-  EC_WRITE_BIT(&pd[hd->set_count_pdo_os], hd->set_count_pdo_bp, *(hd->set_raw_count));
-  EC_WRITE_BIT(&pd[hd->ena_latch_c_pdo_os], hd->ena_latch_c_pdo_bp, *(hd->ena_latch_c));
-  EC_WRITE_BIT(&pd[hd->ena_latch_ext_pos_pdo_os], hd->ena_latch_ext_pos_pdo_bp, *(hd->ena_latch_ext_pos));
-  EC_WRITE_BIT(&pd[hd->ena_latch_ext_neg_pdo_os], hd->ena_latch_ext_neg_pdo_bp, *(hd->ena_latch_ext_neg));
-  EC_WRITE_S16(&pd[hd->set_count_val_pdo_os], *(hd->set_raw_count_val));
+  EC_WRITE_BIT(&pd[hd->set_count_pdo_os], hd->set_count_pdo_bp, LCEC_PIN_BIT_GET(hd->set_raw_count));
+  EC_WRITE_BIT(&pd[hd->ena_latch_c_pdo_os], hd->ena_latch_c_pdo_bp, LCEC_PIN_BIT_GET(hd->ena_latch_c));
+  EC_WRITE_BIT(&pd[hd->ena_latch_ext_pos_pdo_os], hd->ena_latch_ext_pos_pdo_bp, LCEC_PIN_BIT_GET(hd->ena_latch_ext_pos));
+  EC_WRITE_BIT(&pd[hd->ena_latch_ext_neg_pdo_os], hd->ena_latch_ext_neg_pdo_bp, LCEC_PIN_BIT_GET(hd->ena_latch_ext_neg));
+  EC_WRITE_S16(&pd[hd->set_count_val_pdo_os], LCEC_PIN_S32_GET(hd->set_raw_count_val));
 
-  EC_WRITE_BIT(&pd[hd->dcm_ena_pdo_os], hd->dcm_ena_pdo_bp, *(hd->dcm_enable));
-  EC_WRITE_BIT(&pd[hd->dcm_reset_pdo_os], hd->dcm_reset_pdo_bp, *(hd->dcm_reset));
-  EC_WRITE_BIT(&pd[hd->dcm_reduce_torque_pdo_os], hd->dcm_reduce_torque_pdo_bp, *(hd->dcm_reduce_torque));
+  EC_WRITE_BIT(&pd[hd->dcm_ena_pdo_os], hd->dcm_ena_pdo_bp, LCEC_PIN_BIT_GET(hd->dcm_enable));
+  EC_WRITE_BIT(&pd[hd->dcm_reset_pdo_os], hd->dcm_reset_pdo_bp, LCEC_PIN_BIT_GET(hd->dcm_reset));
+  EC_WRITE_BIT(&pd[hd->dcm_reduce_torque_pdo_os], hd->dcm_reduce_torque_pdo_bp, LCEC_PIN_BIT_GET(hd->dcm_reduce_torque));
   EC_WRITE_S16(&pd[hd->dcm_velo_pdo_os], (int16_t)raw_val);
 }
