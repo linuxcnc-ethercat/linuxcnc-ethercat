@@ -9,6 +9,8 @@
 - [Configuration Reference](configuration-reference.md)
 - [Distributed Clocks](distributed-clocks.md)
 - [Master HAL Pins](master-pins.md)
+- [Runtime slave re-initialization](runtime-reinit.md) -- re-applying
+  driver configuration to a slave that was power-cycled while LinuxCNC runs.
 
 ## Development Documentation
 
