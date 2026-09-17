@@ -38,6 +38,15 @@
 /// mirrors the configured list into 0xF030 so the coupler accepts the PDO
 /// mapping at the SafeOp transition.
 ///
+/// 0xF030, the SM PDO assignment and the SII CoE bits "Enable PDO
+/// Assignment" / "Enable PDO Configuration" are all reset on every power
+/// cycle.  Leadshine R&D confirmed (2026-09) that the master must rewrite
+/// 0x1C12/0x1C13 after 0xF030 and that the SII bits cannot be made
+/// persistent in firmware.  The driver applies all of it in `_init` and
+/// again from `proc_reinit` when the coupler returns to the bus
+/// (documentation/runtime-reinit.md).  The external "guard" program that
+/// set the SII bits before the HAL started is no longer needed.
+///
 /// Addressing (per ESI / MDP conventions), for slot N (= `<subModule id>`):
 ///   CoE objects : inputs 0x6000 + N*SLOT_INCR, outputs 0x7000 + N*SLOT_INCR
 ///   PDOs        : TxPdo (in)  0x1A00 + N*PdoIncr
@@ -151,6 +160,7 @@ typedef struct {
 typedef struct {
   int slot_count;
   leadshine_ec_slot_t *slots;
+  lcec_syncs_t *syncs;  // PDO/sync layout built in _init, reused for the PDO assignment on re-init
 } lcec_leadshine_ec_data_t;
 
 // Modparam ids.  These are the keys passed to lcec_submodule_modparam_get();
