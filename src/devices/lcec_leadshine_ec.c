@@ -24,8 +24,12 @@
 /// module types it accepts via `types[].modules` (built from
 /// `leadshine_ec_module_table`), and in `_init` it walks the configured
 /// `slave->submodules` list, builds a dynamic PDO/sync-manager layout, exports
-/// the per-slot HAL pins through the `lcec_class_*` helpers, applies each
-/// module's `<modParam>`s, and writes the configured module ident list (0xF030).
+/// the per-slot HAL pins through the `lcec_class_*` helpers, and then applies
+/// the coupler's volatile configuration (SII feature bits, 0xF030 module
+/// list, `<modParam>`s, PDO assignment) via leadshine_ec_apply_config().
+///
+/// The same leadshine_ec_apply_config() re-runs from `proc_reinit` whenever
+/// the coupler returns after a power cycle (documentation/runtime-reinit.md).
 ///
 /// All CoE object / PDO / subindex addresses are taken from the R3EC ESI in
 /// documentation/R3EC-v2.4.xml.  Digital modules default to the bit-wise PDO
@@ -34,18 +38,22 @@
 
 #include "lcec_leadshine_ec.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "../lcec.h"
 
 static int lcec_leadshine_ec_init(int comp_id, lcec_slave_t *slave);
+static int lcec_leadshine_ec_reinit(lcec_slave_t *slave);
 static void lcec_leadshine_ec_read(lcec_slave_t *slave, long period);
 static void lcec_leadshine_ec_write(lcec_slave_t *slave, long period);
 
 static lcec_typelist_t types[] = {
-    {"R2EC", LCEC_LEADSHINE_VID, 0x61400005, 0, NULL, lcec_leadshine_ec_init, NULL, LEADSHINE_EC_FLAG(32, 0x10)},
-    {"R3EC", LCEC_LEADSHINE_VID, 0x61400025, 0, NULL, lcec_leadshine_ec_init, NULL, LEADSHINE_EC_FLAG(64, 0x08)},
+    {"R2EC", LCEC_LEADSHINE_VID, 0x61400005, 0, NULL, lcec_leadshine_ec_init, NULL, LEADSHINE_EC_FLAG(32, 0x10), NULL, NULL,
+        lcec_leadshine_ec_reinit},
+    {"R3EC", LCEC_LEADSHINE_VID, 0x61400025, 0, NULL, lcec_leadshine_ec_init, NULL, LEADSHINE_EC_FLAG(64, 0x08), NULL, NULL,
+        lcec_leadshine_ec_reinit},
     {NULL},
 };
 
@@ -373,23 +381,81 @@ static int leadshine_ec_apply_modparams(lcec_slave_t *slave, lcec_slave_submodul
 /// @brief Write the configured module ident list (0xF030) so the coupler
 /// accepts the PDO mapping.  Per the ESI, sub 0 is a USINT count and subs 1..N
 /// are one UDINT (32-bit) module ident each (slot id + 1).
-static void leadshine_ec_write_module_list(lcec_slave_t *slave) {
-  int count = 0;
+///
+/// Volatile on the coupler (lost on every power cycle), so this runs from
+/// both `_init` and `_reinit`.
+/// @return 0 on success, <0 if any write failed.
+static int leadshine_ec_write_module_list(lcec_slave_t *slave) {
+  int count = 0, result = 0, err;
 
   for (lcec_slave_submodule_t *s = slave->submodules; s != NULL; s = s->next) {
-    if (lcec_write_sdo32(slave, LEADSHINE_EC_CONFMODULES, s->id + 1, s->ident) != 0) {
+    if ((err = lcec_write_sdo32(slave, LEADSHINE_EC_CONFMODULES, s->id + 1, s->ident)) != 0) {
       rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "%s.%s: failed writing module ident 0x%08x to 0x%04x:%02x\n", slave->master->name,
           slave->name, s->ident, LEADSHINE_EC_CONFMODULES, s->id + 1);
+      result = err;
     }
     if (s->id + 1 > count) {
       count = s->id + 1;
     }
   }
 
-  if (lcec_write_sdo8(slave, LEADSHINE_EC_CONFMODULES, 0x00, count) != 0) {
+  if ((err = lcec_write_sdo8(slave, LEADSHINE_EC_CONFMODULES, 0x00, count)) != 0) {
     rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "%s.%s: failed writing module count to 0x%04x:00\n", slave->master->name, slave->name,
         LEADSHINE_EC_CONFMODULES);
+    result = err;
   }
+
+  return result;
+}
+
+/// @brief Warn about every difference between the detected module list
+/// (0xF050) and the configured one: the PDO layout is fixed after
+/// activation, so a backplane change while powered down means the process
+/// image no longer matches the hardware.
+/// @return number of differences (0 = match), <0 if 0xF050 could not be read.
+static int leadshine_ec_check_detected_modules(lcec_slave_t *slave) {
+  lcec_master_t *master = slave->master;
+  uint8_t detected_count;
+  int configured_count = 0, differences = 0, err;
+
+  if ((err = lcec_read_sdo8(slave, LEADSHINE_EC_READMODULES, 0x00, &detected_count)) != 0) {
+    rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "%s.%s: cannot read detected module list 0x%04x:00 (%d)\n", master->name, slave->name,
+        LEADSHINE_EC_READMODULES, err);
+    return err;
+  }
+
+  for (lcec_slave_submodule_t *s = slave->submodules; s != NULL; s = s->next) {
+    uint32_t detected = 0;
+
+    if (s->id + 1 > configured_count) {
+      configured_count = s->id + 1;
+    }
+    if (s->id >= detected_count || lcec_read_sdo32(slave, LEADSHINE_EC_READMODULES, s->id + 1, &detected) != 0) {
+      detected = 0;
+    }
+    if (detected != s->ident) {
+      rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "%s.%s: slot %d: configured module 0x%08x (%s) but coupler detects 0x%08x\n",
+          master->name, slave->name, s->id, s->ident, s->name, detected);
+      differences++;
+    }
+  }
+
+  // modules beyond the configured slots
+  for (int slot = configured_count; slot < detected_count; slot++) {
+    uint32_t detected = 0;
+    if (lcec_read_sdo32(slave, LEADSHINE_EC_READMODULES, slot + 1, &detected) == 0 && detected != 0) {
+      rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "%s.%s: slot %d: coupler detects module 0x%08x but no <subModule> configures it\n",
+          master->name, slave->name, slot, detected);
+      differences++;
+    }
+  }
+
+  if (differences) {
+    rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "%s.%s: detected modules (0x%04x) differ from the configuration in %d slot(s); "
+                                                 "check the <subModule> list against the backplane\n",
+        master->name, slave->name, LEADSHINE_EC_READMODULES, differences);
+  }
+  return differences;
 }
 
 /// @brief Explicitly write the SM2/SM3 PDO assignment objects (0x1C12/0x1C13).
@@ -432,7 +498,71 @@ static int leadshine_ec_assign_pdos(lcec_slave_t *slave, lcec_syncs_t *syncs) {
 }
 
 // ------------------------------------------------------------------
-// init / read / write
+// Per-boot coupler configuration
+// ------------------------------------------------------------------
+
+/// @brief Apply everything the coupler forgets on a power cycle.  Idempotent;
+/// runs from `_init` and from `_reinit` (slave held in PREOP).
+///
+/// 1. SII CoE bits "Enable PDO Assignment" / "Enable PDO Configuration":
+///    cleared on every boot; without them the master skips the PDO
+///    assignment.  Read-modify-write, written only when clear.  This
+///    replaces the external pre-HAL "guard" program.
+/// 2. 0xF030 configured module list.
+/// 3. Per-slot modparams.
+/// 4. SM2/SM3 PDO assignment (0x1C12/0x1C13).
+/// @return 0 on success, <0 on the first hard failure.
+static int leadshine_ec_apply_config(lcec_slave_t *slave) {
+  lcec_master_t *master = slave->master;
+  lcec_leadshine_ec_data_t *hal_data = (lcec_leadshine_ec_data_t *)slave->hal_data;
+  int err, changed;
+
+  // 1. SII feature bits
+  if ((err = lcec_sii_update_coe_details(slave, LCEC_SII_COE_ENABLE_PDO_ASSIGN | LCEC_SII_COE_ENABLE_PDO_CONFIG, 0, &changed)) != 0) {
+    if (err == -ENOSYS) {
+      // stock libethercat: bits must be set externally before start, as before
+      rtapi_print_msg(RTAPI_MSG_WARN,
+          LCEC_MSG_PFX "%s.%s: cannot set the SII PDO assignment/configuration bits with this libethercat; "
+                       "set them externally before starting LinuxCNC, or upgrade to the linuxcnc-ethercat master\n",
+          master->name, slave->name);
+    } else {
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: failed to enable PDO assignment/configuration in the SII (%d)\n",
+          master->name, slave->name, err);
+      return err;
+    }
+  } else if (changed) {
+    rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "%s.%s: SII PDO assignment/configuration bits enabled\n", master->name, slave->name);
+  }
+
+  // 2. module list
+  if ((err = leadshine_ec_write_module_list(slave)) != 0) {
+    return err;
+  }
+
+  // 3. modparams, one slot at a time
+  for (lcec_slave_submodule_t *s = slave->submodules; s != NULL; s = s->next) {
+    const leadshine_ec_module_def_t *def = leadshine_ec_find_module(s->ident);
+    if (def == NULL) {
+      continue;  // already warned in _init
+    }
+    if ((err = leadshine_ec_apply_modparams(slave, s, def)) != 0) {
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: failed to apply modparams for slot %d (%d)\n", master->name, slave->name, s->id,
+          err);
+      return err;
+    }
+  }
+
+  // 4. PDO assignment
+  if ((err = leadshine_ec_assign_pdos(slave, hal_data->syncs)) != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: failed to write the PDO assignment (%d)\n", master->name, slave->name, err);
+    return err;
+  }
+
+  return 0;
+}
+
+// ------------------------------------------------------------------
+// init / reinit / read / write
 // ------------------------------------------------------------------
 
 static int lcec_leadshine_ec_init(int comp_id, lcec_slave_t *slave) {
@@ -446,8 +576,9 @@ static int lcec_leadshine_ec_init(int comp_id, lcec_slave_t *slave) {
   hal_data->slot_count = leadshine_ec_count_slots(slave);
   hal_data->slots = hal_data->slot_count > 0 ? LCEC_HAL_ALLOCATE_ARRAY(leadshine_ec_slot_t, hal_data->slot_count) : NULL;
 
-  // Build the dynamic PDO / sync-manager layout (consumed after _init returns).
+  // Build the dynamic PDO / sync-manager layout (kept for re-init).
   lcec_syncs_t *syncs = LCEC_HAL_ALLOCATE(lcec_syncs_t);
+  hal_data->syncs = syncs;
   leadshine_ec_build_syncs(slave, syncs, pdo_incr);
 
   // Register HAL pins + PDO entries and apply modparams, one slot at a time.
@@ -484,21 +615,28 @@ static int lcec_leadshine_ec_init(int comp_id, lcec_slave_t *slave) {
       case MODULE_ENCODER: leadshine_ec_register_enc(slave, slot, s->name, def->in); break;
       default: break;
     }
-
-    if ((err = leadshine_ec_apply_modparams(slave, s, def)) != 0) {
-      return err;
-    }
   }
 
-  // Tell the coupler which modules the config expects, then force the SM PDO
-  // assignment (the master does not reliably assign the input SM by itself).
-  leadshine_ec_write_module_list(slave);
-  if ((err = leadshine_ec_assign_pdos(slave, syncs)) != 0) {
+  // volatile coupler config (SII bits, module list, modparams, PDO assignment)
+  if ((err = leadshine_ec_apply_config(slave)) != 0) {
     return err;
   }
+  leadshine_ec_check_detected_modules(slave);
 
   slave->proc_read = lcec_leadshine_ec_read;
   slave->proc_write = lcec_leadshine_ec_write;
+  return 0;
+}
+
+/// @brief Runtime re-initialization after the coupler returned to the bus
+/// (documentation/runtime-reinit.md).  Non-realtime, coupler held in PREOP.
+static int lcec_leadshine_ec_reinit(lcec_slave_t *slave) {
+  int err;
+
+  if ((err = leadshine_ec_apply_config(slave)) != 0) {
+    return err;
+  }
+  leadshine_ec_check_detected_modules(slave);
   return 0;
 }
 
