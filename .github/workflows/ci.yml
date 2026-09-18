@@ -21,7 +21,7 @@ env:
     # Build libethercat from this ref of linuxcnc-ethercat/ethercat instead
     # of installing libethercat-dev from the apt repo. Lets a PR be built
     # against a master branch whose API is not released yet. Empty = apt.
-    ETHERCAT_SOURCE_REF: ''
+    ETHERCAT_SOURCE_REF: 'feat/slave-reinit-hold'
 
 jobs:
     build-deb:
