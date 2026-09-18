@@ -131,6 +131,11 @@ typedef int (*lcec_slave_preinit_t)(lcec_slave_t *slave);
 typedef int (*lcec_slave_init_t)(int comp_id, lcec_slave_t *slave);
 typedef void (*lcec_slave_cleanup_t)(lcec_slave_t *slave);
 typedef void (*lcec_slave_rw_t)(lcec_slave_t *slave, long period);
+/// @brief Runtime re-initialization hook (documentation/runtime-reinit.md).
+/// Non-realtime; slave held in PREOP after returning to the bus.  Re-apply
+/// every SDO/SII write `_init` did, idempotently; no HAL pins, no
+/// `lcec_pdo_init()`.  Non-zero keeps the slave held and is retried.
+typedef int (*lcec_slave_reinit_t)(lcec_slave_t *slave);
 
 typedef enum {
   MODPARAM_TYPE_BIT,    ///< Modparam value is a single bit.
@@ -165,6 +170,7 @@ typedef struct {
   const lcec_modparam_desc_t *modparams;  ///< XML modparams, if any
   uint64_t flags;                         ///< Flags, passed through to `proc_init` as `slave->flags`.
   const char *sourcefile;                 ///< Source filename, autopopulated.
+  lcec_slave_reinit_t proc_reinit;        ///< Optional runtime re-init hook (NULL = no PREOP hold, today's behavior).
 } lcec_typelist_t;
 
 /// @brief Linked list for holding device type definitions.
@@ -245,6 +251,9 @@ typedef struct lcec_slave_state {
   hal_bit_t *state_preop;   ///< Is the device in state `PREOP`?  Equivalant to the `.slave-state-preop` HAL pin.
   hal_bit_t *state_safeop;  ///< Is the device in state `SAFEOP`?  Equivalant to the `.slave-state-safeop` HAL pin.
   hal_bit_t *state_op;      ///< Is the device in state `OP`?  Equivalant to the `.slave-state-op` HAL pin.
+  hal_bit_t *reconfig;        ///< Held in PREOP / being re-initialized.  `.slave-reconfig` pin.
+  hal_bit_t *reconfig_error;  ///< Last re-init failed or the hold timed out.  `.slave-reconfig-error` pin.
+  hal_u32_t *reconfig_count;  ///< Successful runtime re-inits.  `.slave-reconfig-count` pin.
 } lcec_slave_state_t;
 
 typedef struct lcec_pdo_entry_reg {
@@ -368,6 +377,13 @@ typedef struct lcec_slave {
   lcec_slave_cleanup_t proc_cleanup;          ///< Calback for cleaning up the device.
   lcec_slave_rw_t proc_read;                  ///< Callback for reading from the device.
   lcec_slave_rw_t proc_write;                 ///< Callback for writing to the device.
+  lcec_slave_reinit_t proc_reinit;            ///< Callback for runtime re-initialization, if any.
+  int reinit_requested;                       ///< RT thread: master reports a PREOP hold (or timeout).
+  int reinit_in_progress;                     ///< Helper thread: `proc_reinit` running.
+  int reinit_error;                           ///< Last re-init or release failed.
+  uint32_t reinit_count;                      ///< Successful runtime re-inits.
+  long reinit_last_attempt;                   ///< Ticks of the last attempt (retry pacing).
+  long reinit_released;                       ///< Ticks of the last release (stale-state filter).
   lcec_slave_state_t *hal_state_data;         ///< HAL state data.
   void *hal_data;                             ///< HAL data, device driver specific.
   int generic_pdo_entry_count;                ///< The number of generic PDO entries.
@@ -458,6 +474,29 @@ int lcec_write_sdo32(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint
 int lcec_write_sdo8_modparam(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint8_t value, const char *mpname);
 int lcec_write_sdo16_modparam(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint16_t value, const char *mpname);
 int lcec_write_sdo32_modparam(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint32_t value, const char *mpname);
+
+// SII (EEPROM) access, 16-bit word offsets as in `ethercat sii_read`.
+// Needs a libethercat with EC_HAVE_SII_ACCESS, else -ENOSYS.
+#define LCEC_SII_FIRST_CATEGORY 0x40  ///< Word offset of the first SII category header.
+#define LCEC_SII_CAT_STRINGS    0x000A
+#define LCEC_SII_CAT_GENERAL    0x001E
+#define LCEC_SII_CAT_FMMU       0x0028
+#define LCEC_SII_CAT_SYNCM      0x0029
+#define LCEC_SII_CAT_TXPDO      0x0032
+#define LCEC_SII_CAT_RXPDO      0x0033
+#define LCEC_SII_GENERAL_COE_WORD 2  ///< Word inside the general category holding the CoE details byte (high byte).
+// CoE details bits (ETG.1000.6 SII general category, byte 5).
+#define LCEC_SII_COE_ENABLE_SDO             0x01
+#define LCEC_SII_COE_ENABLE_SDO_INFO        0x02
+#define LCEC_SII_COE_ENABLE_PDO_ASSIGN      0x04
+#define LCEC_SII_COE_ENABLE_PDO_CONFIG      0x08
+#define LCEC_SII_COE_ENABLE_UPLOAD_AT_START 0x10
+#define LCEC_SII_COE_ENABLE_SDO_COMPLETE    0x20
+int lcec_sii_read16(lcec_slave_t *slave, uint16_t word_offset, uint16_t *value);
+int lcec_sii_write16(lcec_slave_t *slave, uint16_t word_offset, uint16_t value);
+int lcec_sii_find_category(lcec_slave_t *slave, uint16_t cat_type, uint16_t *word_offset, uint16_t *word_count);
+int lcec_sii_update_coe_details(lcec_slave_t *slave, uint8_t set_mask, uint8_t clear_mask, int *changed);
+int lcec_slave_apply_sdo_config(lcec_slave_t *slave);
 
 int lcec_pin_newf(hal_type_t type, hal_pin_dir_t dir, void **data_ptr_addr, const char *fmt, ...);
 int lcec_pin_newf_list(void *base, const lcec_pindesc_t *list, ...);

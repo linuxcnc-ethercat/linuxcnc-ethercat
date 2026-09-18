@@ -8,7 +8,7 @@ include Makefile.clean
 #CC=g++
 
 RTLDFLAGS += -Wl,-rpath,$(LIBDIR)
-RTEXTRA_LDFLAGS += -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -L$(LIBDIR) -llinuxcnchal -lethercat -lrt
+RTEXTRA_LDFLAGS += -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -L$(LIBDIR) -llinuxcnchal -lethercat -lrt -lpthread
 
 #EXTRA_CFLAGS += --std=c2x
 EXTRA_CFLAGS += -Wall # Increase debugging level
