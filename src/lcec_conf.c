@@ -52,6 +52,8 @@ typedef struct {
   LCEC_CONF_MASTER_T *currMaster;
   const lcec_typelist_t *currSlaveType;
   LCEC_CONF_SLAVE_T *currSlave;
+  LCEC_CONF_SUBMODULE_T *currSubModule;            // current <subModule> being parsed, or NULL
+  const lcec_submodule_desc_t *currSubModuleType;  // matched entry in currSlaveType->modules, or NULL
   LCEC_CONF_SYNCMANAGER_T *currSyncManager;
   LCEC_CONF_PDO_T *currPdo;
   LCEC_CONF_SDOCONF_T *currSdoConf;
@@ -76,23 +78,31 @@ static void parsePdoEntryAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char 
 static void parseComplexEntryAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **attr);
 static void parseModParamAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **attr);
 
+/// XXX: submodule implementation
+static void parseSubModuleAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **attr);
+static void endSubModule(LCEC_CONF_XML_INST_T *inst, int next);
+
 static const LCEC_CONF_XML_HANLDER_T xml_states[] = {
-    {"masters", lcecConfTypeNone, lcecConfTypeMasters, NULL, NULL},
-    {"master", lcecConfTypeMasters, lcecConfTypeMaster, parseMasterAttrs, NULL},
-    {"slave", lcecConfTypeMaster, lcecConfTypeSlave, parseSlaveAttrs, NULL},
-    {"dcConf", lcecConfTypeSlave, lcecConfTypeDcConf, parseDcConfAttrs, NULL},
-    {"watchdog", lcecConfTypeSlave, lcecConfTypeWatchdog, parseWatchdogAttrs, NULL},
-    {"sdoConfig", lcecConfTypeSlave, lcecConfTypeSdoConfig, parseSdoConfigAttrs, NULL},
-    {"sdoDataRaw", lcecConfTypeSdoConfig, lcecConfTypeSdoDataRaw, parseDataRawAttrs, NULL},
-    {"idnConfig", lcecConfTypeSlave, lcecConfTypeIdnConfig, parseIdnConfigAttrs, NULL},
-    {"idnDataRaw", lcecConfTypeIdnConfig, lcecConfTypeIdnDataRaw, parseDataRawAttrs, NULL},
-    {"initCmds", lcecConfTypeSlave, lcecConfTypeInitCmds, parseInitCmdsAttrs, NULL},
-    {"syncManager", lcecConfTypeSlave, lcecConfTypeSyncManager, parseSyncManagerAttrs, NULL},
-    {"pdo", lcecConfTypeSyncManager, lcecConfTypePdo, parsePdoAttrs, NULL},
-    {"pdoEntry", lcecConfTypePdo, lcecConfTypePdoEntry, parsePdoEntryAttrs, NULL},
-    {"complexEntry", lcecConfTypePdoEntry, lcecConfTypeComplexEntry, parseComplexEntryAttrs, NULL},
-    {"modParam", lcecConfTypeSlave, lcecConfTypeModParam, parseModParamAttrs, NULL},
-    {"NULL", -1, -1, NULL, NULL},
+    {"masters",      lcecConfTypeNone,        lcecConfTypeMasters,      NULL,                   NULL},
+    {"master",       lcecConfTypeMasters,     lcecConfTypeMaster,       parseMasterAttrs,       NULL},
+    {"slave",        lcecConfTypeMaster,      lcecConfTypeSlave,        parseSlaveAttrs,        NULL},
+    {"dcConf",       lcecConfTypeSlave,       lcecConfTypeDcConf,       parseDcConfAttrs,       NULL},
+    {"watchdog",     lcecConfTypeSlave,       lcecConfTypeWatchdog,     parseWatchdogAttrs,     NULL},
+    {"sdoConfig",    lcecConfTypeSlave,       lcecConfTypeSdoConfig,    parseSdoConfigAttrs,    NULL},
+    {"sdoDataRaw",   lcecConfTypeSdoConfig,   lcecConfTypeSdoDataRaw,   parseDataRawAttrs,      NULL},
+    {"idnConfig",    lcecConfTypeSlave,       lcecConfTypeIdnConfig,    parseIdnConfigAttrs,    NULL},
+    {"idnDataRaw",   lcecConfTypeIdnConfig,   lcecConfTypeIdnDataRaw,   parseDataRawAttrs,      NULL},
+    {"initCmds",     lcecConfTypeSlave,       lcecConfTypeInitCmds,     parseInitCmdsAttrs,     NULL},
+    {"syncManager",  lcecConfTypeSlave,       lcecConfTypeSyncManager,  parseSyncManagerAttrs,  NULL},
+    {"pdo",          lcecConfTypeSyncManager, lcecConfTypePdo,          parsePdoAttrs,          NULL},
+    {"pdoEntry",     lcecConfTypePdo,         lcecConfTypePdoEntry,     parsePdoEntryAttrs,     NULL},
+    {"complexEntry", lcecConfTypePdoEntry,    lcecConfTypeComplexEntry, parseComplexEntryAttrs, NULL},
+    {"modParam",     lcecConfTypeSlave,       lcecConfTypeModParam,     parseModParamAttrs,     NULL},
+    /// XXX: submodule implementation
+    {"subModule",    lcecConfTypeSlave,       lcecConfTypeSubModule,         parseSubModuleAttrs, endSubModule},
+    {"modParam",     lcecConfTypeSubModule,   lcecConfTypeSubModuleModParam, parseModParamAttrs,  NULL},
+    ///
+    {"NULL",         -1,                      -1,                       NULL,                   NULL},
 };
 
 static int parseSyncCycle(LCEC_CONF_XML_STATE_T *state, const char *nptr);
@@ -517,6 +527,8 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
   LCEC_PIN_U32_SET(conf_hal_data->slave_count, LCEC_PIN_U32_GET(conf_hal_data->slave_count) + 1);
   state->currSlaveType = slaveType;
   state->currSlave = p;
+  state->currSubModule = NULL;
+  state->currSubModuleType = NULL;
 }
 
 static void parseDcConfAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **attr) {
@@ -1293,10 +1305,23 @@ static void parseModParamAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char 
   const char *pname, *pval;
   const lcec_modparam_desc_t *modparams;
 
-  if (state->currSlaveType->modparams == NULL) {
-    fprintf(stderr, "%s: ERROR: modparam not allowed for this slave\n", modname);
-    XML_StopParser(inst->parser, 0);
-    return;
+  // Select the modparam descriptor list to validate against: when inside a
+  // <subModule>, use that submodule type's modparams; otherwise the slave's.
+  const lcec_modparam_desc_t *allowed;
+  if (state->currSubModule != NULL) {
+    allowed = state->currSubModuleType->modparams;
+    if (allowed == NULL) {
+      fprintf(stderr, "%s: ERROR: modparam not allowed for this submodule\n", modname);
+      XML_StopParser(inst->parser, 0);
+      return;
+    }
+  } else {
+    allowed = state->currSlaveType->modparams;
+    if (allowed == NULL) {
+      fprintf(stderr, "%s: ERROR: modparam not allowed for this slave\n", modname);
+      XML_StopParser(inst->parser, 0);
+      return;
+    }
   }
 
   LCEC_CONF_MODPARAM_T *p = ADD_OUTPUT_BUFFER(&state->outputBuf, LCEC_CONF_MODPARAM_T);
@@ -1346,7 +1371,7 @@ static void parseModParamAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char 
   }
 
   // search for matching param name
-  for (modparams = state->currSlaveType->modparams; modparams->name != NULL; modparams++) {
+  for (modparams = allowed; modparams->name != NULL; modparams++) {
     if (strcmp(pname, modparams->name) == 0) {
       break;
     }
@@ -1414,7 +1439,115 @@ static void parseModParamAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char 
       break;
   }
 
-  (state->currSlave->modParamCount)++;
+  // count the modparam against its owner: the submodule if we are inside one,
+  // otherwise the slave.  This keeps slave->modParamCount meaning "slave-level
+  // modparams only" so the runtime allocation stays correct.
+  if (state->currSubModule != NULL) {
+    (state->currSubModule->modParamCount)++;
+  } else {
+    (state->currSlave->modParamCount)++;
+  }
+}
+
+static void parseSubModuleAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **attr) {
+  LCEC_CONF_XML_STATE_T *state = (LCEC_CONF_XML_STATE_T *)inst;
+  const lcec_submodule_desc_t *modules;
+  char *s;
+
+  // the slave type must declare submodule support
+  if (state->currSlaveType->modules == NULL) {
+    fprintf(stderr, "%s: ERROR: subModule not supported by slave type '%s'\n", modname, state->currSlaveType->name);
+    XML_StopParser(inst->parser, 0);
+    return;
+  }
+
+  LCEC_CONF_SUBMODULE_T *p = ADD_OUTPUT_BUFFER(&state->outputBuf, LCEC_CONF_SUBMODULE_T);
+  if (p == NULL) {
+    XML_StopParser(inst->parser, 0);
+    return;
+  }
+
+  p->confType = lcecConfTypeSubModule;
+  p->modParamCount = 0;
+
+  int have_ident = 0;
+  while (*attr) {
+    const char *name = *(attr++);
+    const char *val = *(attr++);
+
+    // parse slot id
+    if (strcmp(name, "id") == 0) {
+      s = NULL;
+      unsigned long id = strtoul(val, &s, 0);
+      if (*s != 0 || id > 0xff) {
+        fprintf(stderr, "%s: ERROR: Invalid subModule id '%s'\n", modname, val);
+        XML_StopParser(inst->parser, 0);
+        return;
+      }
+      p->id = (uint8_t)id;
+      continue;
+    }
+
+    // parse module ident
+    if (strcmp(name, "ident") == 0) {
+      s = NULL;
+      p->ident = (uint32_t)strtoul(val, &s, 0);
+      if (*s != 0) {
+        fprintf(stderr, "%s: ERROR: Invalid subModule ident '%s'\n", modname, val);
+        XML_StopParser(inst->parser, 0);
+        return;
+      }
+      have_ident = 1;
+      continue;
+    }
+
+    // parse name
+    if (strcmp(name, "name") == 0) {
+      strncpy(p->name, val, LCEC_CONF_STR_MAXLEN);
+      p->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
+      continue;
+    }
+
+    // handle error
+    fprintf(stderr, "%s: ERROR: Invalid subModule attribute %s\n", modname, name);
+    XML_StopParser(inst->parser, 0);
+    return;
+  }
+
+  // ident is required
+  if (!have_ident) {
+    fprintf(stderr, "%s: ERROR: subModule has no ident attribute\n", modname);
+    XML_StopParser(inst->parser, 0);
+    return;
+  }
+
+  // the ident must be a module type the slave type knows about
+  for (modules = state->currSlaveType->modules; modules->name != NULL; modules++) {
+    if (modules->ident == p->ident) {
+      break;
+    }
+  }
+  if (modules->name == NULL) {
+    fprintf(stderr, "%s: ERROR: Unknown subModule ident 0x%08x for slave type '%s'\n", modname, p->ident, state->currSlaveType->name);
+    XML_StopParser(inst->parser, 0);
+    return;
+  }
+
+  // set default name
+  if (p->name[0] == 0) {
+    snprintf(p->name, LCEC_CONF_STR_MAXLEN, "%d", p->id);
+  }
+
+  state->currSubModule = p;
+  state->currSubModuleType = modules;
+}
+
+static void endSubModule(LCEC_CONF_XML_INST_T *inst, int next) {
+  LCEC_CONF_XML_STATE_T *state = (LCEC_CONF_XML_STATE_T *)inst;
+
+  // leaving the <subModule>: subsequent modparams belong to the slave again
+  state->currSubModule = NULL;
+  state->currSubModuleType = NULL;
 }
 
 static int parseSyncCycle(LCEC_CONF_XML_STATE_T *state, const char *nptr) {

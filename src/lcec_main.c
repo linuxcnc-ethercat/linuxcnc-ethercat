@@ -103,6 +103,9 @@ static const lcec_pindesc_t slave_pins[] = {
     {HAL_BIT, HAL_OUT, offsetof(lcec_slave_state_t, state_preop), "%s.%s.%s.slave-state-preop"},
     {HAL_BIT, HAL_OUT, offsetof(lcec_slave_state_t, state_safeop), "%s.%s.%s.slave-state-safeop"},
     {HAL_BIT, HAL_OUT, offsetof(lcec_slave_state_t, state_op), "%s.%s.%s.slave-state-op"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_slave_state_t, reconfig), "%s.%s.%s.slave-reconfig"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_slave_state_t, reconfig_error), "%s.%s.%s.slave-reconfig-error"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_slave_state_t, reconfig_count), "%s.%s.%s.slave-reconfig-count"},
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
@@ -136,6 +139,9 @@ static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const 
 static int lcec_master_all_op(lcec_master_t *master);
 
 static void sigsegv_handler(int sig);
+static int lcec_reinit_start(void);
+static void lcec_reinit_stop(void);
+static void lcec_slave_check_reinit(lcec_slave_t *slave);
 
 static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const char *name, uint32_t cycle_time) {
   lcec_sync_unit_t *sync_unit;
@@ -252,7 +258,8 @@ int rtapi_app_main(void) {
         goto fail2;
       }
 
-      // initialize sdos
+      // initialize sdos: complete-access entries go through the master's
+      // startup list, plain entries via lcec_slave_apply_sdo_config()
       if (slave->sdo_config != NULL) {
         for (sdo_config = slave->sdo_config; sdo_config->index != 0xffff;
             sdo_config = (lcec_slave_sdoconf_t *)&sdo_config->data[sdo_config->length]) {
@@ -261,13 +268,9 @@ int rtapi_app_main(void) {
               rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to configure slave %s.%s sdo %04x (complete)\n", master->name,
                   slave->name, sdo_config->index);
             }
-          } else {
-            if (lcec_write_sdo(slave, sdo_config->index, sdo_config->subindex, &sdo_config->data[0], sdo_config->length) != 0) {
-              rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to configure slave %s.%s sdo %04x:%02x\n", master->name, slave->name,
-                  sdo_config->index, sdo_config->subindex);
-            }
           }
         }
+        lcec_slave_apply_sdo_config(slave);
       }
 
       // initialize idns
@@ -296,6 +299,25 @@ int rtapi_app_main(void) {
           rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failure in proc_init for slave %s.%s\n", master->name, slave->name);
           goto fail2;
         }
+      }
+
+      // runtime re-initialization: hold returning instances in PREOP, confirm
+      // the one proc_init just configured
+      if (slave->proc_reinit != NULL) {
+#if defined(EC_HAVE_REINIT_HOLD) && !defined(__KERNEL__)
+        if (ecrt_slave_config_flag(slave->config, "ReinitHold", 1) != 0 || ecrt_slave_config_reinit_done(slave->config) != 0) {
+          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to enable runtime re-initialization for slave %s.%s\n", master->name,
+              slave->name);
+          goto fail2;
+        }
+        rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "runtime re-initialization enabled for slave %s.%s\n", master->name, slave->name);
+#else
+        rtapi_print_msg(RTAPI_MSG_WARN,
+            LCEC_MSG_PFX "slave %s.%s supports runtime re-initialization, but this libethercat does not (EC_HAVE_REINIT_HOLD); "
+                         "a power-cycled slave will need a LinuxCNC restart\n",
+            master->name, slave->name);
+        slave->proc_reinit = NULL;
+#endif
       }
 
       // configure dc for this slave
@@ -432,6 +454,11 @@ int rtapi_app_main(void) {
     goto fail2;
   }
 
+  // runtime re-initialization helper (no-op when no slave needs it)
+  if (lcec_reinit_start() != 0) {
+    goto fail2;
+  }
+
   rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "installed driver for %d slaves\n", slave_count);
   hal_ready(lcec_comp_id);
   return 0;
@@ -450,6 +477,8 @@ fail0:
 /// @brief Shut down LinuxCNC-Ethercat
 void rtapi_app_exit(void) {
   lcec_master_t *master;
+
+  lcec_reinit_stop();
 
   // deactivate all masters
   for (master = first_master; master != NULL; master = master->next) {
@@ -485,6 +514,7 @@ int lcec_parse_config(void) {
   LCEC_CONF_SDOCONF_T *sdo_conf;
   LCEC_CONF_IDNCONF_T *idn_conf;
   LCEC_CONF_MODPARAM_T *modparam_conf;
+  LCEC_CONF_SUBMODULE_T *submodule_conf;
   ec_pdo_entry_info_t *generic_pdo_entries;
   ec_pdo_info_t *generic_pdos;
   ec_sync_info_t *generic_sync_managers;
@@ -493,6 +523,9 @@ int lcec_parse_config(void) {
   lcec_slave_sdoconf_t *sdo_config;
   lcec_slave_idnconf_t *idn_config;
   lcec_slave_modparam_t *modparams;
+  lcec_slave_submodule_t *submodule, *last_submodule;
+  lcec_slave_modparam_t *submodule_modparams;
+  int submodule_mp_remaining;
 
   // initialize list
   first_master = NULL;
@@ -545,6 +578,10 @@ int lcec_parse_config(void) {
   idn_config = NULL;
   pe_conf = NULL;
   modparams = NULL;
+  submodule = NULL;
+  last_submodule = NULL;
+  submodule_modparams = NULL;
+  submodule_mp_remaining = 0;
   while ((conf_type = ((LCEC_CONF_NULL_T *)conf)->confType) != lcecConfTypeNone) {
     // get type
     switch (conf_type) {
@@ -607,6 +644,10 @@ int lcec_parse_config(void) {
         sdo_config = NULL;
         idn_config = NULL;
         modparams = NULL;
+        submodule = NULL;
+        last_submodule = NULL;
+        submodule_modparams = NULL;
+        submodule_mp_remaining = 0;
 
         slave->index = slave_conf->index;
         strncpy(slave->name, slave_conf->name, LCEC_CONF_STR_MAXLEN);
@@ -639,6 +680,7 @@ int lcec_parse_config(void) {
           slave->is_fsoe_logic = type->is_fsoe_logic;
           slave->proc_preinit = type->proc_preinit;
           slave->proc_init = type->proc_init;
+          slave->proc_reinit = type->proc_reinit;
           slave->flags = type->flags;
         } else {
           // generic slave
@@ -702,11 +744,49 @@ int lcec_parse_config(void) {
         slave->sdo_config = sdo_config;
         slave->idn_config = idn_config;
         slave->modparams = modparams;
+        slave->submodules = NULL;
         slave->dc_conf = NULL;
         slave->wd_conf = NULL;
 
         // update slave count
         slave_count++;
+        break;
+
+      case lcecConfTypeSubModule:
+        // get config token
+        submodule_conf = (LCEC_CONF_SUBMODULE_T *)conf;
+        conf += sizeof(LCEC_CONF_SUBMODULE_T);
+
+        // check for slave
+        if (slave == NULL) {
+          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "Slave node for submodule config missing\n");
+          goto fail2;
+        }
+
+        // create new submodule
+        submodule = LCEC_ALLOCATE(lcec_slave_submodule_t);
+        submodule->next = NULL;
+        submodule->id = submodule_conf->id;
+        submodule->ident = submodule_conf->ident;
+        strncpy(submodule->name, submodule_conf->name, LCEC_CONF_STR_MAXLEN);
+        submodule->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
+
+        // alloc this submodule's modparam array (id=-1 terminated)
+        submodule_modparams = NULL;
+        submodule_mp_remaining = submodule_conf->modParamCount;
+        if (submodule_conf->modParamCount > 0) {
+          submodule_modparams = LCEC_ALLOCATE_ARRAY(lcec_slave_modparam_t, (submodule_conf->modParamCount + 1));
+          submodule_modparams[submodule_conf->modParamCount].id = -1;
+        }
+        submodule->modparams = submodule_modparams;
+
+        // append to the slave's submodule list, preserving XML order
+        if (last_submodule == NULL) {
+          slave->submodules = submodule;
+        } else {
+          last_submodule->next = submodule;
+        }
+        last_submodule = submodule;
         break;
 
       case lcecConfTypeDcConf:
@@ -971,18 +1051,39 @@ int lcec_parse_config(void) {
           goto fail2;
         }
 
-        if (modparams == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "modparams is nullg\n");
-          goto fail2;
+        // Route to the current submodule while it still has unfilled slots,
+        // otherwise to the slave.  A submodule's modparams are serialized
+        // directly after its <subModule> record, so consuming exactly
+        // modParamCount of them correctly attributes any slave-level modparams
+        // that appear before or after a <subModule>.
+        if (submodule != NULL && submodule_mp_remaining > 0) {
+          if (submodule_modparams == NULL) {
+            rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "submodule modparams is null\n");
+            goto fail2;
+          }
+
+          // copy attributes
+          submodule_modparams->id = modparam_conf->id;
+          submodule_modparams->value = modparam_conf->value;
+          submodule_modparams->name = modparam_conf->name;
+
+          // next entry
+          submodule_modparams++;
+          submodule_mp_remaining--;
+        } else {
+          if (modparams == NULL) {
+            rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "modparams is null\n");
+            goto fail2;
+          }
+
+          // copy attributes
+          modparams->id = modparam_conf->id;
+          modparams->value = modparam_conf->value;
+          modparams->name = modparam_conf->name;
+
+          // next entry
+          modparams++;
         }
-
-        // copy attributes
-        modparams->id = modparam_conf->id;
-        modparams->value = modparam_conf->value;
-        modparams->name = modparam_conf->name;
-
-        // next entry
-        modparams++;
         break;
 
       default:
@@ -1137,6 +1238,164 @@ void lcec_update_slave_state_hal(lcec_slave_state_t *hal_data, ec_slave_config_s
   LCEC_PIN_BIT_SET(hal_data->state_safeop, (ss->al_state & 0x04) != 0);
   LCEC_PIN_BIT_SET(hal_data->state_op, (ss->al_state & 0x08) != 0);
 }
+
+#define LCEC_REINIT_STATE_LAG_MS 1500  ///< Ignore a stale "pending" report this long after a release (> LCEC_STATE_UPDATE_PERIOD).
+
+/// @brief Mirror the master's PREOP-hold state into the re-init request flags and HAL pins (RT thread).
+static void lcec_slave_check_reinit(lcec_slave_t *slave) {
+  lcec_slave_state_t *hal_data = slave->hal_state_data;
+  int pending = 0, timed_out = 0;
+
+  if (slave->proc_reinit != NULL) {
+#ifdef EC_HAVE_REINIT_HOLD
+    pending = slave->state.reinit_pending;
+    timed_out = slave->state.reinit_timeout;
+#endif
+    if (timed_out) {
+      slave->reinit_requested = 1;  // master gave up; keep retrying
+    } else if (pending) {
+      // slave->state lags by up to LCEC_STATE_UPDATE_PERIOD; a "pending" seen
+      // right after a release is stale
+      if ((lcec_get_ticks() - slave->reinit_released) > LCEC_MS_TO_TICKS(LCEC_REINIT_STATE_LAG_MS)) {
+        slave->reinit_requested = 1;
+      }
+    } else if (!slave->reinit_in_progress) {
+      slave->reinit_requested = 0;
+      slave->reinit_error = 0;
+    }
+  }
+
+  LCEC_PIN_BIT_SET(hal_data->reconfig, pending || slave->reinit_in_progress);
+  LCEC_PIN_BIT_SET(hal_data->reconfig_error, slave->reinit_error || timed_out);
+  LCEC_PIN_U32_SET(hal_data->reconfig_count, slave->reinit_count);
+}
+
+#if defined(EC_HAVE_REINIT_HOLD) && !defined(__KERNEL__)
+
+#include <errno.h>
+#include <pthread.h>
+
+#define LCEC_REINIT_POLL_MS  100   ///< Helper thread poll period.
+#define LCEC_REINIT_RETRY_MS 2000  ///< Back-off between failed re-init attempts of one slave.
+
+/// @brief Re-apply XML sdoConfig + driver config to a returned slave, then release the PREOP hold.
+/// Non-realtime context.  Returns <0 on failure (slave stays held).
+static int lcec_slave_reinit(lcec_slave_t *slave) {
+  lcec_master_t *master = slave->master;
+  int err;
+
+  if ((err = lcec_slave_apply_sdo_config(slave)) != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s: re-applying XML sdoConfig failed (%d)\n", master->name, slave->name, err);
+    return err;
+  }
+
+  if ((err = slave->proc_reinit(slave)) != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s: driver re-initialization failed (%d); slave stays held in PREOP\n",
+        master->name, slave->name, err);
+    return err;
+  }
+
+#ifdef EC_HAVE_REINIT_HOLD
+  if ((err = ecrt_slave_config_reinit_done(slave->config)) != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s: releasing the PREOP hold failed (%d)\n", master->name, slave->name, err);
+    return err;
+  }
+#endif
+
+  return 0;
+}
+
+static pthread_t reinit_thread;
+static int reinit_thread_started = 0;
+static volatile int reinit_thread_stop = 0;
+
+/// @brief Helper thread: runs `proc_reinit` for slaves held in PREOP.  Blocking
+/// SDO/SII traffic cannot run on the servo thread (it drives the master FSM
+/// that serves it), so this polls the flags set by lcec_slave_check_reinit().
+static void *lcec_reinit_thread(void *arg) {
+  lcec_master_t *master;
+  lcec_slave_t *slave;
+  struct timespec poll = {0, LCEC_REINIT_POLL_MS * 1000000L};
+  (void)arg;
+
+  while (!reinit_thread_stop) {
+    for (master = first_master; master != NULL; master = master->next) {
+      for (slave = master->first_slave; slave != NULL; slave = slave->next) {
+        long now;
+
+        if (slave->proc_reinit == NULL || !slave->reinit_requested || reinit_thread_stop) {
+          continue;
+        }
+        now = lcec_get_ticks();
+        if (slave->reinit_error && (now - slave->reinit_last_attempt) < LCEC_MS_TO_TICKS(LCEC_REINIT_RETRY_MS)) {
+          continue;
+        }
+
+        slave->reinit_in_progress = 1;
+        rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "slave %s.%s returned to the bus and is held in PREOP; re-initializing%s\n",
+            master->name, slave->name, slave->reinit_error ? " (retry)" : "");
+
+        if (lcec_slave_reinit(slave) == 0) {
+          slave->reinit_error = 0;
+          slave->reinit_count++;
+          slave->reinit_released = lcec_get_ticks();
+          slave->reinit_requested = 0;
+          rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "slave %s.%s re-initialized (%u so far); released to the master\n", master->name,
+              slave->name, slave->reinit_count);
+        } else {
+          slave->reinit_error = 1;
+          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s re-initialization failed; retrying in %d ms\n", master->name, slave->name,
+              LCEC_REINIT_RETRY_MS);
+        }
+        slave->reinit_last_attempt = now;
+        slave->reinit_in_progress = 0;
+      }
+    }
+    nanosleep(&poll, NULL);
+  }
+  return NULL;
+}
+
+static int lcec_reinit_start(void) {
+  lcec_master_t *master;
+  lcec_slave_t *slave;
+  int needed = 0, err;
+
+  for (master = first_master; master != NULL; master = master->next) {
+    for (slave = master->first_slave; slave != NULL; slave = slave->next) {
+      if (slave->proc_reinit != NULL) {
+        needed++;
+      }
+    }
+  }
+  if (!needed) {
+    return 0;
+  }
+
+  reinit_thread_stop = 0;
+  if ((err = pthread_create(&reinit_thread, NULL, lcec_reinit_thread, NULL)) != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to start the re-initialization thread (%d)\n", err);
+    return -1;
+  }
+  reinit_thread_started = 1;
+  rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "runtime re-initialization enabled for %d slave(s)\n", needed);
+  return 0;
+}
+
+static void lcec_reinit_stop(void) {
+  if (reinit_thread_started) {
+    reinit_thread_stop = 1;
+    pthread_join(reinit_thread, NULL);
+    reinit_thread_started = 0;
+  }
+}
+
+#else
+
+static int lcec_reinit_start(void) { return 0; }
+static void lcec_reinit_stop(void) {}
+
+#endif
 
 /// @brief Update all input pins across all masters and slaves.
 void lcec_read_all(void *arg, long period) {
@@ -1416,6 +1675,7 @@ void lcec_read_master(void *arg, long period) {
     }
     rtapi_mutex_give(&master->mutex);
     if (check_states) {
+      lcec_slave_check_reinit(slave);
       lcec_update_slave_state_hal(slave->hal_state_data, &slave->state);
     }
 

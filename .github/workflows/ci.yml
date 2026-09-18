@@ -17,6 +17,12 @@ on:
 permissions:
     contents: read
 
+env:
+    # Build libethercat from this ref of linuxcnc-ethercat/ethercat instead
+    # of installing libethercat-dev from the apt repo. Lets a PR be built
+    # against a master branch whose API is not released yet. Empty = apt.
+    ETHERCAT_SOURCE_REF: 'feat/slave-reinit-hold'
+
 jobs:
     build-deb:
         name: ${{ matrix.distro }}${{ matrix.hal_api == 'next' && ' (HAL next)' || '' }}${{ matrix.arch == 'arm64' && ' (arm64)' || '' }}
@@ -111,7 +117,13 @@ jobs:
                   apt-get update
                   apt-get install -y --no-install-recommends \
                       git build-essential devscripts debhelper \
-                      libethercat-dev libexpat1-dev yapps2
+                      libexpat1-dev yapps2
+                  if [ -n "${ETHERCAT_SOURCE_REF}" ]; then
+                      apt-get install -y --no-install-recommends \
+                          autoconf automake libtool pkg-config dkms
+                  else
+                      apt-get install -y --no-install-recommends libethercat-dev
+                  fi
                   if [ "${HAL_API}" = "legacy" ]; then
                       apt-get install -y --no-install-recommends linuxcnc-uspace-dev
                   fi
@@ -123,6 +135,17 @@ jobs:
 
             - name: Mark repo as safe (container runs as root)
               run: git config --global --add safe.directory "$PWD"
+
+            - name: Build and install libethercat from source
+              if: env.ETHERCAT_SOURCE_REF != ''
+              run: |
+                  set -e
+                  git clone --depth 1 --branch "${ETHERCAT_SOURCE_REF}" \
+                      https://github.com/linuxcnc-ethercat/ethercat.git /tmp/ethercat
+                  cd /tmp/ethercat
+                  ./script/build-deb.sh
+                  dpkg -i ../libethercat_*.deb ../libethercat-dev_*.deb
+                  grep -c EC_HAVE_REINIT_HOLD /usr/include/ecrt.h
 
             - name: Build and install linuxcnc master
               if: matrix.hal_api == 'next'
