@@ -103,7 +103,7 @@ syncs.  If you're modifying an existing driver, try commenting out the
 `sync_info=...` line, power-cycle your Ethercat devices, and see if it
 still works.
 
-Failure is pretty obvious -- LCEC will fail at startup with an error
+Failure is pretty obvious: LCEC will fail at startup with an error
 about being unable to map a PDO entry.
 
 If you *need* to change PDO mappings, then feel free to use this
@@ -187,7 +187,7 @@ can exceed them, and needs to notice.
 `lcec_syncs_add_pdo_entry()` return `0` on success and `-1` when the
 corresponding buffer is full (in which case nothing is added).  The
 failure is also recorded stickily in `syncs->error`, so you don't have to
-check every call -- build the whole layout in a loop and check once:
+check every call, build the whole layout in a loop and check once:
 
 ```c
   lcec_syncs_init(slave, syncs);

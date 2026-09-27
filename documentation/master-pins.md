@@ -36,7 +36,7 @@ ramp-up during bring-up does not pollute them.  On a healthy bus,
 `wkc` is constant, `wkc-min` equals `wkc`, and `wkc-change-count`
 stays 0.  A rising change count with `wkc-min` dipping below the
 steady-state value means a slave is intermittently dropping out of
-the exchange — a marginal cable, connector, or an overloaded slave.
+the exchange: a marginal cable, connector, or an overloaded slave.
 These transients last a cycle or two and are easy to miss by polling;
 the counter catches them between samples, and netting `wkc` into
 halscope or a recorder shows exactly when they happen.
@@ -88,7 +88,7 @@ should be ignored).
 ## Time correlation
 
 These pins let an external process map timestamps taken with
-`clock_gettime(CLOCK_MONOTONIC)` into the DC time domain — for
+`clock_gettime(CLOCK_MONOTONIC)` into the DC time domain, for
 example, to correlate a camera frame or an external sensor reading
 (timestamped in OS time) with the cycle-sampled position of a
 DC-synchronized drive.
@@ -116,5 +116,5 @@ error grows by several microseconds per second.
 Reading a 64-bit value split across two u32 pins from another
 process is not atomic: read `hi`, then `lo`, then `hi` again, and
 retry if `hi` changed (the low word rolls over every ~4.3 s).  For
-the full four-pin set, re-read until two consecutive reads agree —
+the full four-pin set, re-read until two consecutive reads agree;
 the values only change once per cycle, so one retry suffices.

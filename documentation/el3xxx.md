@@ -40,13 +40,13 @@ This should create a bunch of
 `lcec.<MASTERID>.<SLAVENAME>.ain-<CHANNEL>-<TYPE>` pins in LinuxCNC.
 The pin types include:
 
-- `bias` -- settable to adjust the value returned in `val`.
-- `error` -- true if the hardware has logged an error.
-- `overrange` -- true if the input is over range.
-- `raw` -- the raw input measurement from the device.
-- `scale` -- settable to adjust the value returned in `val`.
-- `underrange` -- true if the input is under range.
-- `val` -- the current measurement on the input, with `scale` and `bias`
+- `bias`: settable to adjust the value returned in `val`.
+- `error`: true if the hardware has logged an error.
+- `overrange`: true if the input is over range.
+- `raw`: the raw input measurement from the device.
+- `scale`: settable to adjust the value returned in `val`.
+- `underrange`: true if the input is under range.
+- `val`: the current measurement on the input, with `scale` and `bias`
   applied.
 
 Examples:

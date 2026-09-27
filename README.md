@@ -65,8 +65,8 @@ apt install -y linux-headers-$(uname -r) ethercat-master linuxcnc-ethercat
 > `sudo systemctl restart ethercat`.
 
 **Note:** If you previously followed older instructions and added the
-openSUSE `science:EtherLab` source, you can leave it in place — apt
-will prefer our packages because of the version epoch — or remove it
+openSUSE `science:EtherLab` source, you can leave it in place, apt
+will prefer our packages because of the version epoch, or remove it
 with `rm /etc/apt/sources.list.d/ighvh.sources`. The official
 LinuxCNC 2.9.x ISO ships with the openSUSE source pre-installed;
 adding the lines above is enough to migrate.
@@ -160,6 +160,68 @@ drivers, and will attempt to create generic drivers for other devices.
 It's not always perfect, but it's usually an OK starting point.  The
 configgen tool will not overwrite any files, so it should be safe to
 run.
+
+### A minimal end-to-end test
+
+Before wiring EtherCAT into a full machine configuration, it is worth
+verifying the whole chain (master, driver, and slaves) in a plain
+HAL session.  This needs `ethercat slaves` to show your devices first;
+if it does not, go back to [initial setup](#initial-setup) and check
+`MASTER0_DEVICE` and `DEVICE_MODULES` in `/etc/ethercat.conf`.
+
+1. Generate a starting XML configuration for the attached hardware:
+
+   ```sh
+   lcec_configgen > ethercat.xml
+   ```
+
+   Review the result and adjust it to taste; configgen produces a
+   starting point, not a finished configuration.
+
+2. Start an interactive HAL session:
+
+   ```sh
+   halrun
+   ```
+
+3. At the `halcmd:` prompt, load the configuration and the driver,
+   create a realtime thread, and start it:
+
+   ```
+   loadusr -W lcec_conf ethercat.xml
+   loadrt lcec
+   loadrt threads name1=servo-thread period1=1000000
+   addf lcec.read-all servo-thread
+   addf lcec.write-all servo-thread
+   initf lcec.activate servo-thread
+   start
+   ```
+
+   The `initf` line exists only on LinuxCNC 2.10 and later; it runs
+   the master activation once, in realtime context, which gives DC
+   SYNC0 a clean phase.  On 2.9 halcmd does not know `initf`, so
+   omit the line; the driver activates inline instead.  If you are
+   on 2.10+ and forget the line, the driver logs a warning and falls
+   back to the inline path, with slightly worse DC phasing.
+
+4. Inspect the pins.  The exact names come from your XML; a slave
+   named `D2` shows up as `lcec.0.D2.*`:
+
+   ```
+   show pin lcec
+   ```
+
+5. Read and set individual pins, or wire two of them together:
+
+   ```
+   show pin lcec.0.D2.1-input
+   setp lcec.0.D3.1-output 1
+   net button-to-relay lcec.0.D2.1-input => lcec.0.D3.1-output
+   ```
+
+6. Leave with `exit`.  Everything done inside `halrun` is transient;
+   to keep a setup, save the same commands to a `.hal` file and run
+   it with `halrun -f file.hal`.
 
 ## Devices Supported
 

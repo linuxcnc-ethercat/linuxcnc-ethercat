@@ -67,7 +67,7 @@ following-error feedback are live.
 - **Drive temperature is not exposed in any object.**  DC-bus voltage
   is **U0-31 = 0x201E:0x1F**, a UINT16; with mains applied it read
   3157, which puts the unit at 0.1 V (315.7 V, the expected rectified
-  220 V).  That scale is *inferred*, not stated by the manual — check
+  220 V).  That scale is *inferred*, not stated by the manual, so check
   it against a meter before showing volts to an operator.
 - **0x603F carries a vendor code, not a CiA 402 one.**  Read as
   DECIMAL, its value is the digits of the code on the drive's own
@@ -76,8 +76,8 @@ following-error feedback are live.
   entirely.  The full table of codes is chapter 11.2 of the vendor
   manual.
 - **Keep the firmware and the ESI in step.**  The standard **0x100A**
-  ("Manufacturer Software version") returns the firmware as a string —
-  `V1.15` here, the latest at the time of writing — and the ESI states
+  ("Manufacturer Software version") returns the firmware as a string
+  (`V1.15` here, the latest at the time of writing), and the ESI states
   the firmware it describes.  A drive older than the ESI needs the
   vendor's firmware upgrade tool.
 - **SDO Info works on this drive.**  The whole object dictionary can
@@ -93,7 +93,7 @@ following-error feedback are live.
   clocks did not converge at all.  The driver enables DC by default
   (`assignActivate` 0x300, SYNC0 at the application cycle time, shifted
   by half the cycle).  The half-cycle SYNC0 shift is the manual's
-  recommendation — advance the PDI by 50% of the SYNC0 period — and
+  recommendation (advance the PDI by 50% of the SYNC0 period), and
   their fault `E.101` ("ECAT sync error") names an unreasonable master
   SYNC Shift Time as its first cause; measured, the shift buys much
   faster startup convergence.  Override with a `<dcConf>` element if
