@@ -184,6 +184,8 @@ Description | Driver | EtherCAT VID:PID | Device Type | Testing Status | Notes
 [Beckhoff EL5102 2Ch. Inc. Encoder 5V (RS422,TTL)](http://www.beckhoff.com/EL5102) | [el5102](../devices/lcec_el5102.c) | 0x2:0x13ee3052 | Encoder Input | Developed without hardware, may work | 
 [Beckhoff EL5151 1Ch. Inc. Encoder](http://www.beckhoff.com/EL5151) | [el5151](../src/devices/lcec_el5151.c) | 0x2:0x141f3052 | Encoder Input |  | 
 [Beckhoff EL5152 2Ch. Inc. Encoder](http://www.beckhoff.com/EL5152) | [el5152](../src/devices/lcec_el5152.c) | 0x2:0x14203052 | Encoder Input |  | 
+[Beckhoff EL6001 1Ch. RS232 Serial Interface](http://www.beckhoff.com/EL6001) | [el6021](../src/devices/lcec_el6021.c) | 0x2:0x17713052 | Serial Interface | Developed without hardware; exposes a /dev/ character device via CUSE | 
+[Beckhoff EL6021 1Ch. RS422/RS485 Serial Interface](http://www.beckhoff.com/EL6021) | [el6021](../src/devices/lcec_el6021.c) | 0x2:0x17893052 | Serial Interface | Developed without hardware; exposes a /dev/ character device via CUSE | 
 [Beckhoff EL6090 Display terminal](http://www.beckhoff.com/EL6090) | [el6090](../src/devices/lcec_el6090.c) | 0x2:0x17ca3052 | LCD Display | Uncertain; @scottlaird has one, but the driver was just merged. | 
 [Beckhoff EL6900, TwinSAFE PLC](http://www.beckhoff.com/EL6900) | [el6900](../src/devices/lcec_el6900.c) | 0x2:0x1af43052 | Safety Terminals | Part of @scottlaird's test suite, but not currently being evaluated. | 
 [Beckhoff EL7031 1Ch. Stepper motor output stage (24V, 1.5A)](http://www.beckhoff.com/EL7031) | [el70x1](../src/devices/lcec_el70x1.c) | 0x2:0x1b773052 | Stepper Drive |  | 

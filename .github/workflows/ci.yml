@@ -116,7 +116,7 @@ jobs:
                   apt-get update
                   apt-get install -y --no-install-recommends \
                       git build-essential devscripts debhelper \
-                      libethercat-dev libexpat1-dev yapps2
+                      libethercat-dev libexpat1-dev libfuse3-dev yapps2
                   if [ "${HAL_API}" = "legacy" ]; then
                       apt-get install -y --no-install-recommends linuxcnc-uspace-dev
                   fi
@@ -163,6 +163,21 @@ jobs:
                       suffix="${fname##*_}"
                       cp "$src" "dist/${base}_${{ matrix.distro }}${{ matrix.hal_api == 'next' && '-next' || '' }}${{ matrix.arch == 'arm64' && '-arm64' || '' }}_${suffix}"
                   done
+
+
+            - name: Verify CUSE serial support
+              # The EL6001/EL6021 driver exposes its tty via CUSE, which
+              # needs libfuse3 >= 3.12 at build time. bullseye ships 3.10
+              # and legitimately builds without it; everywhere else a
+              # missing libfuse3 NEEDED entry means the build silently
+              # dropped the feature (e.g. libfuse3-dev not installed).
+              # Fail loudly instead of shipping a half-baked package.
+              if: matrix.distro != 'debian-11'
+              run: |
+                  if ! objdump -p src/lcec.so | grep -q 'NEEDED.*libfuse3'; then
+                      echo "::error::lcec.so was built without CUSE support (libfuse3 >= 3.12 missing?)"
+                      exit 1
+                  fi
 
             - name: Run tests
               run: |
