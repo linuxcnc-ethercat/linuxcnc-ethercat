@@ -68,15 +68,17 @@ and some of which are required:
   | `-1` | **M2R** | LinuxCNC's servo thread is pulled toward the DC reference clock by a bang-bang PLL (DC is authoritative). `-1` is the only valid negative value; the parser rejects anything else negative. |
 
   Most systems with at least one DC-sync'd slave (servo / stepper)
-  want **M2R** — set `refClockSyncCycles="-1"`. See
+  want **M2R**: set `refClockSyncCycles="-1"`. See
   [Distributed Clocks](distributed-clocks.md) for which mode to pick
   and how to tune the PLL.
 
-- `syncToRefClock="true|false"`: (optional, alternate spelling of the
-  sign of `refClockSyncCycles`). `"true"` ↔ negative cycles (M2R),
-  `"false"` ↔ positive cycles (R2M). Kept for back-compat — prefer
-  the sign-based form. If you specify both they must agree, otherwise
-  the parser errors out. (See [#471](https://github.com/linuxcnc-ethercat/linuxcnc-ethercat/issues/471) for a redesign discussion.)
+- `syncToRefClock="true|false"`: **deprecated**, will be removed in
+  v1.46.0. Alternate spelling of the sign of `refClockSyncCycles`:
+  `"true"` means negative cycles (M2R), `"false"` means positive
+  cycles (R2M). Use the sign-based form instead. If you specify both
+  they must agree, otherwise the parser errors out. (See
+  [#471](https://github.com/linuxcnc-ethercat/linuxcnc-ethercat/issues/471)
+  for the deprecation discussion.)
 
 Generally, for "normal" systems with DC-sync'd drives, this will look like
 

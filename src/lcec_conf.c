@@ -329,6 +329,13 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
   int given_sync = p->syncToRefClock;  // 0=not given, 1=true, -1=false
   int given_cycles = p->refClockSyncCycles;
 
+  if (given_sync != 0) {
+    fprintf(stderr,
+        "%s: WARNING: syncToRefClock is deprecated; use the sign of refClockSyncCycles instead "
+        "(negative = M2R, positive = R2M, 0 = free running). syncToRefClock will be removed in v1.46.0\n",
+        modname);
+  }
+
   if (given_cycles < -1) {
     fprintf(stderr, "%s: ERROR: refClockSyncCycles=%d invalid, only -1, 0, or positive values allowed\n", modname, given_cycles);
     XML_StopParser(inst->parser, 0);

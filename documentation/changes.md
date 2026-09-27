@@ -18,6 +18,11 @@ This list should only include deliberate breakage, not typical bugs.
 
 ## Pending
 
+- The `<master>` attribute `syncToRefClock` is deprecated and will be
+  removed in v1.46.0.  Use the sign of `refClockSyncCycles` instead:
+  negative for M2R, positive for R2M, 0 for free running.  Configs
+  using it still parse but log a warning.  See
+  [#471](https://github.com/linuxcnc-ethercat/linuxcnc-ethercat/issues/471).
 - Beckhoff EL5101 (and EL5102) calculate frequency incorrectly. See
   [#380](https://github.com/linuxcnc-ethercat/linuxcnc-ethercat/pull/380)
 - [API] `lcec_param*` now use param-specific types instead of
