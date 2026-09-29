@@ -5,10 +5,9 @@ description: >-
   cache them by upstream commit, and install linuxcnc-uspace and
   linuxcnc-uspace-dev into the build container. Used to compile
   linuxcnc-ethercat against the new HAL getter/setter API, which no public
-  apt repository carries yet. The ref input pins the upstream commit -
-  v2.10.0-pre2 is the first tag marking the broken (64-bit, opaque handle)
-  HAL API. Master is intentionally not tracked: every upstream HAL break
-  would fail CI before linuxcnc-ethercat is ready for it.
+  apt repository carries yet. The ref input selects the upstream commit:
+  CI builds master (early warning for the next HAL break), the release
+  workflow pins a tag for reproducible debs.
 inputs:
   codename:
     description: Debian codename (bookworm, trixie)
@@ -24,11 +23,12 @@ inputs:
     default: amd64
   ref:
     description: >-
-      Upstream linuxcnc git ref (tag, branch or commit) to build. Pinned to
-      the v2.10.0-pre2 tag by default; bump deliberately when
-      linuxcnc-ethercat supports a newer HAL API.
+      Upstream linuxcnc git ref (tag, branch or commit) to build. CI leaves
+      this at the default (master) so a future upstream HAL break shows up
+      as a failing scheduled run - early warning. The release workflow pins
+      a tag so published debs are reproducible.
     required: false
-    default: v2.10.0-pre2
+    default: master
 
 runs:
   using: composite

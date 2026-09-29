@@ -135,6 +135,11 @@ jobs:
                   codename: ${{ matrix.codename }}
                   distro: ${{ matrix.distro }}
                   arch: ${{ matrix.arch }}
+                  # Pinned tag: published debs must be reproducible. Bump
+                  # deliberately once master CI proves the tree against a
+                  # newer upstream. (CI tracks master instead - early
+                  # warning for the next HAL break.)
+                  ref: v2.10.0-pre2
 
             - name: Stamp version with codename suffix
               env:

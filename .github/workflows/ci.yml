@@ -9,10 +9,10 @@ on:
         types: [published]
     workflow_dispatch:
     schedule:
-        # Weekly, so the linuxcnc 2.10 deb cache stays warm for per-push
-        # runs even when nothing pushes. The HAL-next side builds the
-        # pinned v2.10.0-pre2 tag, not master - bumping the pin is a
-        # deliberate step once the tree supports a newer HAL API.
+        # Weekly, so the HAL-next side keeps tracking linuxcnc master even
+        # when nothing pushes - a future upstream HAL break shows up here
+        # first - and the linuxcnc 2.10 deb cache stays warm for per-push
+        # runs.
         - cron: '23 4 * * 1'
 
 permissions:
@@ -40,9 +40,12 @@ jobs:
                       hal_api: next
                 include:
                     # hal_api=legacy: 2.9-era HAL headers from the repos.
-                    # hal_api=next: linuxcnc v2.10.0-pre2 built from source
-                    # (new getter/setter API, 64-bit opaque handles); see
-                    # release.yml for the details.
+                    # hal_api=next: linuxcnc master built from source (new
+                    # getter/setter API, 64-bit opaque handles since
+                    # 2.10.0~pre2). Master is tracked on purpose: a red run
+                    # here is the early warning that upstream broke the HAL
+                    # API again. Releases build a pinned tag instead; see
+                    # release.yml.
                     #
                     # linuxcnc_org_repo: build against linuxcnc.org's
                     # linuxcnc-uspace-dev instead of Debian main. Needed on

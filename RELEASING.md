@@ -77,11 +77,12 @@ from there automatically.
 ## Notes
 
 - The HAL API flavor matrix lives in `ci.yml`/`release.yml`
-  (`hal_api: [legacy, next]`). The `next` (+getset) flavor builds against
-  the linuxcnc ref pinned in
-  `.github/actions/linuxcnc-master-debs/action.yml` (currently
-  `v2.10.0-pre2`). Bumping that pin is a deliberate change with its own
-  commit, never part of a release commit.
+  (`hal_api: [legacy, next]`). CI's `next` flavor tracks linuxcnc master
+  on purpose - a red run is the early warning that upstream broke the HAL
+  API again. Releases pin a tag via the `ref` input in `release.yml`
+  (currently `v2.10.0-pre2`) so published debs are reproducible. Bump the
+  pin deliberately, in its own commit, once master CI has proven the tree
+  against a newer upstream; never as part of a release commit.
 - Prereleases: name the tag `vX.Y.Z~preN` or `vX.Y.Z-preN` and the
   workflow marks the GitHub release as prerelease automatically.
 - If the release workflow fails after the tag is pushed, fix on master,
