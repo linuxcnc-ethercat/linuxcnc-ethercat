@@ -1,3 +1,19 @@
+linuxcnc-ethercat (1.45.0-1) unstable; urgency=low
+
+  * feat(hal): support LinuxCNC 2.10.0~pre2 (64-bit opaque HAL API).
+    Upstream's API break (tagged v2.10.0-pre2) removed the legacy
+    hal_*_t data typedefs, the legacy pin/param creators and the
+    uses_fp argument of hal_export_funct(). The compat shim now
+    reinstates the four typedefs locally on HAL_API_VERSION >= 1 and
+    routes function exports through a version-aware macro; 2.9 and
+    transitional-master builds are unaffected. The +getset flavor is
+    now built against the pinned v2.10.0-pre2 tag instead of tracking
+    linuxcnc master.
+  * feat(conf): deprecate syncToRefClock, removal slated for v1.46.0.
+  * docs: add halrun end-to-end walkthrough.
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Tue, 29 Sep 2026 19:56:03 +0800
+
 linuxcnc-ethercat (1.44.0-1) unstable; urgency=low
 
   * fix(main): trip the M2R resync watchdog at half a period and remove
