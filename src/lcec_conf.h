@@ -22,7 +22,10 @@
 #define _LCEC_CONF_H_
 
 #include <ecrt.h>
-#include <hal.h>
+// lcec_hal_compat.h (not plain hal.h): it reinstates the legacy hal_*_t
+// data typedefs on HAL_API_VERSION >= 1, and lcec.h includes this header
+// before its own lcec_hal_compat.h include.
+#include "lcec_hal_compat.h"
 
 #define LCEC_MODULE_NAME "lcec"
 
