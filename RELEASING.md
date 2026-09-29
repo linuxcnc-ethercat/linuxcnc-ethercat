@@ -63,6 +63,17 @@ from there automatically.
    curl -s https://linuxcnc-ethercat.github.io/apt/dists/trixie/getset/binary-amd64/Packages | grep -A1 '^Package: linuxcnc-ethercat$'
    ```
 
+7. If the release has user-notable changes (deprecations, breaking
+   changes, API support), prepend a `## Highlights` section to the
+   release body - the workflow's body is static install text and
+   auto-generated notes, so anything important is buried otherwise:
+
+   ```sh
+   gh release view vX.Y.Z --json body --jq .body > /tmp/rel.md
+   { printf '## Highlights\n\n- **Deprecated: ...**\n\n'; cat /tmp/rel.md; } > /tmp/rel_new.md
+   gh release edit vX.Y.Z --notes-file /tmp/rel_new.md
+   ```
+
 ## Notes
 
 - The HAL API flavor matrix lives in `ci.yml`/`release.yml`
