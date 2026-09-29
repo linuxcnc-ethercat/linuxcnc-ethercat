@@ -1,11 +1,14 @@
 ---
-name: Build and install linuxcnc master debs
+name: Build and install linuxcnc 2.10 debs
 description: >-
-  Build linuxcnc (master branch, uspace) from source as Debian packages,
+  Build linuxcnc (2.10 pre-release, uspace) from source as Debian packages,
   cache them by upstream commit, and install linuxcnc-uspace and
   linuxcnc-uspace-dev into the build container. Used to compile
   linuxcnc-ethercat against the new HAL getter/setter API, which no public
-  apt repository carries yet.
+  apt repository carries yet. The ref input pins the upstream commit -
+  v2.10.0-pre2 is the first tag marking the broken (64-bit, opaque handle)
+  HAL API. Master is intentionally not tracked: every upstream HAL break
+  would fail CI before linuxcnc-ethercat is ready for it.
 inputs:
   codename:
     description: Debian codename (bookworm, trixie)
@@ -19,6 +22,13 @@ inputs:
       are arch-specific, so amd64 and arm64 builds must never share a key.
     required: false
     default: amd64
+  ref:
+    description: >-
+      Upstream linuxcnc git ref (tag, branch or commit) to build. Pinned to
+      the v2.10.0-pre2 tag by default; bump deliberately when
+      linuxcnc-ethercat supports a newer HAL API.
+    required: false
+    default: v2.10.0-pre2
 
 runs:
   using: composite
@@ -34,35 +44,46 @@ runs:
           apt-get install -y --no-install-recommends \
               ca-certificates curl git build-essential devscripts debhelper equivs
 
-    - name: Resolve linuxcnc master commit
+    - name: Resolve linuxcnc commit
       id: sha
       shell: bash
+      env:
+          REF: ${{ inputs.ref }}
       run: |
-          sha=$(git ls-remote https://github.com/LinuxCNC/linuxcnc.git refs/heads/master | cut -f1)
+          set -e
+          # Try tag/branch first, then a raw commit SHA.
+          sha=$(git ls-remote https://github.com/LinuxCNC/linuxcnc.git "refs/tags/${REF}^{}" "refs/tags/${REF}" "refs/heads/${REF}" "${REF}" \
+                  | head -1 | cut -f1)
+          if [ -z "${sha}" ]; then
+              sha="${REF}"
+          fi
           echo "sha=${sha}" >> "$GITHUB_OUTPUT"
 
-    - name: Cache linuxcnc master debs
+    - name: Cache linuxcnc 2.10 debs
       id: cache
       uses: actions/cache@v6
       with:
           path: linuxcnc-dist
           key: linuxcnc-master-debs-${{ inputs.distro }}-${{ inputs.arch }}-${{ steps.sha.outputs.sha }}
 
-    - name: Build linuxcnc master debs
+    - name: Build linuxcnc 2.10 debs
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
       env:
           DEBIAN_FRONTEND: noninteractive
+          REF: ${{ inputs.ref }}
       run: |
           set -e
-          git clone --depth 1 https://github.com/LinuxCNC/linuxcnc.git linuxcnc-master
+          git clone https://github.com/LinuxCNC/linuxcnc.git linuxcnc-master
           cd linuxcnc-master
+          git fetch --depth 1 origin "${REF}"
+          git checkout --detach FETCH_HEAD
           # no-docs: drop the documentation toolchain (asciidoctor-pdf,
           # fonts-noto-cjk, ...) from both the build-deps and the build.
           # We only need linuxcnc-uspace and linuxcnc-uspace-dev.
           (cd debian && ./configure no-docs)
-          # Install master's own build-deps (the archive's linuxcnc 2.9.x
-          # build-deps lag master's debian/control, e.g. the pyqt5 stack).
+          # Install the tree's own build-deps (the archive's linuxcnc 2.9.x
+          # build-deps lag 2.10's debian/control, e.g. the pyqt5 stack).
           # mk-build-deps generates and installs a linuxcnc-build-deps
           # package from the generated control file.
           mk-build-deps --install --remove \
@@ -74,7 +95,7 @@ runs:
           # linuxcnc-ethercat build (which scans ../*.deb) never sees them.
           mv ../*.deb ../linuxcnc-dist/
 
-    - name: Install linuxcnc master debs
+    - name: Install linuxcnc 2.10 debs
       shell: bash
       env:
           DEBIAN_FRONTEND: noninteractive
