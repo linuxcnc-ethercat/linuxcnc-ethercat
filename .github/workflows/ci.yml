@@ -9,9 +9,10 @@ on:
         types: [published]
     workflow_dispatch:
     schedule:
-        # Weekly, so the HAL-next side keeps tracking linuxcnc master even
-        # when nothing pushes, and the linuxcnc-master-debs cache stays warm
-        # for per-push runs.
+        # Weekly, so the linuxcnc 2.10 deb cache stays warm for per-push
+        # runs even when nothing pushes. The HAL-next side builds the
+        # pinned v2.10.0-pre2 tag, not master - bumping the pin is a
+        # deliberate step once the tree supports a newer HAL API.
         - cron: '23 4 * * 1'
 
 permissions:
@@ -31,7 +32,7 @@ jobs:
                 # variants there.
                 arch: [amd64, arm64]
                 exclude:
-                    # linuxcnc master needs a C++20 compiler; bullseye's
+                    # linuxcnc 2.10 needs a C++20 compiler; bullseye's
                     # gcc 10 fails configure. No bullseye system will ever
                     # run new-API linuxcnc, so a +getset deb is useless
                     # there - bullseye stays legacy-only.
@@ -39,8 +40,9 @@ jobs:
                       hal_api: next
                 include:
                     # hal_api=legacy: 2.9-era HAL headers from the repos.
-                    # hal_api=next: linuxcnc master built from source (new
-                    # getter/setter API); see release.yml for the details.
+                    # hal_api=next: linuxcnc v2.10.0-pre2 built from source
+                    # (new getter/setter API, 64-bit opaque handles); see
+                    # release.yml for the details.
                     #
                     # linuxcnc_org_repo: build against linuxcnc.org's
                     # linuxcnc-uspace-dev instead of Debian main. Needed on
@@ -124,7 +126,7 @@ jobs:
             - name: Mark repo as safe (container runs as root)
               run: git config --global --add safe.directory "$PWD"
 
-            - name: Build and install linuxcnc master
+            - name: Build and install linuxcnc 2.10
               if: matrix.hal_api == 'next'
               uses: ./.github/actions/linuxcnc-master-debs
               with:

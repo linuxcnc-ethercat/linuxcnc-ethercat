@@ -397,13 +397,13 @@ int rtapi_app_main(void) {
 
     // export read function
     rtapi_snprintf(name, HAL_NAME_LEN, "%s.%s.read", LCEC_MODULE_NAME, master->name);
-    if (hal_export_funct(name, lcec_read_master, master, 0, 0, lcec_comp_id) != 0) {
+    if (LCEC_HAL_EXPORT_FUNCT(name, lcec_read_master, master, 0, 0, lcec_comp_id) != 0) {
       rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s read funct export failed\n", master->name);
       goto fail2;
     }
     // export write function
     rtapi_snprintf(name, HAL_NAME_LEN, "%s.%s.write", LCEC_MODULE_NAME, master->name);
-    if (hal_export_funct(name, lcec_write_master, master, 0, 0, lcec_comp_id) != 0) {
+    if (LCEC_HAL_EXPORT_FUNCT(name, lcec_write_master, master, 0, 0, lcec_comp_id) != 0) {
       rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s write funct export failed\n", master->name);
       goto fail2;
     }
@@ -413,7 +413,7 @@ int rtapi_app_main(void) {
   // with `initf <module>.activate <thread>` in their .hal file before `start`.
   if (initf_supported) {
     rtapi_snprintf(name, HAL_NAME_LEN, "%s.activate", LCEC_MODULE_NAME);
-    if (hal_export_funct(name, lcec_activate, NULL, 0, 0, lcec_comp_id) != 0) {
+    if (LCEC_HAL_EXPORT_FUNCT(name, lcec_activate, NULL, 0, 0, lcec_comp_id) != 0) {
       rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "activate funct export failed\n");
       goto fail2;
     }
@@ -421,13 +421,13 @@ int rtapi_app_main(void) {
 
   // export read-all function
   rtapi_snprintf(name, HAL_NAME_LEN, "%s.read-all", LCEC_MODULE_NAME);
-  if (hal_export_funct(name, lcec_read_all, NULL, 0, 0, lcec_comp_id) != 0) {
+  if (LCEC_HAL_EXPORT_FUNCT(name, lcec_read_all, NULL, 0, 0, lcec_comp_id) != 0) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "read-all funct export failed\n");
     goto fail2;
   }
   // export write-all function
   rtapi_snprintf(name, HAL_NAME_LEN, "%s.write-all", LCEC_MODULE_NAME);
-  if (hal_export_funct(name, lcec_write_all, NULL, 0, 0, lcec_comp_id) != 0) {
+  if (LCEC_HAL_EXPORT_FUNCT(name, lcec_write_all, NULL, 0, 0, lcec_comp_id) != 0) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "write-all funct export failed\n");
     goto fail2;
   }

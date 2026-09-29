@@ -22,7 +22,7 @@ jobs:
                 # variants there.
                 arch: [amd64, arm64]
                 exclude:
-                    # linuxcnc master needs a C++20 compiler; bullseye's
+                    # linuxcnc 2.10 needs a C++20 compiler; bullseye's
                     # gcc 10 fails configure. No bullseye system will ever
                     # run new-API linuxcnc, so a +getset deb is useless
                     # there - bullseye stays legacy-only.
@@ -33,9 +33,10 @@ jobs:
                     # (linuxcnc-uspace-dev from the repos). Covers 2.9.x and
                     # pre-break 2.10.
                     #
-                    # hal_api=next: build against linuxcnc master compiled
-                    # from source (new HAL getter/setter API). The produced
-                    # deb gets a +getset version suffix (sorts above the
+                    # hal_api=next: build against linuxcnc v2.10.0-pre2
+                    # compiled from source (new HAL getter/setter API,
+                    # 64-bit opaque handles). The produced deb gets a
+                    # +getset version suffix (sorts above the
                     # plain build of the same base) and a shlibs-derived
                     # Depends: linuxcnc-uspace (>= 1:2.10~) that is
                     # unsatisfiable on 2.9-era systems, so apt auto-selects
@@ -127,7 +128,7 @@ jobs:
             - name: Mark repo as safe (container runs as root)
               run: git config --global --add safe.directory "$PWD"
 
-            - name: Build and install linuxcnc master
+            - name: Build and install linuxcnc 2.10
               if: matrix.hal_api == 'next'
               uses: ./.github/actions/linuxcnc-master-debs
               with:
@@ -219,7 +220,7 @@ jobs:
                       2. **Architecture** - `_amd64` (PC) or `_arm64` (Raspberry Pi 4/5 and other 64-bit ARM boards). `dpkg --print-architecture` tells you which you have.
                       3. **HAL API flavor** - each distro/arch ships two builds of the same source:
                          - **plain** (e.g. `linuxcnc-ethercat_1.43.0-1+deb13u1`): LinuxCNC 2.9.x, or 2.10 built from source before the HAL getter/setter API change (July 2026).
-                         - **+getset** (e.g. `linuxcnc-ethercat_1.43.0+getset-1+deb13u1`): LinuxCNC 2.10 built from current master, which has the new HAL getter/setter API.
+                         - **+getset** (e.g. `linuxcnc-ethercat_1.43.0+getset-1+deb13u1`): LinuxCNC 2.10.0~pre2 or later, with the new HAL getter/setter API (64-bit opaque handles). Also runs on self-built 2.10 master from between July 2026 and the 2.10.0~pre2 tag.
 
                       Notes:
 

@@ -34,11 +34,21 @@
 /// the full 64-bit storage slot (sign-extended), and both reader styles use
 /// the low bytes of the same little-endian slot.
 ///
-/// Detection: upstream will add `#define HAL_API_VERSION 1` to hal.h once the
-/// getter/setter + query API are in place (per B. Stultiens).  Until that
-/// lands, fall back to COMPONENT_TYPE_* (define aliases added to hal.h with
-/// the query API) or HAL_BOOL (temporary, will become an enum entry).
-/// Pre-#4099 hal.h defines none of these.
+/// Detection - three HAL API states exist in the wild:
+///
+///   1. LinuxCNC 2.9.x: none of the markers below are defined.  Direct
+///      dereference of `hal_bit_t *` etc., legacy pin/param creators.
+///   2. Transitional 2.10 master (roughly 2026-07..2026-09, post-#4099,
+///      pre-break): defines COMPONENT_TYPE_* and HAL_BOOL as macros, no
+///      HAL_API_VERSION.  Typed creators and opaque references exist, but
+///      the legacy `hal_*_t` data typedefs are still present (deprecated).
+///   3. LinuxCNC 2.10.0~pre2 and later: defines HAL_API_VERSION 1.  The
+///      legacy `hal_*_t` data typedefs, the legacy creators and the
+///      `uses_fp` argument of hal_export_funct() are gone; HAL_BOOL is an
+///      enum entry, not a macro.
+///
+/// State 3 removed only declarations; the getter/setter accessors and the
+/// typed creators are identical to state 2, so one code path covers both.
 
 #ifndef _LCEC_HAL_COMPAT_H_
 #define _LCEC_HAL_COMPAT_H_
@@ -51,6 +61,26 @@
 
 #if defined(HAL_API_VERSION) || defined(COMPONENT_TYPE_USER) || defined(HAL_BOOL)
 #define LCEC_HAL_NEW_API 1
+
+#if defined(HAL_API_VERSION)
+// HAL_API_VERSION >= 1 removed the legacy data typedefs from hal.h.
+// Reinstate them locally: lcec hal_data structs keep declaring pin storage
+// with the old `hal_*_t *` pointer types (they hold opaque references via
+// the casts below), and config structs/locals use the scalar types with
+// their legacy widths.  These definitions match the pre-break upstream
+// typedefs exactly (volatile bool / rtapi_s32 / rtapi_u32 / rtapi_real).
+typedef volatile rtapi_bool hal_bit_t;
+typedef volatile rtapi_s32 hal_s32_t;
+typedef volatile rtapi_u32 hal_u32_t;
+typedef volatile rtapi_real hal_float_t;
+
+// hal_export_funct() lost its uses_fp argument at the same break.
+#define LCEC_HAL_EXPORT_FUNCT(name, funct, arg, uses_fp, reentrant, comp_id) \
+  hal_export_funct((name), (funct), (arg), (reentrant), (comp_id))
+#else
+#define LCEC_HAL_EXPORT_FUNCT(name, funct, arg, uses_fp, reentrant, comp_id) \
+  hal_export_funct((name), (funct), (arg), (uses_fp), (reentrant), (comp_id))
+#endif
 
 // New API: access through the typed inline accessors.  Pin storage pointers
 // in lcec hal_data structs are still declared with the old `hal_*_t *`
@@ -84,6 +114,8 @@ typedef hal_uint_t lcec_param_u32_t;
 #define LCEC_PARAM_U32_GET(f) hal_get_ui32((f))
 #else
 // Old API (LinuxCNC 2.9.x): direct dereference.
+#define LCEC_HAL_EXPORT_FUNCT(name, funct, arg, uses_fp, reentrant, comp_id) \
+  hal_export_funct((name), (funct), (arg), (uses_fp), (reentrant), (comp_id))
 #define LCEC_PIN_BIT_SET(p, v) (*(p) = (v))
 #define LCEC_PIN_BIT_GET(p) (*(p))
 #define LCEC_PIN_FLOAT_SET(p, v) (*(p) = (v))
