@@ -220,7 +220,7 @@ jobs:
                       2. **Architecture** - `_amd64` (PC) or `_arm64` (Raspberry Pi 4/5 and other 64-bit ARM boards). `dpkg --print-architecture` tells you which you have.
                       3. **HAL API flavor** - each distro/arch ships two builds of the same source:
                          - **plain** (e.g. `linuxcnc-ethercat_1.43.0-1+deb13u1`): LinuxCNC 2.9.x, or 2.10 built from source before the HAL getter/setter API change (July 2026).
-                         - **+getset** (e.g. `linuxcnc-ethercat_1.43.0+getset-1+deb13u1`): LinuxCNC 2.10.0~pre2 or later, with the new HAL getter/setter API (64-bit opaque handles). Also runs on self-built 2.10 master from between July 2026 and the 2.10.0~pre2 tag.
+                         - **+getset** (e.g. `linuxcnc-ethercat_1.43.0+getset-1+deb13u1`): LinuxCNC `2.10.0~pre2` or later, with the new HAL getter/setter API (64-bit opaque handles). Also runs on self-built 2.10 master from between July 2026 and the `2.10.0~pre2` tag.
 
                       Notes:
 
