@@ -18,6 +18,10 @@ This list should only include deliberate breakage, not typical bugs.
 
 ## Pending
 
+- Sync Units slower than the master cycle are now exchanged on fixed
+  cycles of the DC grid (see `syncUnitPhase`) instead of counting from
+  the cycle the bus first reached OP, so their position relative to
+  SYNC0 can differ from before.
 - The `<master>` attribute `syncToRefClock` is deprecated and will be
   removed in v1.46.0.  Use the sign of `refClockSyncCycles` instead:
   negative for M2R, positive for R2M, 0 for free running.  Configs

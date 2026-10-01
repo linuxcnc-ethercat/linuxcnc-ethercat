@@ -27,6 +27,7 @@
 
 #include "devices/lcec_generic.h"
 #include "lcec.h"
+#include "lcec_syncunit.h"
 #include <rtapi_app.h>
 // #include <linuxcnc/rtapi_mutex.h>
 
@@ -132,17 +133,22 @@ void lcec_read_master(void *arg, long period);
 void lcec_write_master(void *arg, long period);
 static int lcec_activate_master(lcec_master_t *master);
 static void lcec_activate(void *arg, long period);
-static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const char *name, uint32_t cycle_time);
+static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const char *name, uint32_t cycle_time, uint32_t phase);
 static int lcec_master_all_op(lcec_master_t *master);
 
 static void sigsegv_handler(int sig);
 
-static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const char *name, uint32_t cycle_time) {
+static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const char *name, uint32_t cycle_time, uint32_t phase) {
   lcec_sync_unit_t *sync_unit;
 
   if (cycle_time == 0 || master->app_time_period == 0 || (cycle_time % master->app_time_period) != 0) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s syncUnit %s cycle %u is not a positive multiple of appTimePeriod %u\n",
         master->name, name, cycle_time, master->app_time_period);
+    return NULL;
+  }
+  if (phase >= cycle_time / master->app_time_period) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s syncUnit %s phase %u must be less than its divider %u\n", master->name, name,
+        phase, cycle_time / master->app_time_period);
     return NULL;
   }
 
@@ -151,6 +157,11 @@ static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const 
       if (sync_unit->cycle_time != cycle_time) {
         rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s syncUnit %s cycle mismatch (%u != %u)\n", master->name, name,
             sync_unit->cycle_time, cycle_time);
+        return NULL;
+      }
+      if (sync_unit->phase != phase) {
+        rtapi_print_msg(
+            RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s syncUnit %s phase mismatch (%u != %u)\n", master->name, name, sync_unit->phase, phase);
         return NULL;
       }
       return sync_unit;
@@ -162,6 +173,7 @@ static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const 
   sync_unit->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
   sync_unit->cycle_time = cycle_time;
   sync_unit->cycle_divider = cycle_time / master->app_time_period;
+  sync_unit->phase = phase;
   sync_unit->queued = 1;
   LCEC_LIST_APPEND(master->first_sync_unit, master->last_sync_unit, sync_unit);
 
@@ -619,7 +631,7 @@ int lcec_parse_config(void) {
         slave->sync_unit_cycle = slave_conf->syncUnitCycle;
         slave->master = master;
 
-        slave->sync_unit = lcec_master_get_sync_unit(master, slave->sync_unit_name, slave->sync_unit_cycle);
+        slave->sync_unit = lcec_master_get_sync_unit(master, slave->sync_unit_name, slave->sync_unit_cycle, slave_conf->syncUnitPhase);
         if (slave->sync_unit == NULL) {
           goto fail2;
         }
@@ -1237,6 +1249,9 @@ static int lcec_activate_master(lcec_master_t *master) {
 #ifdef RTAPI_TASK_PLL_SUPPORT
   master->dc_ref_time = initial_app_time;  // Record the same value we sent to kernel
 #endif
+  // IgH aligns every slave's SYNC0 to this time, so the next write is tick 0
+  // of the Sync Unit grid
+  master->next_tick = 0;
   rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "Initial app_time set to %llu\n", (unsigned long long)initial_app_time);
 
   // Activate master
@@ -1253,8 +1268,8 @@ static int lcec_activate_master(lcec_master_t *master) {
       master->process_data = sync_unit->process_data;
       master->process_data_len = sync_unit->process_data_len;
     }
-    rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "master %s syncUnit %s cycle=%u ns divider=%u process_data_len=%d\n", master->name,
-        sync_unit->name, sync_unit->cycle_time, sync_unit->cycle_divider, sync_unit->process_data_len);
+    rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "master %s syncUnit %s cycle=%u ns divider=%u phase=%u process_data_len=%d\n", master->name,
+        sync_unit->name, sync_unit->cycle_time, sync_unit->cycle_divider, sync_unit->phase, sync_unit->process_data_len);
   }
 
   master->activated = 1;
@@ -1465,20 +1480,13 @@ void lcec_write_master(void *arg, long period) {
     }
   }
 
-  // Keep all domains cycling during startup. Once OP has been reached, run
-  // each Sync Unit at its configured integer divider.
+  // Keep all domains cycling during startup. Once OP has been reached, send
+  // each Sync Unit on the ticks of the DC grid its divider and phase select,
+  // so a unit's exchange keeps the same position relative to the SYNC0
+  // events of its slaves across restarts.
   force_cycle = !master->sync_units_started;
   for (sync_unit = master->first_sync_unit; sync_unit != NULL; sync_unit = sync_unit->next) {
-    if (force_cycle) {
-      sync_unit->write = 1;
-      sync_unit->cycle_counter = 0;
-    } else if (sync_unit->cycle_counter == 0) {
-      sync_unit->write = 1;
-      sync_unit->cycle_counter = sync_unit->cycle_divider - 1;
-    } else {
-      sync_unit->write = 0;
-      sync_unit->cycle_counter--;
-    }
+    sync_unit->write = force_cycle || lcec_su_due(master->next_tick, sync_unit->cycle_divider, sync_unit->phase);
   }
 
   // process slaves
@@ -1521,6 +1529,10 @@ void lcec_write_master(void *arg, long period) {
 #endif
 
   ecrt_master_application_time(master->master, app_time);
+
+  // One write per master cycle: count ticks rather than derive them from
+  // app_time, which also carries how late in the cycle this funct runs.
+  master->next_tick++;
 
   // publish the (app time, monotonic time) correlation pair; `now` was
   // sampled with rtapi_get_time() adjacent to the app_time computation, so
@@ -1796,6 +1808,8 @@ void lcec_write_master(void *arg, long period) {
       }
       // force resync of master time
       master->dc_ref -= resync_corr;
+      // app_time moved by whole periods; keep the Sync Unit grid with it
+      master->next_tick -= lcec_su_round_div(resync_corr, app_period);
       // skip next control cycle to allow resync
       dc_time_valid = 0;
       // increment reset counter to document this event

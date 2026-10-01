@@ -469,6 +469,18 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
       continue;
     }
 
+    if (strcmp(name, "syncUnitPhase") == 0) {
+      char *end;
+      long phase = strtol(val, &end, 10);
+      if (*val == 0 || *end != 0 || phase < 0 || phase > 0x7fffffffL) {
+        fprintf(stderr, "%s: ERROR: Invalid syncUnitPhase %s\n", modname, val);
+        XML_StopParser(inst->parser, 0);
+        return;
+      }
+      p->syncUnitPhase = phase;
+      continue;
+    }
+
     if (strcmp(name, "vid") == 0) {
       p->vid = strtol(val, NULL, 16);
       continue;
@@ -510,6 +522,13 @@ static void parseSlaveAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **a
   if (p->syncUnitCycle == 0 || state->currMaster->appTimePeriod == 0 || (p->syncUnitCycle % state->currMaster->appTimePeriod) != 0) {
     fprintf(stderr, "%s: ERROR: Slave %s syncUnitCycle %u is not a positive multiple of appTimePeriod %u\n", modname, p->name,
         p->syncUnitCycle, state->currMaster->appTimePeriod);
+    XML_StopParser(inst->parser, 0);
+    return;
+  }
+
+  if (p->syncUnitPhase >= p->syncUnitCycle / state->currMaster->appTimePeriod) {
+    fprintf(stderr, "%s: ERROR: Slave %s syncUnitPhase %u must be less than syncUnitCycle / appTimePeriod (%u)\n", modname, p->name,
+        p->syncUnitPhase, p->syncUnitCycle / state->currMaster->appTimePeriod);
     XML_StopParser(inst->parser, 0);
     return;
   }

@@ -253,17 +253,19 @@ typedef struct lcec_pdo_entry_reg {
   ec_pdo_entry_reg_t *pdo_entry_regs;
 } lcec_pdo_entry_reg_t;
 
+/// @brief A Sync Unit: one EtherCAT domain exchanged every `cycle_divider`
+/// master cycles.
 typedef struct lcec_sync_unit {
   struct lcec_sync_unit *prev;
   struct lcec_sync_unit *next;
   char name[LCEC_CONF_STR_MAXLEN];
   uint32_t cycle_time;
   unsigned int cycle_divider;
-  unsigned int cycle_counter;
+  unsigned int phase;  ///< Master cycle within the unit cycle the domain is sent on.
   int pdo_entry_count;
   lcec_pdo_entry_reg_t *regs;
   ec_domain_t *domain;
-  uint8_t *process_data;
+  uint8_t *process_data;  ///< The domain's process image.
   int process_data_len;
   int queued;
   int process;
@@ -284,6 +286,7 @@ typedef struct lcec_master {
   lcec_sync_unit_t *first_sync_unit;
   lcec_sync_unit_t *last_sync_unit;
   int sync_units_started;
+  int64_t next_tick;  ///< Grid index of the tick the next write sends; tick 0 is the activation app time.
   lcec_slave_t *first_slave;
   lcec_slave_t *last_slave;
   lcec_master_data_t *hal_data;
