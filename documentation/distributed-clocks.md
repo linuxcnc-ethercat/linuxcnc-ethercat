@@ -208,7 +208,8 @@ keeps the previous behavior: the slave belongs to the `default` domain and is
 exchanged every master cycle.
 
 For a DC-capable slave, configure `dcConf` independently and keep its hardware
-cycle consistent with the Sync Unit cycle. Slaves that exchange coupled data,
+cycle consistent with the Sync Unit cycle: `sync0Cycle`, or `sync0Cycle +
+sync1Cycle` for oversampling terminals that run SYNC0 as the sample clock. Slaves that exchange coupled data,
 including an FSoE logic device and its safety slaves, should remain in the same
 Sync Unit.
 

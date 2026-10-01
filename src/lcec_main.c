@@ -300,8 +300,11 @@ int rtapi_app_main(void) {
 
       // configure dc for this slave
       if (slave->dc_conf != NULL) {
+        // IgH aligns SYNC0 on the grid of sync0Cycle + sync1Cycle; oversampling
+        // terminals run SYNC0 as the sample clock and SYNC1 for the frame
         if (slave->sync_unit->cycle_divider > 1 && slave->dc_conf->sync0Cycle > 0 &&
-            slave->dc_conf->sync0Cycle != slave->sync_unit->cycle_time) {
+            slave->dc_conf->sync0Cycle != slave->sync_unit->cycle_time &&
+            slave->dc_conf->sync0Cycle + slave->dc_conf->sync1Cycle != slave->sync_unit->cycle_time) {
           rtapi_print_msg(RTAPI_MSG_WARN,
               LCEC_MSG_PFX
               "slave %s.%s syncUnit %s cycle=%u ns but DC sync0Cycle=%u ns; set dcConf sync0Cycle to the slave "
