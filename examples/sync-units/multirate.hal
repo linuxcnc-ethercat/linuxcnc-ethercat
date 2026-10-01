@@ -1,0 +1,24 @@
+# One 8 kHz EtherCAT bus serviced from three HAL threads.  Thread periods
+# must equal the Sync Unit cycles; the fastest thread owns the bus.
+loadrt threads name1=ecat-thread period1=125000 name2=servo-thread period2=500000 name3=io-thread period3=1000000
+loadusr -W lcec_conf multirate-conf.xml
+loadrt lcec
+
+addf lcec.read-all ecat-thread
+# 8 kHz consumers of lcec.0.ain.* go here
+addf lcec.write-all ecat-thread
+
+addf lcec.0.syncunit.motion.read servo-thread
+# motion and drive logic go here
+addf lcec.0.syncunit.motion.write servo-thread
+
+addf lcec.0.syncunit.io.read io-thread
+# I/O logic goes here
+addf lcec.0.syncunit.io.write io-thread
+
+# LinuxCNC 2.10+: activate the master in realtime context in the bus thread,
+# before its first cycle.  Without it lcec falls back to activating inline in
+# the first write-all and DC starts with a dirty phase; on 2.9 (no initf),
+# delete this line.
+initf lcec.activate ecat-thread
+start

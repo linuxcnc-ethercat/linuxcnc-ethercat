@@ -232,6 +232,111 @@ The schedule is the same on every start.  (Before, slow units counted from the
 cycle the bus first reached OP, so a unit's position relative to SYNC0 changed
 from run to run.)
 
+### Running a Sync Unit in its own HAL thread
+
+For a step-by-step setup, including the host tuning a fast bus thread
+needs, see [Multi-rate systems](multi-rate.md).
+
+The master's `read-all`/`write-all` functs run in the thread that sets the
+master cycle, normally the fastest one.  By default they also run the drivers
+of every Sync Unit, so all pins update in that thread.  A Sync Unit with a
+divider of 2 or more can instead be serviced from a HAL thread of its own
+cycle, so that the bulk of a HAL configuration runs at the rate its devices
+actually use while the bus runs faster.  For example, an 8 kHz bus for a
+fast analog input, with the drives and motion at 2 kHz and the I/O at 1 kHz:
+
+```xml
+  <master idx="0" appTimePeriod="125000" refClockSyncCycles="-1">
+    <slave idx="0" type="EL3162" name="ain"/>  <!-- default unit, 8 kHz -->
+    <slave idx="1" type="generic" ... name="x-drive"
+           syncUnit="motion" syncUnitCycle="*4">
+      <dcConf assignActivate="300" sync0Cycle="*4" sync0Shift="20000"/>
+      ...
+    </slave>
+    <slave idx="2" type="EL1809" name="din"
+           syncUnit="io" syncUnitCycle="*8" syncUnitPhase="2"/>
+    <slave idx="3" type="generic" ... name="serial"
+           syncUnit="serial" syncUnitCycle="*32">
+      ...
+    </slave>
+  </master>
+```
+
+```
+loadrt threads name1=ecat-thread period1=125000 name2=servo-thread period2=500000 name3=io-thread period3=1000000
+loadusr -W lcec_conf ethercat-conf.xml
+loadrt lcec
+addf lcec.read-all ecat-thread
+# ... 8 kHz consumers of lcec.0.ain.* ...
+addf lcec.write-all ecat-thread
+
+addf lcec.0.syncunit.motion.read servo-thread
+# ... motion, drive logic ...
+addf lcec.0.syncunit.motion.write servo-thread
+
+addf lcec.0.syncunit.io.read io-thread
+# ... I/O logic ...
+addf lcec.0.syncunit.io.write io-thread
+
+initf lcec.activate ecat-thread
+start
+```
+
+`initf lcec.activate` belongs in the bus thread: the unit threads phase-lock
+to the DC grid the master starts at activation, so a clean activation matters
+here.  It needs LinuxCNC 2.10 or later (see [the README](../README.md)).
+
+The `serial` unit has no functs added, so its drivers keep running every 32nd
+cycle of `ecat-thread`.
+
+Once a unit's `read` funct runs, the master's functs stop running that unit's
+drivers and only move its process image:
+
+```
+            send       receive              send
+  ecat  ----|---------|---------|---------|---------|----   one tick = appTimePeriod
+           tick p    p+1                 p+N
+                       |<- phase-offset
+  unit                 [read .. HAL .. write]
+```
+
+The unit thread works on a private copy of the image.  The master thread
+copies each received image to it, and copies the outputs the unit last
+published into the domain before sending.  Neither side ever waits for the
+other: if the unit thread has not published new outputs by its next send tick,
+the previous ones are sent again and `late-count` increments.  After 10
+consecutive unit cycles without new outputs the unit is considered stalled and
+is no longer sent, so its slaves' sync manager watchdogs take their outputs to
+a safe state, as they would if the master stopped.  Sending resumes with the
+next outputs the unit thread publishes.
+
+The unit's `read` funct also phase-locks its thread to the bus.  LinuxCNC
+starts every thread at its own arbitrary phase, so lcec adjusts the unit
+thread's period (through the same RTAPI PLL the master uses) until the thread
+starts `phase-offset` ns (default a quarter of `appTimePeriod`) after the
+master cycle that receives the unit's domain.  That leaves the unit thread
+`N - 1` master cycles, minus `phase-offset`, to run and publish its outputs.
+Lock is reported on `phase-locked`.  Like the master's own PLL this needs a
+LinuxCNC with `RTAPI_TASK_PLL_SUPPORT` (uspace); without it the unit thread
+still works, at whatever phase it started.
+
+Requirements:
+
+- The thread's period must equal the unit's cycle.  Otherwise lcec logs an
+  error and does not steer the thread.
+- Add both `read` and `write`, in that order, to the same thread.  A `write`
+  in another thread logs an error and publishes nothing.
+- The bus thread must have the higher priority, which LinuxCNC does when its
+  period is the shorter.  Never add unit functs to the master's own thread.
+- Several units with the same cycle may share a thread; the first one whose
+  `read` runs sets the thread's phase.
+- Anything netted to a unit's pins should run in the unit's thread.
+- Drivers must reach the process image through `lcec_slave_pd()`; all drivers
+  in this tree do.  See [Adding drivers](adding-drivers.md).
+
+The per-unit pins (`wkc`, `fresh`, `late-count`, `phase-locked`, ...) are listed
+in [Master pins](master-pins.md#sync-unit-pins).
+
 ## Drivers and DC Clocks
 
 Some devices (like RTelligent stepper drives) *only* seem to work in
