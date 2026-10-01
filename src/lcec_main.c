@@ -107,6 +107,17 @@ static const lcec_pindesc_t slave_pins[] = {
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
+/// @brief Sync Unit pins, exported when a master has more than one Sync Unit
+static const lcec_pindesc_t sync_unit_pins[] = {
+    {HAL_U32, HAL_OUT, offsetof(lcec_sync_unit_data_t, wkc), "%s.%s.syncunit.%s.wkc"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_sync_unit_data_t, wkc_min), "%s.%s.syncunit.%s.wkc-min"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_sync_unit_data_t, wkc_change_cnt), "%s.%s.syncunit.%s.wkc-change-count"},
+    {HAL_S32, HAL_OUT, offsetof(lcec_sync_unit_data_t, wkc_state), "%s.%s.syncunit.%s.wkc-state"},
+    {HAL_BIT, HAL_IO, offsetof(lcec_sync_unit_data_t, wkc_reset), "%s.%s.syncunit.%s.wkc-reset"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_sync_unit_data_t, fresh), "%s.%s.syncunit.%s.fresh"},
+    {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
+};
+
 static lcec_master_t *first_master = NULL;
 static lcec_master_t *last_master = NULL;
 extern int lcec_comp_id;
@@ -135,6 +146,8 @@ static int lcec_activate_master(lcec_master_t *master);
 static void lcec_activate(void *arg, long period);
 static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const char *name, uint32_t cycle_time, uint32_t phase);
 static int lcec_master_all_op(lcec_master_t *master);
+static int lcec_init_sync_unit(lcec_master_t *master, lcec_sync_unit_t *sync_unit);
+static void lcec_update_sync_unit_wkc(lcec_sync_unit_data_t *hd, const ec_domain_state_t *state);
 
 static void sigsegv_handler(int sig);
 
@@ -176,6 +189,7 @@ static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const 
   sync_unit->phase = phase;
   sync_unit->queued = 1;
   LCEC_LIST_APPEND(master->first_sync_unit, master->last_sync_unit, sync_unit);
+  master->sync_unit_count++;
 
   return sync_unit;
 }
@@ -401,6 +415,13 @@ int rtapi_app_main(void) {
     // Monitor on by default (one broadcast datagram per cycle); setp to 0
     // for zero overhead when the dc-sync pins are unused.
     LCEC_PARAM_BIT_SET(master->hal_data->dc_sync_monitor, 1);
+
+    // Sync Unit pins
+    for (sync_unit = master->first_sync_unit; sync_unit != NULL; sync_unit = sync_unit->next) {
+      if (lcec_init_sync_unit(master, sync_unit) != 0) {
+        goto fail2;
+      }
+    }
 
     // Activate master (only when initf is unavailable; otherwise lcec.activate
     // funct does it from RT context after the user's `initf lcec.activate <thread>`).
@@ -1345,6 +1366,9 @@ void lcec_read_master(void *arg, long period) {
     // pins continue to describe the complete process image. Domains that are
     // not scheduled this cycle retain their last reported state.
     ecrt_domain_state(sync_unit->domain, &sync_unit_state);
+    if (sync_unit->hal_data != NULL && sync_unit->process) {
+      lcec_update_sync_unit_wkc(sync_unit->hal_data, &sync_unit_state);
+    }
     domain_state.working_counter += sync_unit_state.working_counter;
     if (sync_unit_state.wc_state != EC_WC_ZERO) {
       all_domains_zero = 0;
@@ -1442,6 +1466,12 @@ void lcec_read_master(void *arg, long period) {
       master->process_data = slave->sync_unit->process_data;
       master->process_data_len = slave->sync_unit->process_data_len;
       slave->proc_read(slave, slave->sync_unit->cycle_time);
+    }
+  }
+
+  for (sync_unit = master->first_sync_unit; sync_unit != NULL; sync_unit = sync_unit->next) {
+    if (sync_unit->hal_data != NULL) {
+      LCEC_PIN_BIT_SET(sync_unit->hal_data->fresh, sync_unit->process);
     }
   }
 }
@@ -1852,6 +1882,50 @@ void lcec_write_master(void *arg, long period) {
   master->app_time_last = (uint32_t)app_time;
   master->dc_time_valid_last = dc_time_valid;
 #endif
+}
+
+/// @brief Export the pins of a Sync Unit.
+static int lcec_init_sync_unit(lcec_master_t *master, lcec_sync_unit_t *sync_unit) {
+  // a master with a single unit keeps its pin set unchanged
+  if (master->sync_unit_count < 2) {
+    return 0;
+  }
+
+  if ((sync_unit->hal_data = LCEC_HAL_ALLOCATE(lcec_sync_unit_data_t)) == NULL) {
+    return -1;
+  }
+  memset(sync_unit->hal_data, 0, sizeof(lcec_sync_unit_data_t));
+  return lcec_pin_newf_list(sync_unit->hal_data, sync_unit_pins, LCEC_MODULE_NAME, master->name, sync_unit->name);
+}
+
+/// @brief Update the working counter pins of a Sync Unit.
+static void lcec_update_sync_unit_wkc(lcec_sync_unit_data_t *hd, const ec_domain_state_t *state) {
+  uint32_t wkc_now = state->working_counter;
+
+  if (LCEC_PIN_BIT_GET(hd->wkc_reset)) {
+    LCEC_PIN_BIT_SET(hd->wkc_reset, 0);
+    hd->wkc_full_seen = 0;
+    LCEC_PIN_U32_SET(hd->wkc_min, 0);
+    LCEC_PIN_U32_SET(hd->wkc_change_cnt, 0);
+  }
+
+  LCEC_PIN_U32_SET(hd->wkc, wkc_now);
+  LCEC_PIN_S32_SET(hd->wkc_state, (hal_s32_t)state->wc_state);
+  if (!hd->wkc_full_seen) {
+    if (state->wc_state == EC_WC_COMPLETE) {
+      hd->wkc_full_seen = 1;
+      LCEC_PIN_U32_SET(hd->wkc_min, wkc_now);
+      LCEC_PIN_U32_SET(hd->wkc_change_cnt, 0);
+    }
+  } else {
+    if (wkc_now < LCEC_PIN_U32_GET(hd->wkc_min)) {
+      LCEC_PIN_U32_SET(hd->wkc_min, wkc_now);
+    }
+    if (wkc_now != hd->wkc_last) {
+      LCEC_PIN_U32_SET(hd->wkc_change_cnt, LCEC_PIN_U32_GET(hd->wkc_change_cnt) + 1);
+    }
+  }
+  hd->wkc_last = wkc_now;
 }
 
 #ifndef __KERNEL__
