@@ -85,11 +85,13 @@ static void lcec_foo_read(lcec_slave_t *slave, long period) {
 }
 ```
 
-Do not use `slave->master->process_data`: it only points at one [Sync
-Unit](distributed-clocks.md#process-data-sync-units)'s domain at a
-time, while `lcec_slave_pd()` always returns the image of the slave's
-own unit.  The `period` passed to `proc_read` / `proc_write` is the
-slave's Sync Unit cycle.
+Do not use `slave->master->process_data`.  A [Sync
+Unit](distributed-clocks.md#running-a-sync-unit-in-its-own-hal-thread)
+can run its drivers from its own HAL thread on a private copy of its
+domain, and only `lcec_slave_pd()` points at the right one.  lcec logs an
+error for any slave in such a unit whose driver never calls it.  The
+`period` passed to `proc_read` / `proc_write` is the slave's Sync Unit
+cycle.
 
 ### Style points
 

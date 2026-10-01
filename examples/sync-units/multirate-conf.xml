@@ -1,0 +1,27 @@
+<masters>
+  <!-- 8 kHz bus; the drive, the I/O and the serial link run slower. -->
+  <master idx="0" appTimePeriod="125000" refClockSyncCycles="-1">
+
+    <!-- Default Sync Unit: sampled every 125 us. -->
+    <slave idx="0" type="EL3162" name="ain"/>
+
+    <!-- Exchanged every 4th master cycle, the cycle its SYNC0 is aligned
+         to; sync0Shift covers the frame's send latency. -->
+    <slave idx="1" type="generic" vid="00000002" pid="00000001" name="x-drive"
+           syncUnit="motion" syncUnitCycle="*4">
+      <dcConf assignActivate="300" sync0Cycle="*4" sync0Shift="20000"/>
+      <!-- Add this drive's sync managers and PDO mapping here. -->
+    </slave>
+
+    <!-- Exchanged on master cycle 2 of every 8. -->
+    <slave idx="2" type="EL1809" name="din"
+           syncUnit="io" syncUnitCycle="*8" syncUnitPhase="2"/>
+
+    <!-- Exchanged every 4 ms by ecat-thread (no functs added for it). -->
+    <slave idx="3" type="generic" vid="00000002" pid="17853052" name="serial"
+           syncUnit="serial" syncUnitCycle="*32">
+      <!-- Add the EL6021 sync managers and PDO mapping here. -->
+    </slave>
+
+  </master>
+</masters>

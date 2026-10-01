@@ -1,13 +1,25 @@
-Sync Unit example
-=================
+Sync Unit examples
+==================
 
-This example splits one 1 ms EtherCAT master into two process-data domains:
+ethercat-conf.xml splits one 1 ms EtherCAT master into two process-data
+domains:
 
 - "slow" is exchanged every 2 ms.
 - "fast" is exchanged every 1 ms.
 
-All slaves sharing a syncUnit name must specify the same syncUnitCycle. If both
-attributes are omitted, the slave uses the default Sync Unit at the master rate.
+multirate-conf.xml with multirate.hal runs an 8 kHz bus and services each
+slower Sync Unit from a HAL thread of its own rate:
 
-Replace the placeholder slave types and IDs in ethercat-conf.xml with the actual
-devices and PDO mappings.
+- the default unit (an EL3162 analog input) at 8 kHz in ecat-thread,
+- "motion" (a DC drive) at 2 kHz in servo-thread,
+- "io" (an EL1809) at 1 kHz in io-thread, exchanged on the third
+  master cycle of each millisecond (syncUnitPhase="2"),
+- "serial" at 250 Hz, left to ecat-thread.
+
+All slaves sharing a syncUnit name must specify the same syncUnitCycle and
+syncUnitPhase. If the attributes are omitted, the slave uses the default
+Sync Unit at the master rate. See documentation/multi-rate.md for a
+walkthrough and documentation/distributed-clocks.md for the reference.
+
+Replace the placeholder slave types and IDs with the actual devices and PDO
+mappings.

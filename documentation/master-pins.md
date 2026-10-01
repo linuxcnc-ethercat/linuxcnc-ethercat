@@ -122,8 +122,9 @@ the values only change once per cycle, so one retry suffices.
 ## Sync Unit pins
 
 A master with more than one [Sync
-Unit](distributed-clocks.md#process-data-sync-units) exports pins per
-unit named `lcec.<m>.syncunit.<unit>.<pin>`.  The master-level `wkc` pins above
+Unit](distributed-clocks.md#process-data-sync-units), or with a unit
+slower than the master cycle, exports pins per unit named
+`lcec.<m>.syncunit.<unit>.<pin>`.  The master-level `wkc` pins above
 keep describing the whole process image; these describe one domain.
 They update on the master cycles the unit is exchanged on.
 
@@ -131,3 +132,24 @@ They update on the master cycles the unit is exchanged on.
 |---|---|---|---|
 | `...wkc` / `wkc-state` / `wkc-min` / `wkc-change-count` / `wkc-reset` | | | As the master `wkc` pins, for this unit's domain |
 | `...fresh` | bit | OUT | TRUE in the cycles new input data for this unit was read, FALSE in the cycles in between |
+
+A unit with a divider of 2 or more also exports `read` and `write`
+functs (`lcec.<m>.syncunit.<unit>.read` / `.write`) to run it from a
+HAL thread of its own cycle, and these pins and params for that mode:
+
+| Pin/Param | Type | Kind | Meaning |
+|---|---|---|---|
+| `...threaded` | bit | pin OUT | TRUE once the unit's `read` funct runs; from then on its drivers run in that thread |
+| `...late-count` | u32 | pin OUT | Send ticks on which no new outputs from the unit thread could be taken (none published, or it kept publishing during every copy attempt), so the previous outputs went out again.  After 10 in a row the unit stops being sent until its thread publishes again |
+| `...stale-count` | u32 | pin OUT | Unit thread cycles that found no new input image |
+| `...phase-err` | s32 | pin OUT | Start of the unit thread relative to its target, in ns; positive is late |
+| `...pll-out` | s32 | pin OUT | Period correction applied to the unit thread, in ns |
+| `...phase-locked` | bit | pin OUT | The unit thread has held its slot (within `appTimePeriod / 16`) for 100 cycles; drops beyond `appTimePeriod / 8` |
+| `...phase-offset` | u32 | param RW | Target start of the unit thread after the master cycle that receives the unit's domain, in ns.  Default `appTimePeriod / 4` |
+
+`late-count` and `stale-count` also count while the thread is still
+locking after start-up.  Once `phase-locked` is TRUE both should stay
+constant; a rising `late-count` means the unit thread's functions take
+longer than the `N - 1` master cycles minus `phase-offset` they have.
+`phase-err`, `pll-out` and `phase-locked` only exist with RTAPI PLL
+support, and only the unit that sets its thread's phase updates them.

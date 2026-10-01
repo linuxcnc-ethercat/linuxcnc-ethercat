@@ -8,6 +8,8 @@
 
 - [Configuration Reference](configuration-reference.md)
 - [Distributed Clocks](distributed-clocks.md)
+- [Multi-rate systems](multi-rate.md): one bus, several HAL threads
+  at different rates, using Sync Units.
 - [Master HAL Pins](master-pins.md)
 
 ## Development Documentation

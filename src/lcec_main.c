@@ -118,6 +118,27 @@ static const lcec_pindesc_t sync_unit_pins[] = {
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
+/// @brief Additional pins of a Sync Unit that can run in its own thread
+static const lcec_pindesc_t sync_unit_thread_pins[] = {
+    {HAL_BIT, HAL_OUT, offsetof(lcec_sync_unit_data_t, threaded), "%s.%s.syncunit.%s.threaded"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_sync_unit_data_t, late_cnt), "%s.%s.syncunit.%s.late-count"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_sync_unit_data_t, stale_cnt), "%s.%s.syncunit.%s.stale-count"},
+#ifdef RTAPI_TASK_PLL_SUPPORT
+    {HAL_S32, HAL_OUT, offsetof(lcec_sync_unit_data_t, phase_err), "%s.%s.syncunit.%s.phase-err"},
+    {HAL_S32, HAL_OUT, offsetof(lcec_sync_unit_data_t, pll_out), "%s.%s.syncunit.%s.pll-out"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_sync_unit_data_t, phase_locked), "%s.%s.syncunit.%s.phase-locked"},
+#endif
+    {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
+};
+
+/// @brief Params of a Sync Unit that can run in its own thread
+static const lcec_paramdesc_t sync_unit_thread_params[] = {
+#ifdef RTAPI_TASK_PLL_SUPPORT
+    {HAL_U32, HAL_RW, offsetof(lcec_sync_unit_data_t, phase_offset), "%s.%s.syncunit.%s.phase-offset"},
+#endif
+    {HAL_TYPE_UNSPECIFIED},
+};
+
 static lcec_master_t *first_master = NULL;
 static lcec_master_t *last_master = NULL;
 extern int lcec_comp_id;
@@ -147,9 +168,21 @@ static void lcec_activate(void *arg, long period);
 static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const char *name, uint32_t cycle_time, uint32_t phase);
 static int lcec_master_all_op(lcec_master_t *master);
 static int lcec_init_sync_unit(lcec_master_t *master, lcec_sync_unit_t *sync_unit);
+static void lcec_read_sync_unit(void *arg, long period);
+static void lcec_write_sync_unit(void *arg, long period);
 static void lcec_update_sync_unit_wkc(lcec_sync_unit_data_t *hd, const ec_domain_state_t *state);
 
 static void sigsegv_handler(int sig);
+
+static inline int64_t lcec_abs64(int64_t v) { return (v < 0) ? -v : v; }
+
+// Sync Unit thread phase lock: lock within master cycle / 16, unlock beyond
+// master cycle / 8, after this many consecutive cycles inside the window
+#define LCEC_SU_LOCK_DWELL 100
+
+// Consecutive unit cycles without new outputs after which a threaded unit is
+// no longer sent
+#define LCEC_SU_STALL_SENDS 10
 
 static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const char *name, uint32_t cycle_time, uint32_t phase) {
   lcec_sync_unit_t *sync_unit;
@@ -182,12 +215,16 @@ static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const 
   }
 
   sync_unit = LCEC_ALLOCATE(lcec_sync_unit_t);
+  sync_unit->master = master;
   strncpy(sync_unit->name, name, LCEC_CONF_STR_MAXLEN);
   sync_unit->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
   sync_unit->cycle_time = cycle_time;
   sync_unit->cycle_divider = cycle_time / master->app_time_period;
   sync_unit->phase = phase;
   sync_unit->queued = 1;
+#ifdef RTAPI_TASK_PLL_SUPPORT
+  sync_unit->pll_task = -1;
+#endif
   LCEC_LIST_APPEND(master->first_sync_unit, master->last_sync_unit, sync_unit);
   master->sync_unit_count++;
 
@@ -416,7 +453,7 @@ int rtapi_app_main(void) {
     // for zero overhead when the dc-sync pins are unused.
     LCEC_PARAM_BIT_SET(master->hal_data->dc_sync_monitor, 1);
 
-    // Sync Unit pins
+    // Sync Unit pins, handoff buffers and functs
     for (sync_unit = master->first_sync_unit; sync_unit != NULL; sync_unit = sync_unit->next) {
       if (lcec_init_sync_unit(master, sync_unit) != 0) {
         goto fail2;
@@ -594,6 +631,7 @@ int lcec_parse_config(void) {
 
         // initialize master
         master->index = master_conf->index;
+        master->bus_task = -1;
         strncpy(master->name, master_conf->name, LCEC_CONF_STR_MAXLEN);
         master->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
         master->app_time_period = master_conf->appTimePeriod;
@@ -1284,6 +1322,11 @@ static int lcec_activate_master(lcec_master_t *master) {
   // Get internal process data for every Sync Unit domain.
   for (sync_unit = master->first_sync_unit; sync_unit != NULL; sync_unit = sync_unit->next) {
     sync_unit->process_data = ecrt_domain_data(sync_unit->domain);
+    if (sync_unit->work != NULL && (int)ecrt_domain_size(sync_unit->domain) != sync_unit->process_data_len) {
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s syncUnit %s domain size changed on activation (%d != %d)\n", master->name,
+          sync_unit->name, (int)ecrt_domain_size(sync_unit->domain), sync_unit->process_data_len);
+      return -1;
+    }
     sync_unit->process_data_len = ecrt_domain_size(sync_unit->domain);
     sync_unit->pd = sync_unit->process_data;
     if (master->process_data == NULL) {
@@ -1334,6 +1377,15 @@ void lcec_read_master(void *arg, long period) {
     }
   }
 
+  // publish this tick's grid index and scheduled start for Sync Unit threads
+  // phase-locking to the bus
+#ifdef RTAPI_TASK_PLL_SUPPORT
+  lcec_su_tick_publish(&master->tick, master->next_tick, rtapi_task_pll_get_reference());
+  master->bus_task = rtapi_task_self();
+#else
+  lcec_su_tick_publish(&master->tick, master->next_tick, rtapi_get_time());
+#endif
+
   // get state check flag
   if (!master->sync_units_started) {
     check_states = 1;
@@ -1361,6 +1413,11 @@ void lcec_read_master(void *arg, long period) {
     if (sync_unit->process) {
       ecrt_domain_process(sync_unit->domain);
       sync_unit->queued = 0;
+
+      // hand the received image to the unit thread
+      if (__atomic_load_n(&sync_unit->threaded, __ATOMIC_ACQUIRE)) {
+        lcec_su_rx_publish(&sync_unit->xfer, sync_unit->process_data);
+      }
     }
 
     // Aggregate the most recent state of every Sync Unit so the master WKC
@@ -1462,8 +1519,8 @@ void lcec_read_master(void *arg, long period) {
       lcec_update_slave_state_hal(slave->hal_state_data, &slave->state);
     }
 
-    // process read function
-    if (slave->sync_unit->process && slave->proc_read != NULL) {
+    // process read function; drivers of a threaded unit run in its thread
+    if (slave->sync_unit->process && slave->proc_read != NULL && !__atomic_load_n(&slave->sync_unit->threaded, __ATOMIC_ACQUIRE)) {
       master->process_data = slave->sync_unit->process_data;
       master->process_data_len = slave->sync_unit->process_data_len;
       slave->proc_read(slave, slave->sync_unit->cycle_time);
@@ -1471,7 +1528,7 @@ void lcec_read_master(void *arg, long period) {
   }
 
   for (sync_unit = master->first_sync_unit; sync_unit != NULL; sync_unit = sync_unit->next) {
-    if (sync_unit->hal_data != NULL) {
+    if (sync_unit->hal_data != NULL && !__atomic_load_n(&sync_unit->threaded, __ATOMIC_ACQUIRE)) {
       LCEC_PIN_BIT_SET(sync_unit->hal_data->fresh, sync_unit->process);
     }
   }
@@ -1520,12 +1577,42 @@ void lcec_write_master(void *arg, long period) {
     sync_unit->write = force_cycle || lcec_su_due(master->next_tick, sync_unit->cycle_divider, sync_unit->phase);
   }
 
-  // process slaves
+  // process slaves; drivers of a threaded unit run in its thread
   for (slave = master->first_slave; slave != NULL; slave = slave->next) {
-    if (slave->sync_unit->write && slave->proc_write != NULL) {
+    if (slave->sync_unit->write && slave->proc_write != NULL && !__atomic_load_n(&slave->sync_unit->threaded, __ATOMIC_ACQUIRE)) {
       master->process_data = slave->sync_unit->process_data;
       master->process_data_len = slave->sync_unit->process_data_len;
       slave->proc_write(slave, slave->sync_unit->cycle_time);
+    }
+  }
+
+  // take the latest outputs published by threaded units
+  for (sync_unit = master->first_sync_unit; sync_unit != NULL; sync_unit = sync_unit->next) {
+    if (sync_unit->write && __atomic_load_n(&sync_unit->threaded, __ATOMIC_ACQUIRE)) {
+      // stage the copy: a failed take must leave the domain image (the last
+      // outputs sent) untouched
+      if (lcec_su_tx_take(&sync_unit->xfer, sync_unit->staged, &sync_unit->tx_gen_sent) > 0) {
+        memcpy(sync_unit->process_data, sync_unit->staged, sync_unit->process_data_len);
+        sync_unit->late_run = 0;
+      } else if (!force_cycle) {
+        // the unit thread missed its window: resend the previous outputs, but
+        // stop sending once it looks stalled, so the slaves' SM watchdogs
+        // take their outputs to a safe state as they would for a dead master
+        LCEC_PIN_U32_SET(sync_unit->hal_data->late_cnt, LCEC_PIN_U32_GET(sync_unit->hal_data->late_cnt) + 1);
+        if (sync_unit->late_run < LCEC_SU_STALL_SENDS) {
+          sync_unit->late_run++;
+        } else {
+          if (!sync_unit->stall_warned) {
+            sync_unit->stall_warned = 1;
+            rtapi_print_msg(RTAPI_MSG_ERR,
+                LCEC_MSG_PFX
+                "master %s syncUnit %s: no outputs from its thread for %d cycles, stopped sending it "
+                "(are its read and write functs both in a running thread?)\n",
+                master->name, sync_unit->name, LCEC_SU_STALL_SENDS);
+          }
+          sync_unit->write = 0;
+        }
+      }
     }
   }
 
@@ -1885,10 +1972,13 @@ void lcec_write_master(void *arg, long period) {
 #endif
 }
 
-/// @brief Export the pins of a Sync Unit.
+/// @brief Export pins, handoff buffers and functs of a Sync Unit.
 static int lcec_init_sync_unit(lcec_master_t *master, lcec_sync_unit_t *sync_unit) {
+  char name[HAL_NAME_LEN + 1];
+  int threadable = sync_unit->cycle_divider >= 2;
+
   // a master with a single unit keeps its pin set unchanged
-  if (master->sync_unit_count < 2) {
+  if (master->sync_unit_count < 2 && !threadable) {
     return 0;
   }
 
@@ -1896,7 +1986,47 @@ static int lcec_init_sync_unit(lcec_master_t *master, lcec_sync_unit_t *sync_uni
     return -1;
   }
   memset(sync_unit->hal_data, 0, sizeof(lcec_sync_unit_data_t));
-  return lcec_pin_newf_list(sync_unit->hal_data, sync_unit_pins, LCEC_MODULE_NAME, master->name, sync_unit->name);
+  if (lcec_pin_newf_list(sync_unit->hal_data, sync_unit_pins, LCEC_MODULE_NAME, master->name, sync_unit->name) != 0) {
+    return -1;
+  }
+
+  if (!threadable) {
+    return 0;
+  }
+
+  if (lcec_pin_newf_list(sync_unit->hal_data, sync_unit_thread_pins, LCEC_MODULE_NAME, master->name, sync_unit->name) != 0) {
+    return -1;
+  }
+  if (lcec_param_newf_list(sync_unit->hal_data, sync_unit_thread_params, LCEC_MODULE_NAME, master->name, sync_unit->name) != 0) {
+    return -1;
+  }
+#ifdef RTAPI_TASK_PLL_SUPPORT
+  // start a quarter master cycle into the receive tick: late enough that the
+  // bus thread has published the image, leaving N - 1.25 master cycles to run
+  LCEC_PARAM_U32_SET(sync_unit->hal_data->phase_offset, master->app_time_period / 4);
+#endif
+
+  // The domain size is final once its PDO entries are registered.
+  sync_unit->process_data_len = ecrt_domain_size(sync_unit->domain);
+  sync_unit->work = LCEC_ALLOCATE_ARRAY(uint8_t, sync_unit->process_data_len + 1);
+  sync_unit->xfer.len = sync_unit->process_data_len;
+  sync_unit->xfer.rx = LCEC_ALLOCATE_ARRAY(uint8_t, sync_unit->process_data_len + 1);
+  sync_unit->xfer.tx[0] = LCEC_ALLOCATE_ARRAY(uint8_t, sync_unit->process_data_len + 1);
+  sync_unit->xfer.tx[1] = LCEC_ALLOCATE_ARRAY(uint8_t, sync_unit->process_data_len + 1);
+  sync_unit->staged = LCEC_ALLOCATE_ARRAY(uint8_t, sync_unit->process_data_len + 1);
+
+  rtapi_snprintf(name, HAL_NAME_LEN, "%s.%s.syncunit.%s.read", LCEC_MODULE_NAME, master->name, sync_unit->name);
+  if (LCEC_HAL_EXPORT_FUNCT(name, lcec_read_sync_unit, sync_unit, 0, 0, lcec_comp_id) != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s syncUnit %s read funct export failed\n", master->name, sync_unit->name);
+    return -1;
+  }
+  rtapi_snprintf(name, HAL_NAME_LEN, "%s.%s.syncunit.%s.write", LCEC_MODULE_NAME, master->name, sync_unit->name);
+  if (LCEC_HAL_EXPORT_FUNCT(name, lcec_write_sync_unit, sync_unit, 0, 0, lcec_comp_id) != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s syncUnit %s write funct export failed\n", master->name, sync_unit->name);
+    return -1;
+  }
+
+  return 0;
 }
 
 /// @brief Update the working counter pins of a Sync Unit.
@@ -1927,6 +2057,232 @@ static void lcec_update_sync_unit_wkc(lcec_sync_unit_data_t *hd, const ec_domain
     }
   }
   hd->wkc_last = wkc_now;
+}
+
+#ifdef RTAPI_TASK_PLL_SUPPORT
+/// @brief Have the read functs of all masters run at least once?
+static int lcec_bus_tasks_known(void) {
+  lcec_master_t *m;
+  for (m = first_master; m != NULL; m = m->next) {
+    if (m->bus_task < 0) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+/// @brief Decide whether a unit funct may steer the period of the thread it
+/// runs in.  Called once, from that thread.
+static void lcec_sync_unit_claim_pll(lcec_sync_unit_t *sync_unit, long period) {
+  lcec_master_t *master = sync_unit->master;
+  lcec_master_t *m;
+  lcec_sync_unit_t *other;
+
+  sync_unit->pll_task = rtapi_task_self();
+  sync_unit->pll_owner = 0;
+
+  if (period != (long)sync_unit->cycle_time) {
+    rtapi_print_msg(RTAPI_MSG_ERR,
+        LCEC_MSG_PFX "master %s syncUnit %s funct runs in a %ld ns thread, expected %u ns; not phase-locking that thread\n", master->name,
+        sync_unit->name, period, sync_unit->cycle_time);
+    return;
+  }
+
+  // never fight the master's own PLL
+  for (m = first_master; m != NULL; m = m->next) {
+    if (m->bus_task >= 0 && m->bus_task == sync_unit->pll_task) {
+      rtapi_print_msg(RTAPI_MSG_ERR,
+          LCEC_MSG_PFX "master %s syncUnit %s funct runs in the thread of master %s; give the unit its own thread\n", master->name,
+          sync_unit->name, m->name);
+      return;
+    }
+  }
+
+  // one unit per thread steers it; others sharing the thread follow along
+  for (m = first_master; m != NULL; m = m->next) {
+    for (other = m->first_sync_unit; other != NULL; other = other->next) {
+      if (other != sync_unit && other->pll_owner && other->pll_task == sync_unit->pll_task) {
+        if (m != master || other->phase != sync_unit->phase) {
+          rtapi_print_msg(RTAPI_MSG_WARN,
+              LCEC_MSG_PFX "master %s syncUnit %s shares its thread with syncUnit %s.%s, which sets the thread's phase\n", master->name,
+              sync_unit->name, m->name, other->name);
+        }
+        return;
+      }
+    }
+  }
+
+  sync_unit->pll_owner = 1;
+}
+
+/// @brief Steer the unit thread to start `phase-offset` ns after the bus
+/// tick that receives the unit's domain.
+static void lcec_sync_unit_pll(lcec_sync_unit_t *sync_unit) {
+  lcec_master_t *master = sync_unit->master;
+  lcec_sync_unit_data_t *hd = sync_unit->hal_data;
+  int64_t tick_index;
+  long long tick_start;
+  int64_t window, offset, err;
+  int32_t corr;
+
+  if (lcec_su_tick_fetch(&master->tick, &tick_index, &tick_start) != 0) {
+    return;
+  }
+
+  // the unit must still finish before its next send tick
+  window = (int64_t)(sync_unit->cycle_divider - 1) * master->app_time_period;
+  offset = LCEC_PARAM_U32_GET(hd->phase_offset);
+  if (offset >= window) {
+    offset = window - 1;
+  }
+
+  err = lcec_su_phase_err(
+      rtapi_task_pll_get_reference(), tick_start, tick_index, sync_unit->cycle_divider, sync_unit->phase, master->app_time_period, offset);
+  corr = lcec_su_pll_correction(err, (int32_t)(sync_unit->cycle_time / 100));
+  rtapi_task_pll_set_correction(corr);
+
+  LCEC_PIN_S32_SET(hd->phase_err, (hal_s32_t)err);
+  LCEC_PIN_S32_SET(hd->pll_out, corr);
+
+  if (lcec_abs64(err) < (int64_t)master->app_time_period / 16) {
+    if (hd->phase_lock_cnt < LCEC_SU_LOCK_DWELL) {
+      hd->phase_lock_cnt++;
+    } else {
+      LCEC_PIN_BIT_SET(hd->phase_locked, 1);
+    }
+  } else if (lcec_abs64(err) > (int64_t)master->app_time_period / 8) {
+    hd->phase_lock_cnt = 0;
+    LCEC_PIN_BIT_SET(hd->phase_locked, 0);
+  }
+}
+#endif
+
+/// @brief Warn about drivers in a threaded unit that do not use
+/// lcec_slave_pd().  Checked again later while a slave is not operational,
+/// since most drivers skip their PDOs until then.
+static void lcec_sync_unit_check_pd(lcec_sync_unit_t *sync_unit) {
+  lcec_master_t *master = sync_unit->master;
+  lcec_slave_t *slave;
+
+  for (slave = master->first_slave; slave != NULL; slave = slave->next) {
+    if (slave->sync_unit != sync_unit || (slave->proc_read == NULL && slave->proc_write == NULL) || slave->pd_used) {
+      continue;
+    }
+    if (!slave->state.operational) {
+      sync_unit->pd_check = (sync_unit->cycle_time < 1000000000u) ? 1000000000u / sync_unit->cycle_time : 1;
+      continue;
+    }
+    rtapi_print_msg(RTAPI_MSG_ERR,
+        LCEC_MSG_PFX
+        "slave %s.%s in syncUnit %s never called lcec_slave_pd(); if its driver reads master->process_data it is "
+        "not reading this unit's image while the unit runs in its own thread\n",
+        master->name, slave->name, sync_unit->name);
+    slave->pd_used = 1;  // warn once
+  }
+}
+
+/// @brief Sync Unit read funct: phase-lock the calling thread to the unit's
+/// slot, take the latest received image and run the unit's proc_read
+/// callbacks.  Add it, before the unit's consumers, to a HAL thread whose
+/// period is the unit's cycle.
+static void lcec_read_sync_unit(void *arg, long period) {
+  lcec_sync_unit_t *sync_unit = (lcec_sync_unit_t *)arg;
+  lcec_master_t *master = sync_unit->master;
+  lcec_sync_unit_data_t *hd = sync_unit->hal_data;
+  lcec_slave_t *slave;
+  uint32_t gen = 0;
+  int ok;
+
+  if (!master->activated) {
+    return;
+  }
+
+  // claim the unit: from here on the bus thread only moves its images
+  if (!sync_unit->threaded) {
+    // threaded first: the bus thread must stop running the drivers before
+    // they are pointed at the work image
+    __atomic_store_n(&sync_unit->threaded, 1, __ATOMIC_RELEASE);
+    sync_unit->pd = sync_unit->work;
+    sync_unit->task = rtapi_task_self();
+    sync_unit->pd_check = (sync_unit->cycle_time < 1000000000u) ? 1000000000u / sync_unit->cycle_time : 1;
+    LCEC_PIN_BIT_SET(hd->threaded, 1);
+    rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "master %s syncUnit %s now serviced by its own thread\n", master->name, sync_unit->name);
+  }
+
+#ifdef RTAPI_TASK_PLL_SUPPORT
+  // claim once every bus thread has run, so their task ids are known
+  if (sync_unit->pll_task < 0 && lcec_bus_tasks_known()) {
+    lcec_sync_unit_claim_pll(sync_unit, period);
+  }
+  if (sync_unit->pll_owner) {
+    lcec_sync_unit_pll(sync_unit);
+  }
+#else
+  (void)period;
+#endif
+
+  ok = (lcec_su_rx_fetch(&sync_unit->xfer, sync_unit->work, &gen) == 0);
+
+  if (ok && gen != sync_unit->rx_gen_seen) {
+    sync_unit->rx_gen_seen = gen;
+    LCEC_PIN_BIT_SET(hd->fresh, 1);
+  } else {
+    LCEC_PIN_BIT_SET(hd->fresh, 0);
+    if (master->sync_units_started) {
+      LCEC_PIN_U32_SET(hd->stale_cnt, LCEC_PIN_U32_GET(hd->stale_cnt) + 1);
+    }
+  }
+
+  // Skip the drivers and let the bus resend the previous outputs while work
+  // holds a torn image, or none yet (rx is filled only once claimed).
+  sync_unit->torn = !ok || gen == 0;
+  if (sync_unit->torn) {
+    return;
+  }
+
+  for (slave = master->first_slave; slave != NULL; slave = slave->next) {
+    if (slave->sync_unit == sync_unit && slave->proc_read != NULL) {
+      slave->proc_read(slave, sync_unit->cycle_time);
+    }
+  }
+
+  // A driver reading master->process_data instead of lcec_slave_pd() gets
+  // another domain's image here, not this unit's.  Once the unit has run for
+  // a second with its slaves operational, name any driver that never asked
+  // for its image.
+  if (sync_unit->pd_check > 0 && master->sync_units_started && --sync_unit->pd_check == 0) {
+    lcec_sync_unit_check_pd(sync_unit);
+  }
+}
+
+/// @brief Sync Unit write funct: run the unit's proc_write callbacks and
+/// publish the outputs for the next send tick.  Add it after the unit's
+/// producers, in the same thread as the unit's read funct.
+static void lcec_write_sync_unit(void *arg, long period) {
+  lcec_sync_unit_t *sync_unit = (lcec_sync_unit_t *)arg;
+  lcec_master_t *master = sync_unit->master;
+  lcec_slave_t *slave;
+  (void)period;
+
+  if (!master->activated || !sync_unit->threaded || sync_unit->torn) {
+    return;
+  }
+  if (rtapi_task_self() != sync_unit->task) {
+    if (!sync_unit->task_warned) {
+      sync_unit->task_warned = 1;
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s syncUnit %s write funct must run in the same thread as its read funct\n",
+          master->name, sync_unit->name);
+    }
+    return;
+  }
+
+  for (slave = master->first_slave; slave != NULL; slave = slave->next) {
+    if (slave->sync_unit == sync_unit && slave->proc_write != NULL) {
+      slave->proc_write(slave, sync_unit->cycle_time);
+    }
+  }
+
+  lcec_su_tx_publish(&sync_unit->xfer, sync_unit->work);
 }
 
 #ifndef __KERNEL__
