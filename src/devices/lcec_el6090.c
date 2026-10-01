@@ -340,11 +340,10 @@ static int lcec_el6090_init(int comp_id, lcec_slave_t *slave) {
 }
 
 static void lcec_el6090_read(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el6090_data_t *hal_data = (lcec_el6090_data_t *)slave->hal_data;
   lcec_el6090_chan_t *chan;
 
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   int i;
   uint32_t operating_time;
 
@@ -380,11 +379,10 @@ static void lcec_el6090_read(lcec_slave_t *slave, long period) {
 }
 
 static void lcec_el6090_write(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el6090_data_t *hal_data = (lcec_el6090_data_t *)slave->hal_data;
   lcec_el6090_chan_t *chan;
 
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   int i;
 
   // Write Value LCD

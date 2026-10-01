@@ -1285,6 +1285,7 @@ static int lcec_activate_master(lcec_master_t *master) {
   for (sync_unit = master->first_sync_unit; sync_unit != NULL; sync_unit = sync_unit->next) {
     sync_unit->process_data = ecrt_domain_data(sync_unit->domain);
     sync_unit->process_data_len = ecrt_domain_size(sync_unit->domain);
+    sync_unit->pd = sync_unit->process_data;
     if (master->process_data == NULL) {
       master->process_data = sync_unit->process_data;
       master->process_data_len = sync_unit->process_data_len;

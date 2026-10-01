@@ -127,9 +127,8 @@ static int lcec_el41x2_init(int comp_id, lcec_slave_t *slave) {
 }
 
 static void lcec_el41x2_write(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el41x2_data_t *hal_data = (lcec_el41x2_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   int i;
   lcec_el41x2_chan_t *chan;
   double tmpval, tmpdc, raw_val;

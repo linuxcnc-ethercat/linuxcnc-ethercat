@@ -298,9 +298,8 @@ static int lcec_el6900_init(int comp_id, lcec_slave_t *slave) {
 }
 
 void lcec_el6900_read(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el6900_data_t *hal_data = (lcec_el6900_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   lcec_el6900_fsoe_t *fsoe_data;
   int i, crc_idx;
   lcec_el6900_fsoe_io_t *io;
@@ -332,9 +331,8 @@ void lcec_el6900_read(lcec_slave_t *slave, long period) {
 }
 
 void lcec_el6900_write(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el6900_data_t *hal_data = (lcec_el6900_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   lcec_el6900_fsoe_io_t *io;
   int i;
 

@@ -41,8 +41,7 @@ lcec_slave_t *lcec_slave_by_index(lcec_master_t *master, int index) {
 
 /// @brief Copy FSoE (Safety over EtherCAT / FailSafe over EtherCAT) data between slaves and masters.
 void copy_fsoe_data(lcec_slave_t *slave, unsigned int slave_offset, unsigned int master_offset) {
-  lcec_master_t *master = slave->master;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   const LCEC_CONF_FSOE_T *fsoeConf = slave->fsoeConf;
 
   if (fsoeConf == NULL) {

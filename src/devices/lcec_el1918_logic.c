@@ -280,9 +280,8 @@ int lcec_el1918_logic_init(int comp_id, lcec_slave_t *slave) {
 }
 
 void lcec_el1918_logic_read(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el1918_logic_data_t *hal_data = (lcec_el1918_logic_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   lcec_el1918_logic_fsoe_t *fsoe_data;
   int i, crc_idx;
   uint8_t std_out;
@@ -315,9 +314,8 @@ void lcec_el1918_logic_read(lcec_slave_t *slave, long period) {
 }
 
 void lcec_el1918_logic_write(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el1918_logic_data_t *hal_data = (lcec_el1918_logic_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   uint8_t std_in;
   int i;
 

@@ -218,9 +218,8 @@ static int lcec_el5152_init(int comp_id, lcec_slave_t *slave) {
 }
 
 static void lcec_el5152_read(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el5152_data_t *hal_data = (lcec_el5152_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   int i, idx_flag;
   lcec_el5152_chan_t *chan;
   int32_t idx_count, raw_count, raw_delta;
@@ -316,9 +315,8 @@ static void lcec_el5152_read(lcec_slave_t *slave, long period) {
 }
 
 static void lcec_el5152_write(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el5152_data_t *hal_data = (lcec_el5152_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   int i;
   lcec_el5152_chan_t *chan;
 
