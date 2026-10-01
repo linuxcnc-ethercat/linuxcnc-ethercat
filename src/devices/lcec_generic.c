@@ -120,9 +120,8 @@ int lcec_generic_init(int comp_id, lcec_slave_t *slave) {
 
 /// @brief Read from a generic device.
 void lcec_generic_read(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_generic_pin_t *hal_data = (lcec_generic_pin_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   int i, j, offset;
   hal_float_t fval;
 
@@ -173,9 +172,8 @@ void lcec_generic_read(lcec_slave_t *slave, long period) {
 
 /// @brief Write to a generic device.
 void lcec_generic_write(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_generic_pin_t *hal_data = (lcec_generic_pin_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   int i, j, offset;
   hal_float_t fval;
 

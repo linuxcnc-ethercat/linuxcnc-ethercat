@@ -365,9 +365,8 @@ static void lcec_el7211_check_scales(lcec_el7211_data_t *hal_data) {
 }
 
 static void lcec_el7211_read(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el7211_data_t *hal_data = (lcec_el7211_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   uint16_t status;
   int32_t vel_raw;
   double vel;
@@ -430,9 +429,8 @@ static void lcec_el7211_read(lcec_slave_t *slave, long period) {
 }
 
 static void lcec_el7201_9014_read(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el7211_data_t *hal_data = (lcec_el7211_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   uint16_t info1;
 
   lcec_el7211_read(slave, period);
@@ -453,9 +451,8 @@ static inline double clamp(double v, double sub, double sup) {
 }
 
 static void lcec_el7211_write(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el7211_data_t *hal_data = (lcec_el7211_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   uint16_t control;
   double velo_cmd, velo_raw, velo_maxdelta;
 

@@ -141,9 +141,8 @@ static int lcec_el2904_init(int comp_id, lcec_slave_t *slave) {
 }
 
 static void lcec_el2904_read(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el2904_data_t *hal_data = (lcec_el2904_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
 
   copy_fsoe_data(slave, hal_data->fsoe_slave_cmd_os, hal_data->fsoe_master_cmd_os);
 
@@ -162,9 +161,8 @@ static void lcec_el2904_read(lcec_slave_t *slave, long period) {
 }
 
 static void lcec_el2904_write(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el2904_data_t *hal_data = (lcec_el2904_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
 
   EC_WRITE_BIT(&pd[hal_data->out_0_os], hal_data->out_0_bp, LCEC_PIN_BIT_GET(hal_data->out_0));
   EC_WRITE_BIT(&pd[hal_data->out_1_os], hal_data->out_1_bp, LCEC_PIN_BIT_GET(hal_data->out_1));

@@ -350,7 +350,7 @@ static void lcec_leadshine_stepper_read(lcec_slave_t *slave, long period) {
 
   // XXXX: If you need to read device-specific PDOs and set pins, then you should do this here.
   //
-  // uint8_t *pd = slave->master->process_data;
+  // uint8_t *pd = lcec_slave_pd(slave);
   // LCEC_PIN_U32_SET(hal_data->alarm_code, EC_READ_U16(&pd[hal_data->alarm_code_os]));
 
   lcec_cia402_read_all(slave, hal_data->cia402);

@@ -310,9 +310,8 @@ static void lcec_omrg5_check_scales(lcec_omrg5_data_t *hal_data) {
 }
 
 static void lcec_omrg5_read(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_omrg5_data_t *hal_data = (lcec_omrg5_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   uint16_t status;
   uint32_t din;
 
@@ -375,9 +374,8 @@ static void lcec_omrg5_read(lcec_slave_t *slave, long period) {
 }
 
 static void lcec_omrg5_write(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_omrg5_data_t *hal_data = (lcec_omrg5_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   int enable_edge;
   uint16_t control;
 

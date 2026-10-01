@@ -363,9 +363,8 @@ static int lcec_el70x1_init(int comp_id, lcec_slave_t *slave) {
 }
 
 static void lcec_el70x1_read(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el70x1_data_t *hal_data = (lcec_el70x1_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
 
   LCEC_PIN_BIT_SET(hal_data->stm_ready_to_enable, EC_READ_BIT(&pd[hal_data->stm_ready_to_enable_pdo_os], hal_data->stm_ready_to_enable_pdo_bp));
   LCEC_PIN_BIT_SET(hal_data->stm_ready, EC_READ_BIT(&pd[hal_data->stm_ready_pdo_os], hal_data->stm_ready_pdo_bp));
@@ -381,9 +380,8 @@ static void lcec_el70x1_read(lcec_slave_t *slave, long period) {
 }
 
 static void lcec_el70x1_write(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el70x1_data_t *hal_data = (lcec_el70x1_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   bool enabled, reduce_tourque;
 
   LCEC_PIN_S32_SET(hal_data->stm_pos_cmd_raw, (int32_t)(LCEC_PIN_FLOAT_GET(hal_data->stm_pos_cmd) * LCEC_PARAM_FLOAT_GET(hal_data->stm_pos_scale)));

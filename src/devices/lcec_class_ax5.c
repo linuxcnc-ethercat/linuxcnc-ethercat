@@ -195,8 +195,7 @@ void lcec_class_ax5_check_scales(lcec_class_ax5_chan_t *chan) {
 }
 
 void lcec_class_ax5_read(lcec_slave_t *slave, lcec_class_ax5_chan_t *chan) {
-  lcec_master_t *master = slave->master;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   uint32_t pos_cnt;
 
   // wait for slave to be operational
@@ -246,8 +245,7 @@ void lcec_class_ax5_read(lcec_slave_t *slave, lcec_class_ax5_chan_t *chan) {
 }
 
 void lcec_class_ax5_write(lcec_slave_t *slave, lcec_class_ax5_chan_t *chan) {
-  lcec_master_t *master = slave->master;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   uint16_t ctrl;
   double velo_cmd_raw;
 

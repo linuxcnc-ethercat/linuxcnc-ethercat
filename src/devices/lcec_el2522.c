@@ -243,9 +243,8 @@ static int lcec_el2522_init(int comp_id, lcec_slave_t *slave) {
 }
 
 static void lcec_el2522_read(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el2522_data_t *hal_data = (lcec_el2522_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
 
   // wait for slave to be operational
   if (!slave->state.operational) {
@@ -272,9 +271,8 @@ static void lcec_el2522_read(lcec_slave_t *slave, long period) {
 }
 
 static void lcec_el2522_write(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el2522_data_t *hal_data = (lcec_el2522_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
 
   for (int i = 0; i < LCEC_EL2522_CHANNEL_COUNT; i++) {
     lcec_el2522_channel_t *channel = &hal_data->channels[i];

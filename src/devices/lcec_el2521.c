@@ -241,9 +241,8 @@ static void lcec_el2521_check_scale(lcec_el2521_data_t *hal_data) {
 }
 
 static void lcec_el2521_read(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el2521_data_t *hal_data = (lcec_el2521_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   int16_t hw_count, hw_count_diff;
   uint16_t state;
   int in;
@@ -290,9 +289,8 @@ static void lcec_el2521_read(lcec_slave_t *slave, long period) {
 }
 
 static void lcec_el2521_write(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el2521_data_t *hal_data = (lcec_el2521_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   uint16_t ctrl;
   int32_t freq_raw;
 

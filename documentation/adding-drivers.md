@@ -71,6 +71,26 @@ See any converted driver (for example
 [`lcec_deasda.c`](../src/devices/lcec_deasda.c), which uses both pin
 and param macros) for how this looks in practice.
 
+### Process data access
+
+PDO offsets from `lcec_pdo_init()` index into the image returned by
+`lcec_slave_pd(slave)`:
+
+```C
+static void lcec_foo_read(lcec_slave_t *slave, long period) {
+  lcec_foo_data_t *hal_data = (lcec_foo_data_t *)slave->hal_data;
+  uint8_t *pd = lcec_slave_pd(slave);
+
+  LCEC_PIN_U32_SET(hal_data->status, EC_READ_U16(&pd[hal_data->status_os]));
+}
+```
+
+Do not use `slave->master->process_data`: it only points at one [Sync
+Unit](distributed-clocks.md#process-data-sync-units)'s domain at a
+time, while `lcec_slave_pd()` always returns the image of the slave's
+own unit.  The `period` passed to `proc_read` / `proc_write` is the
+slave's Sync Unit cycle.
+
 ### Style points
 
 - Run `clang-format` on your code.  There's a [default

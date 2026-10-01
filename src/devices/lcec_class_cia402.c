@@ -480,7 +480,7 @@ lcec_class_cia402_channel_t *lcec_cia402_register_channel(
 /// Call this once per channel registered, from inside of your device's
 /// read function.  Use `lcec_cia402_read_all` to read all channels.
 void lcec_cia402_read(lcec_slave_t *slave, lcec_class_cia402_channel_t *data) {
-  uint8_t *pd = slave->master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
 
 #define READ_OPT(pin_name)              \
   if (data->enabled->enable_##pin_name) \
@@ -539,7 +539,7 @@ void lcec_cia402_read_all(lcec_slave_t *slave, lcec_class_cia402_channels_t *cha
   } while (0)
 
 void lcec_cia402_write(lcec_slave_t *slave, lcec_class_cia402_channel_t *data) {
-  uint8_t *pd = slave->master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
 
   EC_WRITE_U16(&pd[data->controlword_os], (uint16_t)LCEC_PIN_GET(data->controlword));
 

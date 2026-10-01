@@ -265,12 +265,11 @@ static int lcec_el3403_init(int comp_id, lcec_slave_t *slave) {
 }
 
 static void lcec_el3403_read(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_el3403_data_t *hal_data = (lcec_el3403_data_t *)slave->hal_data;
   lcec_el3403_chan_t *chan;
 
   int i;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   int32_t current, voltage, active_power, apparent_power, reactive_power, energy, cosphi, frequency, energy_negative;
   uint8_t ovc;
 

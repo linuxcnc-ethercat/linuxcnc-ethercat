@@ -279,6 +279,7 @@ typedef struct lcec_sync_unit {
   ec_domain_t *domain;
   uint8_t *process_data;  ///< The domain's process image.
   int process_data_len;
+  uint8_t *pd;  ///< The image the unit's drivers work on; see lcec_slave_pd().
   int queued;
   int process;
   int write;
@@ -401,6 +402,13 @@ typedef struct lcec_slave {
   uint64_t flags;                             ///< Flags, as defined by the driver itself.
   lcec_pdo_entry_reg_t *regs;
 } lcec_slave_t;
+
+/// @brief Process image for a slave's proc_read/proc_write callbacks.
+///
+/// PDO offsets from lcec_pdo_init() index into this.  Drivers must use it
+/// rather than `master->process_data`, which only points at one Sync Unit's
+/// domain.
+static inline uint8_t *lcec_slave_pd(const lcec_slave_t *slave) { return slave->sync_unit->pd; }
 
 /// @brief HAL pin description.
 typedef struct {

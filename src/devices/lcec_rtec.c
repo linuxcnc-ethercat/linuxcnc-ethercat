@@ -575,7 +575,7 @@ static int lcec_rtec_init(int comp_id, lcec_slave_t *slave) {
 
 static void lcec_rtec_read(lcec_slave_t *slave, long period) {
   lcec_rtec_data_t *hal_data = (lcec_rtec_data_t *)slave->hal_data;
-  uint8_t *pd = slave->master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
 
   // wait for slave to be operational
   if (!slave->state.operational) {

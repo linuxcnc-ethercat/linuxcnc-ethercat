@@ -378,9 +378,8 @@ static int lcec_il2301_init(int comp_id, lcec_slave_t *slave) {
 }
 
 static void lcec_il2301_read(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_il2301_data_t *hal_data = (lcec_il2301_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
 
   (void)period;
 
@@ -394,9 +393,8 @@ static void lcec_il2301_read(lcec_slave_t *slave, long period) {
 }
 
 static void lcec_il2301_write(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_il2301_data_t *hal_data = (lcec_il2301_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
 
   (void)period;
 

@@ -453,9 +453,8 @@ int lcec_fr4000_init(int comp_id, lcec_slave_t *slave) {
 }
 
 void lcec_fr4000_read(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_fr4000_data_t *hal_data = (lcec_fr4000_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
 
   uint16_t raw_counts[5];
   int32_t raw_forced_counts[5];
@@ -596,9 +595,8 @@ double calculateFvalue(double dac_value, double enc_scale, double dac_scale) {
 }
 
 void lcec_fr4000_write(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_fr4000_data_t *hal_data = (lcec_fr4000_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
 
   float fValue;
 

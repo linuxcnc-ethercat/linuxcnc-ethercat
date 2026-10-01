@@ -166,9 +166,8 @@ static int lcec_ax5805_init(int comp_id, lcec_slave_t *slave) {
 }
 
 static void lcec_ax5805_read(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_ax5805_data_t *hal_data = (lcec_ax5805_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
 
   copy_fsoe_data(slave, hal_data->fsoe_slave_cmd_os, hal_data->fsoe_master_cmd_os);
 

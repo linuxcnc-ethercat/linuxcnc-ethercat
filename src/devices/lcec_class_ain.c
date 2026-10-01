@@ -229,7 +229,7 @@ lcec_class_ain_channel_t *lcec_ain_register_channel(lcec_slave_t *slave, int id,
 /// Call this once per channel registered, from inside of your device's
 /// read function.  Use `lcec_ain_read_all` to read all pins.
 void lcec_ain_read(lcec_slave_t *slave, lcec_class_ain_channel_t *data) {
-  uint8_t *pd = slave->master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   int value;  // Needs to be large enough to hold either a uint16_t or an sint16_t without loss.
   int max_value = data->options->max_value;
 

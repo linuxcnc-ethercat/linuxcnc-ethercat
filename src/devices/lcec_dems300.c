@@ -243,7 +243,7 @@ static void lcec_dems300_check_scales(lcec_dems300_data_t *hal_data) {
 static void lcec_dems300_read(lcec_slave_t *slave, long period) {
   lcec_master_t *master = slave->master;
   lcec_dems300_data_t *hal_data = (lcec_dems300_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   uint16_t status, error;
   int8_t opmode_in;
   int32_t speed_raw;
@@ -315,9 +315,8 @@ static void lcec_dems300_read(lcec_slave_t *slave, long period) {
 }
 
 static void lcec_dems300_write(lcec_slave_t *slave, long period) {
-  lcec_master_t *master = slave->master;
   lcec_dems300_data_t *hal_data = (lcec_dems300_data_t *)slave->hal_data;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   uint16_t control;
   double speed_raw;
   int8_t opmode;

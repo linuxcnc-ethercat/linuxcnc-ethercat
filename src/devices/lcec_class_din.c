@@ -136,8 +136,7 @@ lcec_class_din_channel_t *lcec_din_register_channel_packed(lcec_slave_t *slave, 
 /// Call this once per pin registered, from inside of your device's
 /// read function.  See `lcec_din_read_all` for an alternative approach.
 void lcec_din_read(lcec_slave_t *slave, lcec_class_din_channel_t *data) {
-  lcec_master_t *master = slave->master;
-  uint8_t *pd = master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   hal_bit_t s;
   int os = data->pdo_os;
   int bp = data->pdo_bp;
