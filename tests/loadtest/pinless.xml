@@ -1,0 +1,32 @@
+<masters>
+  <!-- Load-test config: generic slaves that produce a zero-size HAL
+       allocation must not break component load (hal_malloc(0) is
+       rejected since LinuxCNC 2.10.0~pre2, see #529).  Runs without
+       hardware: the IgH master is bound to a veth pair. -->
+  <master idx="0" appTimePeriod="1000000" refClockSyncCycles="1000">
+
+    <!-- Pin-less coupler: no PDO entries at all, pdoMappingCount = 0.
+         This is the #529 case. -->
+    <slave idx="0" type="generic" vid="00000002" pid="044c2c52" name="coupler"/>
+
+    <!-- PDO entries without halPin: pdoEntryCount > 0 but
+         pdoMappingCount = 0, the second zero-size path. -->
+    <slave idx="1" type="generic" vid="00000002" pid="07d83052" name="nopins" configPdos="true">
+      <syncManager idx="2" dir="out">
+        <pdo idx="1600">
+          <pdoEntry idx="7000" subIdx="01" bitLen="1"/>
+        </pdo>
+      </syncManager>
+    </slave>
+
+    <!-- Control case: one mapped pin, must be exported. -->
+    <slave idx="2" type="generic" vid="00000002" pid="07d83052" name="withpin" configPdos="true">
+      <syncManager idx="2" dir="out">
+        <pdo idx="1600">
+          <pdoEntry idx="7000" subIdx="01" bitLen="1" halPin="dout-0" halType="bit"/>
+        </pdo>
+      </syncManager>
+    </slave>
+
+  </master>
+</masters>
