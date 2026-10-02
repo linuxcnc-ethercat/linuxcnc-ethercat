@@ -27,6 +27,7 @@
 
 #include "devices/lcec_generic.h"
 #include "lcec.h"
+#include "lcec_syncunit.h"
 #include <rtapi_app.h>
 // #include <linuxcnc/rtapi_mutex.h>
 
@@ -106,6 +107,17 @@ static const lcec_pindesc_t slave_pins[] = {
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
+/// @brief Sync Unit pins, exported when a master has more than one Sync Unit
+static const lcec_pindesc_t sync_unit_pins[] = {
+    {HAL_U32, HAL_OUT, offsetof(lcec_sync_unit_data_t, wkc), "%s.%s.syncunit.%s.wkc"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_sync_unit_data_t, wkc_min), "%s.%s.syncunit.%s.wkc-min"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_sync_unit_data_t, wkc_change_cnt), "%s.%s.syncunit.%s.wkc-change-count"},
+    {HAL_S32, HAL_OUT, offsetof(lcec_sync_unit_data_t, wkc_state), "%s.%s.syncunit.%s.wkc-state"},
+    {HAL_BIT, HAL_IO, offsetof(lcec_sync_unit_data_t, wkc_reset), "%s.%s.syncunit.%s.wkc-reset"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_sync_unit_data_t, fresh), "%s.%s.syncunit.%s.fresh"},
+    {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
+};
+
 static lcec_master_t *first_master = NULL;
 static lcec_master_t *last_master = NULL;
 extern int lcec_comp_id;
@@ -132,17 +144,24 @@ void lcec_read_master(void *arg, long period);
 void lcec_write_master(void *arg, long period);
 static int lcec_activate_master(lcec_master_t *master);
 static void lcec_activate(void *arg, long period);
-static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const char *name, uint32_t cycle_time);
+static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const char *name, uint32_t cycle_time, uint32_t phase);
 static int lcec_master_all_op(lcec_master_t *master);
+static int lcec_init_sync_unit(lcec_master_t *master, lcec_sync_unit_t *sync_unit);
+static void lcec_update_sync_unit_wkc(lcec_sync_unit_data_t *hd, const ec_domain_state_t *state);
 
 static void sigsegv_handler(int sig);
 
-static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const char *name, uint32_t cycle_time) {
+static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const char *name, uint32_t cycle_time, uint32_t phase) {
   lcec_sync_unit_t *sync_unit;
 
   if (cycle_time == 0 || master->app_time_period == 0 || (cycle_time % master->app_time_period) != 0) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s syncUnit %s cycle %u is not a positive multiple of appTimePeriod %u\n",
         master->name, name, cycle_time, master->app_time_period);
+    return NULL;
+  }
+  if (phase >= cycle_time / master->app_time_period) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s syncUnit %s phase %u must be less than its divider %u\n", master->name, name,
+        phase, cycle_time / master->app_time_period);
     return NULL;
   }
 
@@ -151,6 +170,11 @@ static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const 
       if (sync_unit->cycle_time != cycle_time) {
         rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s syncUnit %s cycle mismatch (%u != %u)\n", master->name, name,
             sync_unit->cycle_time, cycle_time);
+        return NULL;
+      }
+      if (sync_unit->phase != phase) {
+        rtapi_print_msg(
+            RTAPI_MSG_ERR, LCEC_MSG_PFX "master %s syncUnit %s phase mismatch (%u != %u)\n", master->name, name, sync_unit->phase, phase);
         return NULL;
       }
       return sync_unit;
@@ -162,8 +186,10 @@ static lcec_sync_unit_t *lcec_master_get_sync_unit(lcec_master_t *master, const 
   sync_unit->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
   sync_unit->cycle_time = cycle_time;
   sync_unit->cycle_divider = cycle_time / master->app_time_period;
+  sync_unit->phase = phase;
   sync_unit->queued = 1;
   LCEC_LIST_APPEND(master->first_sync_unit, master->last_sync_unit, sync_unit);
+  master->sync_unit_count++;
 
   return sync_unit;
 }
@@ -300,8 +326,11 @@ int rtapi_app_main(void) {
 
       // configure dc for this slave
       if (slave->dc_conf != NULL) {
+        // IgH aligns SYNC0 on the grid of sync0Cycle + sync1Cycle; oversampling
+        // terminals run SYNC0 as the sample clock and SYNC1 for the frame
         if (slave->sync_unit->cycle_divider > 1 && slave->dc_conf->sync0Cycle > 0 &&
-            slave->dc_conf->sync0Cycle != slave->sync_unit->cycle_time) {
+            slave->dc_conf->sync0Cycle != slave->sync_unit->cycle_time &&
+            slave->dc_conf->sync0Cycle + slave->dc_conf->sync1Cycle != slave->sync_unit->cycle_time) {
           rtapi_print_msg(RTAPI_MSG_WARN,
               LCEC_MSG_PFX
               "slave %s.%s syncUnit %s cycle=%u ns but DC sync0Cycle=%u ns; set dcConf sync0Cycle to the slave "
@@ -386,6 +415,13 @@ int rtapi_app_main(void) {
     // Monitor on by default (one broadcast datagram per cycle); setp to 0
     // for zero overhead when the dc-sync pins are unused.
     LCEC_PARAM_BIT_SET(master->hal_data->dc_sync_monitor, 1);
+
+    // Sync Unit pins
+    for (sync_unit = master->first_sync_unit; sync_unit != NULL; sync_unit = sync_unit->next) {
+      if (lcec_init_sync_unit(master, sync_unit) != 0) {
+        goto fail2;
+      }
+    }
 
     // Activate master (only when initf is unavailable; otherwise lcec.activate
     // funct does it from RT context after the user's `initf lcec.activate <thread>`).
@@ -616,7 +652,7 @@ int lcec_parse_config(void) {
         slave->sync_unit_cycle = slave_conf->syncUnitCycle;
         slave->master = master;
 
-        slave->sync_unit = lcec_master_get_sync_unit(master, slave->sync_unit_name, slave->sync_unit_cycle);
+        slave->sync_unit = lcec_master_get_sync_unit(master, slave->sync_unit_name, slave->sync_unit_cycle, slave_conf->syncUnitPhase);
         if (slave->sync_unit == NULL) {
           goto fail2;
         }
@@ -1234,6 +1270,9 @@ static int lcec_activate_master(lcec_master_t *master) {
 #ifdef RTAPI_TASK_PLL_SUPPORT
   master->dc_ref_time = initial_app_time;  // Record the same value we sent to kernel
 #endif
+  // IgH aligns every slave's SYNC0 to this time, so the next write is tick 0
+  // of the Sync Unit grid
+  master->next_tick = 0;
   rtapi_print_msg(RTAPI_MSG_INFO, LCEC_MSG_PFX "Initial app_time set to %llu\n", (unsigned long long)initial_app_time);
 
   // Activate master
@@ -1250,8 +1289,8 @@ static int lcec_activate_master(lcec_master_t *master) {
       master->process_data = sync_unit->process_data;
       master->process_data_len = sync_unit->process_data_len;
     }
-    rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "master %s syncUnit %s cycle=%u ns divider=%u process_data_len=%d\n", master->name,
-        sync_unit->name, sync_unit->cycle_time, sync_unit->cycle_divider, sync_unit->process_data_len);
+    rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "master %s syncUnit %s cycle=%u ns divider=%u phase=%u process_data_len=%d\n", master->name,
+        sync_unit->name, sync_unit->cycle_time, sync_unit->cycle_divider, sync_unit->phase, sync_unit->process_data_len);
   }
 
   master->activated = 1;
@@ -1327,6 +1366,9 @@ void lcec_read_master(void *arg, long period) {
     // pins continue to describe the complete process image. Domains that are
     // not scheduled this cycle retain their last reported state.
     ecrt_domain_state(sync_unit->domain, &sync_unit_state);
+    if (sync_unit->hal_data != NULL && sync_unit->process) {
+      lcec_update_sync_unit_wkc(sync_unit->hal_data, &sync_unit_state);
+    }
     domain_state.working_counter += sync_unit_state.working_counter;
     if (sync_unit_state.wc_state != EC_WC_ZERO) {
       all_domains_zero = 0;
@@ -1426,6 +1468,12 @@ void lcec_read_master(void *arg, long period) {
       slave->proc_read(slave, slave->sync_unit->cycle_time);
     }
   }
+
+  for (sync_unit = master->first_sync_unit; sync_unit != NULL; sync_unit = sync_unit->next) {
+    if (sync_unit->hal_data != NULL) {
+      LCEC_PIN_BIT_SET(sync_unit->hal_data->fresh, sync_unit->process);
+    }
+  }
 }
 
 /// @brief Write all output pins on a master and its slaves.
@@ -1462,20 +1510,13 @@ void lcec_write_master(void *arg, long period) {
     }
   }
 
-  // Keep all domains cycling during startup. Once OP has been reached, run
-  // each Sync Unit at its configured integer divider.
+  // Keep all domains cycling during startup. Once OP has been reached, send
+  // each Sync Unit on the ticks of the DC grid its divider and phase select,
+  // so a unit's exchange keeps the same position relative to the SYNC0
+  // events of its slaves across restarts.
   force_cycle = !master->sync_units_started;
   for (sync_unit = master->first_sync_unit; sync_unit != NULL; sync_unit = sync_unit->next) {
-    if (force_cycle) {
-      sync_unit->write = 1;
-      sync_unit->cycle_counter = 0;
-    } else if (sync_unit->cycle_counter == 0) {
-      sync_unit->write = 1;
-      sync_unit->cycle_counter = sync_unit->cycle_divider - 1;
-    } else {
-      sync_unit->write = 0;
-      sync_unit->cycle_counter--;
-    }
+    sync_unit->write = force_cycle || lcec_su_due(master->next_tick, sync_unit->cycle_divider, sync_unit->phase);
   }
 
   // process slaves
@@ -1518,6 +1559,10 @@ void lcec_write_master(void *arg, long period) {
 #endif
 
   ecrt_master_application_time(master->master, app_time);
+
+  // One write per master cycle: count ticks rather than derive them from
+  // app_time, which also carries how late in the cycle this funct runs.
+  master->next_tick++;
 
   // publish the (app time, monotonic time) correlation pair; `now` was
   // sampled with rtapi_get_time() adjacent to the app_time computation, so
@@ -1793,6 +1838,8 @@ void lcec_write_master(void *arg, long period) {
       }
       // force resync of master time
       master->dc_ref -= resync_corr;
+      // app_time moved by whole periods; keep the Sync Unit grid with it
+      master->next_tick -= lcec_su_round_div(resync_corr, app_period);
       // skip next control cycle to allow resync
       dc_time_valid = 0;
       // increment reset counter to document this event
@@ -1835,6 +1882,50 @@ void lcec_write_master(void *arg, long period) {
   master->app_time_last = (uint32_t)app_time;
   master->dc_time_valid_last = dc_time_valid;
 #endif
+}
+
+/// @brief Export the pins of a Sync Unit.
+static int lcec_init_sync_unit(lcec_master_t *master, lcec_sync_unit_t *sync_unit) {
+  // a master with a single unit keeps its pin set unchanged
+  if (master->sync_unit_count < 2) {
+    return 0;
+  }
+
+  if ((sync_unit->hal_data = LCEC_HAL_ALLOCATE(lcec_sync_unit_data_t)) == NULL) {
+    return -1;
+  }
+  memset(sync_unit->hal_data, 0, sizeof(lcec_sync_unit_data_t));
+  return lcec_pin_newf_list(sync_unit->hal_data, sync_unit_pins, LCEC_MODULE_NAME, master->name, sync_unit->name);
+}
+
+/// @brief Update the working counter pins of a Sync Unit.
+static void lcec_update_sync_unit_wkc(lcec_sync_unit_data_t *hd, const ec_domain_state_t *state) {
+  uint32_t wkc_now = state->working_counter;
+
+  if (LCEC_PIN_BIT_GET(hd->wkc_reset)) {
+    LCEC_PIN_BIT_SET(hd->wkc_reset, 0);
+    hd->wkc_full_seen = 0;
+    LCEC_PIN_U32_SET(hd->wkc_min, 0);
+    LCEC_PIN_U32_SET(hd->wkc_change_cnt, 0);
+  }
+
+  LCEC_PIN_U32_SET(hd->wkc, wkc_now);
+  LCEC_PIN_S32_SET(hd->wkc_state, (hal_s32_t)state->wc_state);
+  if (!hd->wkc_full_seen) {
+    if (state->wc_state == EC_WC_COMPLETE) {
+      hd->wkc_full_seen = 1;
+      LCEC_PIN_U32_SET(hd->wkc_min, wkc_now);
+      LCEC_PIN_U32_SET(hd->wkc_change_cnt, 0);
+    }
+  } else {
+    if (wkc_now < LCEC_PIN_U32_GET(hd->wkc_min)) {
+      LCEC_PIN_U32_SET(hd->wkc_min, wkc_now);
+    }
+    if (wkc_now != hd->wkc_last) {
+      LCEC_PIN_U32_SET(hd->wkc_change_cnt, LCEC_PIN_U32_GET(hd->wkc_change_cnt) + 1);
+    }
+  }
+  hd->wkc_last = wkc_now;
 }
 
 #ifndef __KERNEL__

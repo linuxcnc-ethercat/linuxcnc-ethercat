@@ -253,21 +253,36 @@ typedef struct lcec_pdo_entry_reg {
   ec_pdo_entry_reg_t *pdo_entry_regs;
 } lcec_pdo_entry_reg_t;
 
+/// @brief Per-Sync Unit HAL pins.
+typedef struct lcec_sync_unit_data {
+  hal_u32_t *wkc;             // Output: this unit's domain working counter
+  hal_u32_t *wkc_min;         // Output: min WKC since first complete exchange
+  hal_u32_t *wkc_change_cnt;  // Output: WKC change count since first complete exchange
+  hal_s32_t *wkc_state;       // Output: 0=zero, 1=incomplete, 2=complete (ec_wc_state_t)
+  hal_bit_t *wkc_reset;       // IO: set to 1 to clear min/change stats; self-clears
+  hal_bit_t *fresh;           // Output: new input data was read this cycle
+  uint32_t wkc_last;          // Internal: previous WKC value
+  int wkc_full_seen;          // Internal: domain reached EC_WC_COMPLETE at least once
+} lcec_sync_unit_data_t;
+
+/// @brief A Sync Unit: one EtherCAT domain exchanged every `cycle_divider`
+/// master cycles.
 typedef struct lcec_sync_unit {
   struct lcec_sync_unit *prev;
   struct lcec_sync_unit *next;
   char name[LCEC_CONF_STR_MAXLEN];
   uint32_t cycle_time;
   unsigned int cycle_divider;
-  unsigned int cycle_counter;
+  unsigned int phase;  ///< Master cycle within the unit cycle the domain is sent on.
   int pdo_entry_count;
   lcec_pdo_entry_reg_t *regs;
   ec_domain_t *domain;
-  uint8_t *process_data;
+  uint8_t *process_data;  ///< The domain's process image.
   int process_data_len;
   int queued;
   int process;
   int write;
+  lcec_sync_unit_data_t *hal_data;  ///< Unit pins, NULL for a master with a single unit.
 } lcec_sync_unit_t;
 
 typedef struct lcec_master {
@@ -284,6 +299,8 @@ typedef struct lcec_master {
   lcec_sync_unit_t *first_sync_unit;
   lcec_sync_unit_t *last_sync_unit;
   int sync_units_started;
+  int sync_unit_count;
+  int64_t next_tick;  ///< Grid index of the tick the next write sends; tick 0 is the activation app time.
   lcec_slave_t *first_slave;
   lcec_slave_t *last_slave;
   lcec_master_data_t *hal_data;

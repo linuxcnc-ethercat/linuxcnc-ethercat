@@ -208,9 +208,29 @@ keeps the previous behavior: the slave belongs to the `default` domain and is
 exchanged every master cycle.
 
 For a DC-capable slave, configure `dcConf` independently and keep its hardware
-cycle consistent with the Sync Unit cycle. Slaves that exchange coupled data,
+cycle consistent with the Sync Unit cycle: `sync0Cycle`, or `sync0Cycle +
+sync1Cycle` for oversampling terminals that run SYNC0 as the sample clock. Slaves that exchange coupled data,
 including an FSoE logic device and its safety slaves, should remain in the same
 Sync Unit.
+
+### Position on the DC grid
+
+Master cycles are counted on the DC grid: cycle 0 is the application time
+handed to the master at activation, which is also the time IgH aligns every
+slave's SYNC0 to.  A Sync Unit with divider `N` (`syncUnitCycle="*N"`) and
+`syncUnitPhase="p"` is exchanged on the master cycles where
+`(cycle - p) % N == 0`.
+
+For a DC slave whose `sync0Cycle` equals its Sync Unit's cycle, SYNC0 fires
+`sync0Shift` ns after the start of phase-0 cycles.  So with phase `0` the
+unit's frame leaves at the start of the master cycle SYNC0 is aligned to, and
+`sync0Shift` must cover the frame's send latency for the outputs to be
+latched by the SYNC0 right after it.  With phase `N - 1` the frame leaves one
+master cycle before SYNC0.
+
+The schedule is the same on every start.  (Before, slow units counted from the
+cycle the bus first reached OP, so a unit's position relative to SYNC0 changed
+from run to run.)
 
 ## Drivers and DC Clocks
 

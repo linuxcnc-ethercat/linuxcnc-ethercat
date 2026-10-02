@@ -118,3 +118,16 @@ process is not atomic: read `hi`, then `lo`, then `hi` again, and
 retry if `hi` changed (the low word rolls over every ~4.3 s).  For
 the full four-pin set, re-read until two consecutive reads agree;
 the values only change once per cycle, so one retry suffices.
+
+## Sync Unit pins
+
+A master with more than one [Sync
+Unit](distributed-clocks.md#process-data-sync-units) exports pins per
+unit named `lcec.<m>.syncunit.<unit>.<pin>`.  The master-level `wkc` pins above
+keep describing the whole process image; these describe one domain.
+They update on the master cycles the unit is exchanged on.
+
+| Pin | Type | Dir | Meaning |
+|---|---|---|---|
+| `...wkc` / `wkc-state` / `wkc-min` / `wkc-change-count` / `wkc-reset` | | | As the master `wkc` pins, for this unit's domain |
+| `...fresh` | bit | OUT | TRUE in the cycles new input data for this unit was read, FALSE in the cycles in between |

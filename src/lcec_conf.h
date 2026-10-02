@@ -96,6 +96,7 @@ typedef struct {
   size_t idnConfigLength;
   unsigned int modParamCount;
   uint32_t syncUnitCycle;
+  uint32_t syncUnitPhase;
   char syncUnit[LCEC_CONF_STR_MAXLEN];
   char name[LCEC_CONF_STR_MAXLEN];
 } LCEC_CONF_SLAVE_T;

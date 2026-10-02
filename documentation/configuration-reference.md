@@ -108,6 +108,12 @@ device:
   Process-data exchange period for this Sync Unit. It must be a positive
   integer multiple of the master's `appTimePeriod`; for example, `*2` means
   every second master cycle.
+- `syncUnitPhase="<n>"`: (optional, defaults to `0`): The master cycle within
+  the Sync Unit cycle on which the unit is exchanged, from `0` to
+  `syncUnitCycle / appTimePeriod - 1`. Cycles are counted on the DC grid, so
+  phase `0` is the master cycle a SYNC0 of the unit's period is aligned to.
+  Slaves with the same Sync Unit name must use the same phase. See
+  [Distributed Clocks](distributed-clocks.md#process-data-sync-units).
 -  `vid="<vid>"`: (required for generic, usable but not recommended for others): the Vendor ID for the
    device.  You can determine this via `ethercat slaves -v`.
 - `pid="<pid>"`: (required for generic, usable but not recommended for others): the product ID for the
