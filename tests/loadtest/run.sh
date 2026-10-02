@@ -30,8 +30,21 @@ echo "=== ethercat master on veth-ec0 ($MAC)"
 # ec_generic uses ec_master symbols: master first.
 insmod "$ETHERCAT_SRC/master/ec_master.ko" main_devices="$MAC" || fail "insmod ec_master"
 insmod "$ETHERCAT_SRC/devices/ec_generic.ko" || fail "insmod ec_generic"
-sleep 1
+# ec_master creates /dev/EtherCAT0 as soon as it loads, but ec_generic binds
+# veth-ec0 asynchronously. Requesting the master before the device is
+# attached fails with "Failed to reserve master: No such device", so wait
+# for the attach rather than a fixed time.
+ETHERCAT_TOOL=$(command -v ethercat || echo "$ETHERCAT_SRC/tool/ethercat")
+attached=0
+for _ in $(seq 1 30); do
+    if [ -c /dev/EtherCAT0 ] && "$ETHERCAT_TOOL" master 2> /dev/null | grep -q "(attached)"; then
+        attached=1
+        break
+    fi
+    sleep 1
+done
 [ -c /dev/EtherCAT0 ] || fail "/dev/EtherCAT0 missing"
+[ "$attached" = 1 ] || { "$ETHERCAT_TOOL" master; fail "master device not attached to veth-ec0 after 30 s"; }
 # rtapi_app drops to RTAPI_UID before lcec opens the master device;
 # production grants access via the etherlab udev rule, the test just
 # opens it up.
