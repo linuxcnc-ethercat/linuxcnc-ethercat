@@ -647,12 +647,16 @@ int lcec_parse_config(void) {
           slave->generic_pdo_entry_count = slave_conf->pdoMappingCount;
           slave->proc_init = lcec_generic_init;
 
-          // alloc hal memory
-          if ((generic_hal_data = LCEC_HAL_ALLOCATE_ARRAY(lcec_generic_pin_t, slave_conf->pdoMappingCount)) == NULL) {
-            rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", master->name, slave_conf->name);
-            goto fail2;
+          // alloc hal memory, one pin per mapped PDO entry. A slave without
+          // mapped entries (e.g. an EK1100 coupler) has no pins and no HAL
+          // memory: hal_malloc(0) is an error on LinuxCNC 2.10.
+          if (slave_conf->pdoMappingCount > 0) {
+            if ((generic_hal_data = LCEC_HAL_ALLOCATE_ARRAY(lcec_generic_pin_t, slave_conf->pdoMappingCount)) == NULL) {
+              rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "hal_malloc() for slave %s.%s failed\n", master->name, slave_conf->name);
+              goto fail2;
+            }
+            memset(generic_hal_data, 0, sizeof(lcec_generic_pin_t) * slave_conf->pdoMappingCount);
           }
-          memset(generic_hal_data, 0, sizeof(lcec_generic_pin_t) * slave_conf->pdoMappingCount);
 
           // alloc pdo entry memory
           generic_pdo_entries = LCEC_ALLOCATE_ARRAY(ec_pdo_entry_info_t, slave_conf->pdoEntryCount);
@@ -845,12 +849,6 @@ int lcec_parse_config(void) {
           goto fail2;
         }
 
-        // check for hal data
-        if (generic_hal_data == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "HAL data for generic device missing\n");
-          goto fail2;
-        }
-
         // check for hal dir
         if (generic_hal_dir == HAL_DIR_UNSPECIFIED) {
           rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "HAL direction for generic device missing\n");
@@ -862,8 +860,12 @@ int lcec_parse_config(void) {
         generic_pdo_entries->subindex = pe_conf->subindex;
         generic_pdo_entries->bit_length = pe_conf->bitLength;
 
-        // initialize hal data
+        // initialize hal data (allocated only for slaves with mapped entries)
         if (pe_conf->halPin[0] != 0) {
+          if (generic_hal_data == NULL) {
+            rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "HAL data for generic device missing\n");
+            goto fail2;
+          }
           strncpy(generic_hal_data->name, pe_conf->halPin, LCEC_CONF_STR_MAXLEN);
           generic_hal_data->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
           generic_hal_data->type = pe_conf->halType;
@@ -893,14 +895,12 @@ int lcec_parse_config(void) {
           goto fail2;
         }
 
-        // check for hal data
-        if (generic_hal_data == NULL) {
-          rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "HAL data for generic device missing\n");
-          goto fail2;
-        }
-
-        // initialize hal data
+        // initialize hal data (allocated only for slaves with mapped entries)
         if (ce_conf->halPin[0] != 0) {
+          if (generic_hal_data == NULL) {
+            rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "HAL data for generic device missing\n");
+            goto fail2;
+          }
           strncpy(generic_hal_data->name, ce_conf->halPin, LCEC_CONF_STR_MAXLEN);
           generic_hal_data->name[LCEC_CONF_STR_MAXLEN - 1] = 0;
           generic_hal_data->type = ce_conf->halType;
