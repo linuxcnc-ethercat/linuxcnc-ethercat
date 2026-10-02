@@ -21,7 +21,11 @@ fail() {
 
 echo "=== veth pair"
 ip link del veth-ec0 2> /dev/null
-ip link add veth-ec0 type veth peer name veth-ec1
+# Fixed, locally administered MACs: with a random one, systemd-udev's
+# MACAddressPolicy=persistent can rewrite the address after we read it, and
+# the master then waits forever for a device that no longer exists.
+ip link add veth-ec0 address 02:00:00:00:ec:00 type veth peer name veth-ec1 address 02:00:00:00:ec:01
+command -v udevadm > /dev/null && udevadm settle
 ip link set veth-ec0 up
 ip link set veth-ec1 up
 MAC=$(cat /sys/class/net/veth-ec0/address)
@@ -44,7 +48,12 @@ for _ in $(seq 1 30); do
     sleep 1
 done
 [ -c /dev/EtherCAT0 ] || fail "/dev/EtherCAT0 missing"
-[ "$attached" = 1 ] || { "$ETHERCAT_TOOL" master; fail "master device not attached to veth-ec0 after 30 s"; }
+if [ "$attached" != 1 ]; then
+    "$ETHERCAT_TOOL" master
+    echo "master expects $MAC; veth-ec0 is now: $(ip -br link show veth-ec0)"
+    dmesg | grep -i ethercat | tail -n 20
+    fail "master device not attached to veth-ec0 after 30 s"
+fi
 # rtapi_app drops to RTAPI_UID before lcec opens the master device;
 # production grants access via the etherlab udev rule, the test just
 # opens it up.
