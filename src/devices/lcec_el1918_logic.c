@@ -203,8 +203,11 @@ int lcec_el1918_logic_init(int comp_id, lcec_slave_t *slave) {
     }
   }
 
-  // alloc hal memory
-  hal_data = LCEC_HAL_ALLOCATE_ARRAY(lcec_el1918_logic_data_t, fsoe_idx * sizeof(lcec_el1918_logic_fsoe_t));
+  // alloc hal memory: base struct plus fsoe_idx entries of the flexible
+  // fsoe[] array.  Not LCEC_HAL_ALLOCATE_ARRAY: that would multiply the
+  // struct sizes, and fsoe_idx == 0 would ask hal_malloc for 0 bytes,
+  // which LinuxCNC 2.10 rejects.
+  hal_data = lcec_hal_malloc(sizeof(*hal_data) + fsoe_idx * sizeof(*fsoe_data), __FILE__, __func__, __LINE__);
   hal_data->fsoe_count = fsoe_idx;
   slave->hal_data = hal_data;
 
