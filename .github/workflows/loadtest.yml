@@ -1,0 +1,93 @@
+---
+name: Load test
+
+# Builds lcec and actually loads it into a running HAL with the IgH
+# master bound to a veth pair - no EtherCAT hardware needed.  Catches
+# the class of bug that build-only CI cannot: runtime load failures on
+# real configs, e.g. the hal_malloc(0) rejection in LinuxCNC
+# 2.10.0~pre2 (#529).
+#
+# Runs on the ubuntu host (not in a container) because it must build the
+# etherlab kernel module against the host kernel and insmod it.
+
+on:
+    push:
+        branches: ['**']
+    pull_request:
+    workflow_dispatch:
+    schedule:
+        # Weekly, to keep tracking linuxcnc master even when nothing
+        # pushes.
+        - cron: '47 3 * * 1'
+
+permissions:
+    contents: read
+
+jobs:
+    load-test:
+        name: load test (linuxcnc 2.10, veth)
+        runs-on: ubuntu-24.04
+        steps:
+            - name: Install build dependencies
+              env:
+                  DEBIAN_FRONTEND: noninteractive
+              run: |
+                  set -e
+                  echo 'Acquire::Retries "10";' | sudo tee /etc/apt/apt.conf.d/80-retries
+                  sudo apt-get update
+                  sudo apt-get install -y --no-install-recommends \
+                      linux-headers-$(uname -r) \
+                      git build-essential sudo \
+                      autoconf automake libtool pkg-config kmod iproute2
+
+            - name: Checkout
+              uses: actions/checkout@v5
+
+            - name: Build linuxcnc 2.10 (uspace, run-in-place)
+              run: |
+                  set -e
+                  git clone --depth 1 https://github.com/LinuxCNC/linuxcnc.git /tmp/linuxcnc
+                  cd /tmp/linuxcnc
+                  # Upstream's own headless CI recipe: minimal deps, no
+                  # GUI/doc tooling. mk-build-deps on debian/control does
+                  # not resolve on ubuntu (dummy package silently removed).
+                  .github/scripts/install-deps-headless.sh
+                  .github/scripts/build-rip.sh --with-realtime=uspace --disable-gui --disable-manpages --disable-build-documentation
+                  sudo make -C src setuid
+
+            - name: Build etherlab (libethercat + kernel modules)
+              run: |
+                  set -e
+                  git clone --depth 1 --branch v1.6.9-4 https://github.com/linuxcnc-ethercat/ethercat.git ~/ethercat
+                  cd ~/ethercat
+                  ./bootstrap
+                  # Feature set mirrors debian/dkms.conf in that repo,
+                  # generic driver only: the test binds a veth pair.
+                  ./configure \
+                      --with-linux-dir=/lib/modules/$(uname -r)/build \
+                      --enable-generic \
+                      --disable-8139too --disable-e100 --disable-e1000 --disable-e1000e \
+                      --disable-r8169 --disable-igb --disable-igc --disable-genet \
+                      --disable-stmmac-pci --disable-dwmac-intel --disable-ccat \
+                      --disable-eoe --enable-cycles --enable-hrtimer --disable-rtdm \
+                      --disable-debug-if --disable-debug-ring --disable-regalias \
+                      --disable-tty --disable-wildcards --enable-sii-assign --enable-rt-syslog
+                  make -j$(nproc)
+                  make -j$(nproc) modules
+                  sudo make install
+                  sudo ldconfig
+
+            - name: Build lcec and install into the RIP tree
+              run: |
+                  set -e
+                  source /tmp/linuxcnc/scripts/rip-environment
+                  make build -j$(nproc)
+                  make install-rip LINUXCNC_HOME=/tmp/linuxcnc
+
+            - name: Run load test
+              run: |
+                  # uspace rtapi refuses pure root; RTAPI_UID is the
+                  # fallback uid it drops to (see rtapi_app's refusal
+                  # message). Modules and veth still done as root inside.
+                  sudo env RTAPI_UID=$(id -u) ETHERCAT_SRC=$HOME/ethercat \
+                      bash -c 'source /tmp/linuxcnc/scripts/rip-environment && tests/loadtest/run.sh'
