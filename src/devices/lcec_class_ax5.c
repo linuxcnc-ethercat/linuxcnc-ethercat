@@ -149,7 +149,11 @@ int lcec_class_ax5_init(lcec_slave_t *slave, lcec_class_ax5_chan_t *chan, int in
 
   // init parameters
   LCEC_PARAM_FLOAT_SET(chan->scale, 1.0);
-  LCEC_PARAM_FLOAT_SET(chan->scale_fb2, 1.0);
+  if (chan->fb2_enabled) {
+    // scale_fb2 is only registered when fb2 is enabled; on the HAL
+    // getter/setter API an unregistered param is a NULL reference.
+    LCEC_PARAM_FLOAT_SET(chan->scale_fb2, 1.0);
+  }
   LCEC_PARAM_FLOAT_SET(chan->vel_scale, ((double)idn_vel_scale) * pow(10.0, (double)idn_vel_exp));
   LCEC_PARAM_U32_SET(chan->pos_resolution, idn_pos_resolution);
 
@@ -177,7 +181,7 @@ void lcec_class_ax5_check_scales(lcec_class_ax5_chan_t *chan) {
   }
 
   // check fb2 for change in scale value
-  if (LCEC_PARAM_FLOAT_GET(chan->scale_fb2) != chan->scale_fb2_old) {
+  if (chan->fb2_enabled && LCEC_PARAM_FLOAT_GET(chan->scale_fb2) != chan->scale_fb2_old) {
     // scale value has changed, test and update it
     if ((LCEC_PARAM_FLOAT_GET(chan->scale_fb2) < 1e-20) && (LCEC_PARAM_FLOAT_GET(chan->scale_fb2) > -1e-20)) {
       // value too small, divide by zero is a bad thing
