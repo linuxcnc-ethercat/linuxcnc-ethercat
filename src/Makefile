@@ -8,7 +8,7 @@ include Makefile.clean
 #CC=g++
 
 RTLDFLAGS += -Wl,-rpath,$(LIBDIR)
-RTEXTRA_LDFLAGS += -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -L$(LIBDIR) -llinuxcnchal -lethercat -lrt
+RTEXTRA_LDFLAGS += -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -L$(LIBDIR) -llinuxcnchal -lethercat -lrt -lpthread
 
 # optional CUSE support (exposes serial terminals like EL6001/EL6021 as
 # userspace character devices); enabled when libfuse3 >= 3.12 is available
