@@ -1,3 +1,36 @@
+linuxcnc-ethercat (1.46.0-1) unstable; urgency=low
+
+  * feat(main): schedule Sync Units on the DC grid and add
+    syncUnitPhase, so a unit's exchange keeps a fixed position
+    relative to its slaves' SYNC0 across restarts, and export
+    per-Sync Unit working counter and fresh pins. Thanks to
+    griffin-sisk.
+  * feat(main): run Sync Units with a divider of 2 or more from their
+    own HAL threads, phase-locked to the bus and its distributed
+    clocks through the per-thread RTAPI PLL. A bus can serve a fast
+    analog input while drives, motion and I/O run at slower rates,
+    without running the whole HAL at the fastest rate. New pins:
+    threaded, late-count, stale-count, phase-err, pll-out,
+    phase-locked, plus the phase-offset param. Thanks to
+    griffin-sisk.
+  * feat(drivers): add EL6001/EL6021 serial terminal driver with a
+    CUSE tty. Thanks to griffin-sisk for the hardware test fixes.
+  * fix(dout): register the invert param for packed channels. Thanks
+    to griffin-sisk.
+  * fix(main): accept sync0Cycle + sync1Cycle as a slave's Sync Unit
+    cycle, and don't allocate HAL pin memory for generic slaves
+    without pins; zero-size allocations are fatal on 2.10. Thanks to
+    griffin-sisk.
+  * fix(el1918_logic,el6900): size the FSoE HAL allocation as base +
+    n*entry.
+  * fix(ax5): guard scale_fb2 access when fb2 is disabled; an
+    AX5100/AX5200/AX5805 with fb2 off crashed at init on the getset
+    HAL flavor.
+  * docs: multi-rate setup guide (documentation/multi-rate.md) and
+    Sync Unit threading notes in distributed-clocks.md.
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Sat, 03 Oct 2026 12:56:32 +0800
+
 linuxcnc-ethercat (1.45.0-1) unstable; urgency=low
 
   * feat(hal): support LinuxCNC 2.10.0~pre2 (64-bit opaque HAL API).
