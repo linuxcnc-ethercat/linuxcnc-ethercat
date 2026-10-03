@@ -29,6 +29,7 @@
 - [Delta ASDA Servo drives](deasda.md)
 - [EL3xxx: Beckhoff analog input devices](el3xxx.md)
 - [EL4xxx: Beckhoff analog output devices](el4xxx.md)
+- [EL6001/EL6021: Beckhoff serial interface terminals](el6021.md)
 - [EL7041: Beckhoff EL7041 stepper drives](el7041.md)
 - [Inovance IS620N and SV660 servo drives](inovance.md)
 - [Leadshine stepper drives](leadshine_stepper.md)
