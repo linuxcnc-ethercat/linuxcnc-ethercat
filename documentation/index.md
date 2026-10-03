@@ -32,6 +32,7 @@
 - [EL6001/EL6021: Beckhoff serial interface terminals](el6021.md)
 - [EL7041: Beckhoff EL7041 stepper drives](el7041.md)
 - [Inovance IS620N and SV660 servo drives](inovance.md)
+- [Leadshine R2EC/R3EC modular bus couplers](leadshine_ec.md)
 - [Leadshine stepper drives](leadshine_stepper.md)
 - [Omron MX2 VFD](ommx2.md)
 - [RTelligent ECR and ECT stepper drives](rtec.md)

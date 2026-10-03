@@ -206,8 +206,9 @@ Each `<subModule>` may contain its own `<modParam name="..."
 value="..."/>` tags.  These work exactly like the slave-level
 `<modParam>` tags described above, except that the allowed names and
 values are defined by the *module type* (the `ident`) rather than by
-the coupler.  You can mix slave-level `<modParam>` tags (which
-configure the coupler itself) with `<subModule>` tags in any order.
+the coupler.  Slave-level `<modParam>` tags only work if the coupler
+type defines its own modparams (the `R2EC`/`R3EC` define none, so a
+slave-level `<modParam>` there is rejected at parse time).
 
 Here is an example for a Leadshine `R2EC` coupler carrying a 16-channel
 digital-input module in slot 0 and a 16-channel digital-output module
@@ -224,8 +225,9 @@ in slot 1:
     </slave>
 ```
 
-Refer to the specific driver's documentation for the list of supported
-module `ident`s and the `<modParam>`s available for each.
+Refer to the specific driver's documentation (for example
+[leadshine_ec.md](leadshine_ec.md) for the R2EC/R3EC) for the list of
+supported module `ident`s and the `<modParam>`s available for each.
 
 ### `<syncManagers>`
 

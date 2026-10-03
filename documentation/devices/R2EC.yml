@@ -1,0 +1,11 @@
+---
+Device: R2EC
+VendorID: "0x00004321"
+VendorName: Leadshine Technology Co., Ltd.
+PID: "0x61400005"
+Description: Leadshine R2EC modular EtherCAT bus coupler (32 slots)
+DocumentationURL: https://www.leadshine.com/
+DeviceType: Bus Coupler
+Notes: Modular coupler; configure slots with <subModule> tags, see documentation/leadshine_ec.md
+SrcFile: src/devices/lcec_leadshine_ec.c
+TestingStatus: ""
