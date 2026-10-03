@@ -45,6 +45,12 @@ driver use, so use it however works best for you.
 See the [PDOs and syncs doc](pdos-and-syncs.md) for a discussion of
 the various ways of mapping PDO entries in LinuxCNC-Ethercat.
 
+If your device forgets configuration that `_init` wrote via SDO or SII
+when it loses power (module lists, PDO assignment, feature bits), add a
+`proc_reinit` hook so LinuxCNC-Ethercat can re-apply it when the
+device returns to the bus.  See [Runtime slave
+re-initialization](runtime-reinit.md).
+
 ### HAL pin and parameter access
 
 LinuxCNC is migrating HAL to typed getter/setter accessors (upstream
