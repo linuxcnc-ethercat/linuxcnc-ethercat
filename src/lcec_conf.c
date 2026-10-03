@@ -78,7 +78,7 @@ static void parsePdoEntryAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char 
 static void parseComplexEntryAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **attr);
 static void parseModParamAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **attr);
 
-/// XXX: submodule implementation
+/// Parse `<subModule` attributes; endSubModule leaves the submodule scope.
 static void parseSubModuleAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **attr);
 static void endSubModule(LCEC_CONF_XML_INST_T *inst, int next);
 
@@ -98,7 +98,7 @@ static const LCEC_CONF_XML_HANLDER_T xml_states[] = {
     {"pdoEntry",     lcecConfTypePdo,         lcecConfTypePdoEntry,     parsePdoEntryAttrs,     NULL},
     {"complexEntry", lcecConfTypePdoEntry,    lcecConfTypeComplexEntry, parseComplexEntryAttrs, NULL},
     {"modParam",     lcecConfTypeSlave,       lcecConfTypeModParam,     parseModParamAttrs,     NULL},
-    /// XXX: submodule implementation
+    // a slave may carry pluggable modules, each with its own modParams
     {"subModule",    lcecConfTypeSlave,       lcecConfTypeSubModule,         parseSubModuleAttrs, endSubModule},
     {"modParam",     lcecConfTypeSubModule,   lcecConfTypeSubModuleModParam, parseModParamAttrs,  NULL},
     ///
@@ -1496,6 +1496,7 @@ static void parseSubModuleAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char
   p->confType = lcecConfTypeSubModule;
   p->modParamCount = 0;
 
+  int have_id = 0;
   int have_ident = 0;
   while (*attr) {
     const char *name = *(attr++);
@@ -1511,6 +1512,7 @@ static void parseSubModuleAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char
         return;
       }
       p->id = (uint8_t)id;
+      have_id = 1;
       continue;
     }
 
@@ -1540,11 +1542,41 @@ static void parseSubModuleAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char
     return;
   }
 
-  // ident is required
+  // id and ident are required
+  if (!have_id) {
+    fprintf(stderr, "%s: ERROR: subModule has no id attribute\n", modname);
+    XML_StopParser(inst->parser, 0);
+    return;
+  }
   if (!have_ident) {
     fprintf(stderr, "%s: ERROR: subModule has no ident attribute\n", modname);
     XML_StopParser(inst->parser, 0);
     return;
+  }
+
+  // reject duplicate slot ids and names within this slave: two subModules
+  // with the same id would map identical PDOs and clobber each other's
+  // 0xF030 entry, and duplicate names produce colliding HAL pin names.
+  // SubModule entries are stable, separately allocated items in the output
+  // buffer, so walk the list from the current slave's entry onwards.
+  if (state->currSlave != NULL) {
+    LCEC_CONF_OUTBUF_ITEM_T *item = ((LCEC_CONF_OUTBUF_ITEM_T *)state->currSlave) - 1;
+    for (item = item->next; item != NULL; item = item->next) {
+      LCEC_CONF_SUBMODULE_T *q = (LCEC_CONF_SUBMODULE_T *)(item + 1);
+      if (q == p || q->confType != lcecConfTypeSubModule) {
+        continue;
+      }
+      if (q->id == p->id) {
+        fprintf(stderr, "%s: ERROR: duplicate subModule id %d\n", modname, p->id);
+        XML_StopParser(inst->parser, 0);
+        return;
+      }
+      if (p->name[0] != 0 && q->name[0] != 0 && strcmp(q->name, p->name) == 0) {
+        fprintf(stderr, "%s: ERROR: duplicate subModule name '%s'\n", modname, p->name);
+        XML_StopParser(inst->parser, 0);
+        return;
+      }
+    }
   }
 
   // the ident must be a module type the slave type knows about

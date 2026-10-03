@@ -179,7 +179,7 @@ typedef struct {
   const lcec_modparam_desc_t *modparams;  ///< XML modparams, if any
   uint64_t flags;                         ///< Flags, passed through to `proc_init` as `slave->flags`.
   const char *sourcefile;                 ///< Source filename, autopopulated.
-  const lcec_submodule_desc_t *modules;   /// XXX: added slave submodule or channels*(could be implemented later)
+  const lcec_submodule_desc_t *modules;   ///< Module types for modular slaves (bus couplers with `<subModule>`), or NULL
 } lcec_typelist_t;
 
 /// @brief Linked list for holding device type definitions.

@@ -55,7 +55,7 @@ typedef enum {
   lcecConfTypeInitCmds,
   lcecConfTypeComplexEntry,
   lcecConfTypeModParam,
-  lcecConfTypeSubModule,          /// XXX: Submodule Implementation
+  lcecConfTypeSubModule,          ///< A `<subModule>` of a modular slave (bus coupler)
   lcecConfTypeSubModuleModParam,  /// Submodule Implementation
 } LCEC_CONF_TYPE_T;
 
@@ -175,7 +175,7 @@ typedef struct {
   uint8_t data[];
 } LCEC_CONF_IDNCONF_T;
 
-/// XXX: submodule implementation
+/// A `<subModule>` of a modular slave: slot id, module ident, HAL name.
 typedef struct {
   LCEC_CONF_TYPE_T confType;
   uint8_t id;  // slot id
