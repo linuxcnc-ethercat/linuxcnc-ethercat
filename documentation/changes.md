@@ -33,7 +33,7 @@ This list should only include deliberate breakage, not typical bugs.
   while the master's functs run a driver, so existing drivers keep
   working, but not for a Sync Unit serviced from its own HAL thread.
 - The `<master>` attribute `syncToRefClock` is deprecated and will be
-  removed in v1.46.0.  Use the sign of `refClockSyncCycles` instead:
+  removed in v1.47.0.  Use the sign of `refClockSyncCycles` instead:
   negative for M2R, positive for R2M, 0 for free running.  Configs
   using it still parse but log a warning.  See
   [#471](https://github.com/linuxcnc-ethercat/linuxcnc-ethercat/issues/471).
