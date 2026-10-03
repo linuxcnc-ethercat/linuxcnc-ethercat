@@ -506,7 +506,7 @@ static int lcec_el6021_init(int comp_id, lcec_slave_t *slave) {
 static void lcec_el6021_read(lcec_slave_t *slave, long period) {
   (void)period;
   lcec_el6021_data_t *hal_data = (lcec_el6021_data_t *)slave->hal_data;
-  uint8_t *pd = slave->master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   uint16_t status;
   uint8_t rx_request_toggle, rx_len;
 
@@ -567,7 +567,7 @@ static void lcec_el6021_read(lcec_slave_t *slave, long period) {
 static void lcec_el6021_write(lcec_slave_t *slave, long period) {
   (void)period;
   lcec_el6021_data_t *hal_data = (lcec_el6021_data_t *)slave->hal_data;
-  uint8_t *pd = slave->master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
   uint16_t status = hal_data->last_status;
   uint8_t tx_accepted_toggle;
   uint32_t avail, n;
