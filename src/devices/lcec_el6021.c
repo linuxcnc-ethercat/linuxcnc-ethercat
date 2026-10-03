@@ -35,6 +35,7 @@
 /// period.
 
 #include "lcec_el6021.h"
+#include "lcec_el6021_cfg.h"
 
 #include <ecrt.h>
 #include <errno.h>
@@ -70,30 +71,6 @@
 #define LCEC_TCSBRK   0x5409  // tcdrain() is TCSBRK with a non-zero arg
 #define LCEC_TCSBRKP  0x5425
 
-// kernel UAPI struct termios (asm-generic): NCCS=19, no speed fields.
-// glibc's struct termios differs (NCCS=32 + ispeed/ospeed), so do not
-// memcpy between the two; only the prefix layout matches.
-typedef struct {
-  tcflag_t c_iflag;
-  tcflag_t c_oflag;
-  tcflag_t c_cflag;
-  tcflag_t c_lflag;
-  cc_t c_line;
-  cc_t c_cc[19];
-  unsigned int c_ispeed;  // termios2 only (TCGETS2 / TCSETS2)
-  unsigned int c_ospeed;
-} lcec_ktermios_t;
-
-// size of the kernel's struct termios (no speed fields) and struct termios2
-#define LCEC_KTERMIOS_SIZE  offsetof(lcec_ktermios_t, c_ispeed)
-#define LCEC_KTERMIOS2_SIZE sizeof(lcec_ktermios_t)
-
-// Kernel UAPI baud encoding in c_cflag (asm-generic/termbits.h).  glibc >= 2.42
-// defines B9600 etc. as plain numbers, so they cannot be compared with what
-// the kernel passes in c_cflag.
-#define LCEC_KCBAUD  0x0000100f
-#define LCEC_KBOTHER 0x00001000
-
 typedef enum {
   LCEC_EL6021_STATE_REQUEST_INIT,
   LCEC_EL6021_STATE_WAIT_INIT_RESPONSE,
@@ -103,41 +80,8 @@ typedef enum {
   LCEC_EL6021_STATE_SET_FRAME,
 } lcec_el6021_state_t;
 
-typedef struct {
-  uint8_t idx;
-  uint32_t baud;
-  speed_t speed;
-} lcec_el6021_baud_t;
-
 /// The terminal has RTS/CTS (0x8000:01); only the RS232 EL6001 does
 #define LCEC_EL6021_FLAG_RTSCTS 1
-
-/// EL600x supported baud rates (SDO 0x8000:11 values)
-static const lcec_el6021_baud_t lcec_el6021_baud_table[] = {
-    {1, 300, 0x0007},
-    {2, 600, 0x0008},
-    {3, 1200, 0x0009},
-    {4, 2400, 0x000b},
-    {5, 4800, 0x000c},
-    {6, 9600, 0x000d},
-    {7, 19200, 0x000e},
-    {8, 38400, 0x000f},
-    {9, 57600, 0x1001},
-    {10, 115200, 0x1002},
-};
-
-typedef struct {
-  uint8_t idx;
-  uint8_t data_bits;
-  char parity;  // 'N', 'E' or 'O'
-  uint8_t stop_bits;
-} lcec_el6021_frame_t;
-
-/// EL600x supported data frames (SDO 0x8000:15 values)
-static const lcec_el6021_frame_t lcec_el6021_frame_table[] = {
-    {0x01, 7, 'E', 1}, {0x09, 7, 'E', 2}, {0x02, 7, 'O', 1}, {0x0a, 7, 'O', 2}, {0x03, 8, 'N', 1},
-    {0x0b, 8, 'N', 2}, {0x04, 8, 'E', 1}, {0x0c, 8, 'E', 2}, {0x05, 8, 'O', 1}, {0x0d, 8, 'O', 2},
-};
 
 typedef struct {
   // HAL pins
@@ -214,7 +158,7 @@ typedef struct {
   void *cuse_se;
   void *cuse_ph;
   pthread_mutex_t lock;  // protects cuse_ph and req_* writes from the CUSE thread
-  lcec_ktermios_t tio;
+  lcec_el6021_ktermios_t tio;
   volatile int open_count;
 } lcec_el6021_data_t;
 
@@ -374,125 +318,11 @@ static void ring_read(uint8_t *ring, volatile uint32_t *r, uint8_t *data, uint32
   *r += len;
 }
 
-// configuration table lookups
-
-static const lcec_el6021_baud_t *baud_by_value(uint32_t baud) {
-  size_t i;
-  for (i = 0; i < sizeof(lcec_el6021_baud_table) / sizeof(lcec_el6021_baud_table[0]); i++) {
-    if (lcec_el6021_baud_table[i].baud == baud) {
-      return &lcec_el6021_baud_table[i];
-    }
-  }
-  return NULL;
-}
-
-static const lcec_el6021_baud_t *baud_by_idx(uint8_t idx) {
-  size_t i;
-  for (i = 0; i < sizeof(lcec_el6021_baud_table) / sizeof(lcec_el6021_baud_table[0]); i++) {
-    if (lcec_el6021_baud_table[i].idx == idx) {
-      return &lcec_el6021_baud_table[i];
-    }
-  }
-  return NULL;
-}
-
-static const lcec_el6021_frame_t *frame_by_spec(uint8_t data_bits, char parity, uint8_t stop_bits) {
-  size_t i;
-  for (i = 0; i < sizeof(lcec_el6021_frame_table) / sizeof(lcec_el6021_frame_table[0]); i++) {
-    const lcec_el6021_frame_t *f = &lcec_el6021_frame_table[i];
-    if (f->data_bits == data_bits && f->parity == parity && f->stop_bits == stop_bits) {
-      return f;
-    }
-  }
-  return NULL;
-}
-
-static const lcec_el6021_frame_t *frame_by_idx(uint8_t idx) {
-  size_t i;
-  for (i = 0; i < sizeof(lcec_el6021_frame_table) / sizeof(lcec_el6021_frame_table[0]); i++) {
-    if (lcec_el6021_frame_table[i].idx == idx) {
-      return &lcec_el6021_frame_table[i];
-    }
-  }
-  return NULL;
-}
-
-// parse a frame spec string like "8N1"
-static const lcec_el6021_frame_t *frame_by_string(const char *s) {
-  uint8_t data_bits, stop_bits;
-  char parity;
-
-  if (s == NULL || strlen(s) != 3) {
-    return NULL;
-  }
-  if (s[0] != '7' && s[0] != '8') {
-    return NULL;
-  }
-  data_bits = s[0] - '0';
-  parity = s[1];
-  if (parity != 'N' && parity != 'E' && parity != 'O') {
-    return NULL;
-  }
-  if (s[2] != '1' && s[2] != '2') {
-    return NULL;
-  }
-  stop_bits = s[2] - '0';
-  return frame_by_spec(data_bits, parity, stop_bits);
-}
-
-// map a termios c_cflag to SDO indices. Returns 0 on success.
-static int cflag_to_config(tcflag_t cflag, unsigned int ospeed, uint8_t *baud_idx, uint8_t *frame_idx, uint8_t *rtscts) {
-  uint8_t data_bits, stop_bits;
-  char parity;
-  const lcec_el6021_baud_t *b = NULL;
-  const lcec_el6021_frame_t *f;
-  tcflag_t cbaud = cflag & LCEC_KCBAUD;
-  size_t i;
-
-  // BOTHER carries the rate in c_ospeed (termios2); match it by value
-  for (i = 0; i < sizeof(lcec_el6021_baud_table) / sizeof(lcec_el6021_baud_table[0]); i++) {
-    if ((cbaud == LCEC_KBOTHER) ? (lcec_el6021_baud_table[i].baud == ospeed) : (lcec_el6021_baud_table[i].speed == cbaud)) {
-      b = &lcec_el6021_baud_table[i];
-      break;
-    }
-  }
-  if (b == NULL) {
-    return -1;
-  }
-
-  switch (cflag & CSIZE) {
-    case CS7:
-      data_bits = 7;
-      break;
-    case CS8:
-      data_bits = 8;
-      break;
-    default:
-      return -1;
-  }
-  if (cflag & PARENB) {
-    parity = (cflag & PARODD) ? 'O' : 'E';
-  } else {
-    parity = 'N';
-  }
-  stop_bits = (cflag & CSTOPB) ? 2 : 1;
-
-  f = frame_by_spec(data_bits, parity, stop_bits);
-  if (f == NULL) {
-    return -1;
-  }
-
-  *baud_idx = b->idx;
-  *frame_idx = f->idx;
-  *rtscts = (cflag & CRTSCTS) ? 1 : 0;
-  return 0;
-}
-
 // build the kernel termios reported back to applications from the
 // current requested configuration
-static void config_to_ktermios(lcec_el6021_data_t *hal_data, lcec_ktermios_t *tio) {
-  const lcec_el6021_baud_t *b = baud_by_idx(hal_data->req_baud);
-  const lcec_el6021_frame_t *f = frame_by_idx(hal_data->req_frame);
+static void config_to_ktermios(lcec_el6021_data_t *hal_data, lcec_el6021_ktermios_t *tio) {
+  const lcec_el6021_baud_t *b = lcec_el6021_baud_by_idx(hal_data->req_baud);
+  const lcec_el6021_frame_t *f = lcec_el6021_frame_by_idx(hal_data->req_frame);
 
   memset(tio, 0, sizeof(*tio));
   tio->c_cflag = b->speed | CREAD | CLOCAL;
@@ -520,7 +350,7 @@ static void config_to_ktermios(lcec_el6021_data_t *hal_data, lcec_ktermios_t *ti
 static int request_config(lcec_el6021_data_t *hal_data, tcflag_t cflag, unsigned int ospeed) {
   uint8_t baud_idx, frame_idx, rtscts;
 
-  if (cflag_to_config(cflag, ospeed, &baud_idx, &frame_idx, &rtscts) != 0) {
+  if (lcec_el6021_cflag_to_config(cflag, ospeed, &baud_idx, &frame_idx, &rtscts) != 0) {
     return -1;
   }
   if (rtscts && !hal_data->has_rtscts) {
@@ -555,8 +385,8 @@ static int lcec_el6021_init(int comp_id, lcec_slave_t *slave) {
   hal_data->stop_efd = -1;
 
   // defaults: 9600 8N1, no handshake
-  hal_data->req_baud = baud_by_value(9600)->idx;
-  hal_data->req_frame = frame_by_string("8N1")->idx;
+  hal_data->req_baud = lcec_el6021_baud_by_value(9600)->idx;
+  hal_data->req_frame = lcec_el6021_frame_by_string("8N1")->idx;
   hal_data->req_rtscts = 0;
   snprintf(hal_data->tty_name, sizeof(hal_data->tty_name), "lcec-%s-%s", master->name, slave->name);
 
@@ -564,7 +394,7 @@ static int lcec_el6021_init(int comp_id, lcec_slave_t *slave) {
   for (p = slave->modparams; p != NULL && p->id >= 0; p++) {
     switch (p->id) {
       case LCEC_EL6021_PARAM_BAUD:
-        baud = baud_by_value(p->value.u32);
+        baud = lcec_el6021_baud_by_value(p->value.u32);
         if (baud == NULL) {
           rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid baud rate %u for slave %s.%s\n", p->value.u32, master->name,
               slave->name);
@@ -573,7 +403,7 @@ static int lcec_el6021_init(int comp_id, lcec_slave_t *slave) {
         hal_data->req_baud = baud->idx;
         break;
       case LCEC_EL6021_PARAM_FRAME:
-        frame = frame_by_string(p->value.str);
+        frame = lcec_el6021_frame_by_string(p->value.str);
         if (frame == NULL) {
           rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "invalid dataFrame \"%s\" for slave %s.%s\n", p->value.str,
               master->name, slave->name);
@@ -727,7 +557,7 @@ static void lcec_el6021_read(lcec_slave_t *slave, long period) {
   LCEC_PIN_U32_SET(hal_data->tx_bytes, hal_data->tx_byte_count);
   LCEC_PIN_U32_SET(hal_data->rx_dropped, hal_data->rx_drop_count);
   {
-    const lcec_el6021_baud_t *b = baud_by_idx(hal_data->cur_baud);
+    const lcec_el6021_baud_t *b = lcec_el6021_baud_by_idx(hal_data->cur_baud);
     LCEC_PIN_U32_SET(hal_data->baud, b != NULL ? b->baud : 0);
   }
   LCEC_PIN_BIT_SET(hal_data->cfg_error, hal_data->cfg_error_state);
@@ -1003,7 +833,7 @@ static void cuse_ioctl(fuse_req_t req, int cmd, void *arg, struct fuse_file_info
     const void *in_buf, size_t in_bufsz, size_t out_bufsz) {
   lcec_el6021_data_t *hal_data = fuse_req_userdata(req);
   struct iovec iov;
-  lcec_ktermios_t tio;
+  lcec_el6021_ktermios_t tio;
   size_t tio_size;
   uint32_t avail;
   int mstate;
@@ -1017,7 +847,7 @@ static void cuse_ioctl(fuse_req_t req, int cmd, void *arg, struct fuse_file_info
   switch (cmd) {
     case TCGETS:
     case LCEC_TCGETS2:
-      tio_size = (cmd == TCGETS) ? LCEC_KTERMIOS_SIZE : LCEC_KTERMIOS2_SIZE;
+      tio_size = (cmd == TCGETS) ? LCEC_EL6021_KTERMIOS_SIZE : LCEC_EL6021_KTERMIOS2_SIZE;
       if (!out_bufsz) {
         iov.iov_base = arg;
         iov.iov_len = tio_size;
@@ -1036,7 +866,7 @@ static void cuse_ioctl(fuse_req_t req, int cmd, void *arg, struct fuse_file_info
     case LCEC_TCSETS2:
     case LCEC_TCSETSW2:
     case LCEC_TCSETSF2:
-      tio_size = (cmd == TCSETS || cmd == TCSETSW || cmd == TCSETSF) ? LCEC_KTERMIOS_SIZE : LCEC_KTERMIOS2_SIZE;
+      tio_size = (cmd == TCSETS || cmd == TCSETSW || cmd == TCSETSF) ? LCEC_EL6021_KTERMIOS_SIZE : LCEC_EL6021_KTERMIOS2_SIZE;
       if (!in_bufsz) {
         iov.iov_base = arg;
         iov.iov_len = tio_size;
