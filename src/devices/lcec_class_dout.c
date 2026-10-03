@@ -136,6 +136,16 @@ lcec_class_dout_channel_t *lcec_dout_register_channel_packed(lcec_slave_t *slave
     return NULL;
   }
 
+  // lcec_dout_write() reads the invert param, so every channel needs one.
+  // On LinuxCNC 2.10 an unregistered param is a NULL reference and reading
+  // it crashes the RT thread.
+  err = lcec_param_newf_list(data, slave_params, LCEC_MODULE_NAME, slave->master->name, slave->name, name);
+  if (err != 0) {
+    rtapi_print_msg(
+        RTAPI_MSG_ERR, LCEC_MSG_PFX "lcec_params_newf_list for slave %s.%s pin %s failed\n", slave->master->name, slave->name, name);
+    return NULL;
+  }
+
   return data;
 }
 
