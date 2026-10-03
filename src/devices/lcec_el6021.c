@@ -36,16 +36,17 @@
 
 #include "lcec_el6021.h"
 
-#include "../lcec.h"
-
 #include <ecrt.h>
 #include <errno.h>
-#include <stdio.h>
 #include <pthread.h>
+#include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/eventfd.h>
 #include <termios.h>
 #include <unistd.h>
+
+#include "../lcec.h"
 
 #ifdef LCEC_HAVE_CUSE
 #define FUSE_USE_VERSION 31
@@ -66,6 +67,8 @@
 #define LCEC_TCSETSW2 0x402c542c
 #define LCEC_TCSETSF2 0x402c542d
 #define LCEC_TCFLSH 0x540b
+#define LCEC_TCSBRK   0x5409  // tcdrain() is TCSBRK with a non-zero arg
+#define LCEC_TCSBRKP  0x5425
 
 // kernel UAPI struct termios (asm-generic): NCCS=19, no speed fields.
 // glibc's struct termios differs (NCCS=32 + ispeed/ospeed), so do not
@@ -77,7 +80,19 @@ typedef struct {
   tcflag_t c_lflag;
   cc_t c_line;
   cc_t c_cc[19];
+  unsigned int c_ispeed;  // termios2 only (TCGETS2 / TCSETS2)
+  unsigned int c_ospeed;
 } lcec_ktermios_t;
+
+// size of the kernel's struct termios (no speed fields) and struct termios2
+#define LCEC_KTERMIOS_SIZE  offsetof(lcec_ktermios_t, c_ispeed)
+#define LCEC_KTERMIOS2_SIZE sizeof(lcec_ktermios_t)
+
+// Kernel UAPI baud encoding in c_cflag (asm-generic/termbits.h).  glibc >= 2.42
+// defines B9600 etc. as plain numbers, so they cannot be compared with what
+// the kernel passes in c_cflag.
+#define LCEC_KCBAUD  0x0000100f
+#define LCEC_KBOTHER 0x00001000
 
 typedef enum {
   LCEC_EL6021_STATE_REQUEST_INIT,
@@ -94,10 +109,21 @@ typedef struct {
   speed_t speed;
 } lcec_el6021_baud_t;
 
+/// The terminal has RTS/CTS (0x8000:01); only the RS232 EL6001 does
+#define LCEC_EL6021_FLAG_RTSCTS 1
+
 /// EL600x supported baud rates (SDO 0x8000:11 values)
 static const lcec_el6021_baud_t lcec_el6021_baud_table[] = {
-    {1, 300, B300},       {2, 600, B600},       {3, 1200, B1200},     {4, 2400, B2400},   {5, 4800, B4800},
-    {6, 9600, B9600},     {7, 19200, B19200},   {8, 38400, B38400},   {9, 57600, B57600}, {10, 115200, B115200},
+    {1, 300, 0x0007},
+    {2, 600, 0x0008},
+    {3, 1200, 0x0009},
+    {4, 2400, 0x000b},
+    {5, 4800, 0x000c},
+    {6, 9600, 0x000d},
+    {7, 19200, 0x000e},
+    {8, 38400, 0x000f},
+    {9, 57600, 0x1001},
+    {10, 115200, 0x1002},
 };
 
 typedef struct {
@@ -126,6 +152,8 @@ typedef struct {
 
   // PDO offsets
   unsigned int ctrl_os;
+  unsigned int ctrl_bp;  // bit 0 of a byte: the word starts there
+  unsigned int status_bp;
   unsigned int tx_os;
   unsigned int status_os;
   unsigned int rx_os;
@@ -148,6 +176,7 @@ typedef struct {
   // req_* is the requested configuration (written by modparams and the
   // CUSE thread), pend_* is the snapshot the RT state machine is
   // applying, cur_* is what the terminal currently runs with.
+  uint8_t has_rtscts;
   uint8_t req_rtscts;
   uint8_t cur_rtscts;
   uint8_t req_baud;
@@ -178,6 +207,7 @@ typedef struct {
   char tty_name[LCEC_CONF_STR_MAXLEN];
   int tty_enabled;
   int efd;
+  int stop_efd;  // wakes the CUSE thread's blocking read on shutdown
   volatile int thread_stop;
   pthread_t cuse_thread;
   pthread_t notify_thread;
@@ -200,61 +230,77 @@ static const lcec_pindesc_t slave_pins[] = {
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
+// The terminals' fixed 22-byte COM maps.  The control/status bits and the
+// length byte form one little-endian 16-bit word at the first entry, which is
+// how the handshake below reads and writes them.
 static ec_pdo_entry_info_t lcec_el6021_pdo_entries_out[] = {
-    {0x7001, 0x01, 16},  // Ctrl
-    {0x7000, 0x11, 8},   // Data Out 0
-    {0x7000, 0x12, 8},   // Data Out 1
-    {0x7000, 0x13, 8},   // Data Out 2
-    {0x7000, 0x14, 8},   // Data Out 3
-    {0x7000, 0x15, 8},   // Data Out 4
-    {0x7000, 0x16, 8},   // Data Out 5
-    {0x7000, 0x17, 8},   // Data Out 6
-    {0x7000, 0x18, 8},   // Data Out 7
-    {0x7000, 0x19, 8},   // Data Out 8
-    {0x7000, 0x1a, 8},   // Data Out 9
-    {0x7000, 0x1b, 8},   // Data Out 10
-    {0x7000, 0x1c, 8},   // Data Out 11
-    {0x7000, 0x1d, 8},   // Data Out 12
-    {0x7000, 0x1e, 8},   // Data Out 13
-    {0x7000, 0x1f, 8},   // Data Out 14
-    {0x7000, 0x20, 8},   // Data Out 15
-    {0x7000, 0x21, 8},   // Data Out 16
-    {0x7000, 0x22, 8},   // Data Out 17
-    {0x7000, 0x23, 8},   // Data Out 18
-    {0x7000, 0x24, 8},   // Data Out 19
-    {0x7000, 0x25, 8},   // Data Out 20
-    {0x7000, 0x26, 8},   // Data Out 21
+    {0x7000, 0x01, 1},  // Transmit request
+    {0x7000, 0x02, 1},  // Receive accepted
+    {0x7000, 0x03, 1},  // Init request
+    {0x7000, 0x04, 1},  // Send continuous
+    {0x0000, 0x00, 4},  // gap
+    {0x7000, 0x09, 8},  // Output length
+    {0x7000, 0x11, 8},  // Data Out 0
+    {0x7000, 0x12, 8},  // Data Out 1
+    {0x7000, 0x13, 8},  // Data Out 2
+    {0x7000, 0x14, 8},  // Data Out 3
+    {0x7000, 0x15, 8},  // Data Out 4
+    {0x7000, 0x16, 8},  // Data Out 5
+    {0x7000, 0x17, 8},  // Data Out 6
+    {0x7000, 0x18, 8},  // Data Out 7
+    {0x7000, 0x19, 8},  // Data Out 8
+    {0x7000, 0x1a, 8},  // Data Out 9
+    {0x7000, 0x1b, 8},  // Data Out 10
+    {0x7000, 0x1c, 8},  // Data Out 11
+    {0x7000, 0x1d, 8},  // Data Out 12
+    {0x7000, 0x1e, 8},  // Data Out 13
+    {0x7000, 0x1f, 8},  // Data Out 14
+    {0x7000, 0x20, 8},  // Data Out 15
+    {0x7000, 0x21, 8},  // Data Out 16
+    {0x7000, 0x22, 8},  // Data Out 17
+    {0x7000, 0x23, 8},  // Data Out 18
+    {0x7000, 0x24, 8},  // Data Out 19
+    {0x7000, 0x25, 8},  // Data Out 20
+    {0x7000, 0x26, 8},  // Data Out 21
 };
 
 static ec_pdo_entry_info_t lcec_el6021_pdo_entries_in[] = {
-    {0x6001, 0x01, 16},  // Status
-    {0x6000, 0x11, 8},   // Data In 0
-    {0x6000, 0x12, 8},   // Data In 1
-    {0x6000, 0x13, 8},   // Data In 2
-    {0x6000, 0x14, 8},   // Data In 3
-    {0x6000, 0x15, 8},   // Data In 4
-    {0x6000, 0x16, 8},   // Data In 5
-    {0x6000, 0x17, 8},   // Data In 6
-    {0x6000, 0x18, 8},   // Data In 7
-    {0x6000, 0x19, 8},   // Data In 8
-    {0x6000, 0x1a, 8},   // Data In 9
-    {0x6000, 0x1b, 8},   // Data In 10
-    {0x6000, 0x1c, 8},   // Data In 11
-    {0x6000, 0x1d, 8},   // Data In 12
-    {0x6000, 0x1e, 8},   // Data In 13
-    {0x6000, 0x1f, 8},   // Data In 14
-    {0x6000, 0x20, 8},   // Data In 15
-    {0x6000, 0x21, 8},   // Data In 16
-    {0x6000, 0x22, 8},   // Data In 17
-    {0x6000, 0x23, 8},   // Data In 18
-    {0x6000, 0x24, 8},   // Data In 19
-    {0x6000, 0x25, 8},   // Data In 20
-    {0x6000, 0x26, 8},   // Data In 21
+    {0x6000, 0x01, 1},  // Transmit accepted
+    {0x6000, 0x02, 1},  // Receive request
+    {0x6000, 0x03, 1},  // Init accepted
+    {0x6000, 0x04, 1},  // Buffer full
+    {0x6000, 0x05, 1},  // Parity error
+    {0x6000, 0x06, 1},  // Framing error
+    {0x6000, 0x07, 1},  // Overrun error
+    {0x0000, 0x00, 1},  // gap
+    {0x6000, 0x09, 8},  // Input length
+    {0x6000, 0x11, 8},  // Data In 0
+    {0x6000, 0x12, 8},  // Data In 1
+    {0x6000, 0x13, 8},  // Data In 2
+    {0x6000, 0x14, 8},  // Data In 3
+    {0x6000, 0x15, 8},  // Data In 4
+    {0x6000, 0x16, 8},  // Data In 5
+    {0x6000, 0x17, 8},  // Data In 6
+    {0x6000, 0x18, 8},  // Data In 7
+    {0x6000, 0x19, 8},  // Data In 8
+    {0x6000, 0x1a, 8},  // Data In 9
+    {0x6000, 0x1b, 8},  // Data In 10
+    {0x6000, 0x1c, 8},  // Data In 11
+    {0x6000, 0x1d, 8},  // Data In 12
+    {0x6000, 0x1e, 8},  // Data In 13
+    {0x6000, 0x1f, 8},  // Data In 14
+    {0x6000, 0x20, 8},  // Data In 15
+    {0x6000, 0x21, 8},  // Data In 16
+    {0x6000, 0x22, 8},  // Data In 17
+    {0x6000, 0x23, 8},  // Data In 18
+    {0x6000, 0x24, 8},  // Data In 19
+    {0x6000, 0x25, 8},  // Data In 20
+    {0x6000, 0x26, 8},  // Data In 21
 };
 
 static ec_pdo_info_t lcec_el6021_pdos[] = {
-    {0x1600, 23, lcec_el6021_pdo_entries_out},  // COM RxPDO-Map Outputs
-    {0x1a00, 23, lcec_el6021_pdo_entries_in},   // COM TxPDO-Map Inputs
+    {0x1604, 28, lcec_el6021_pdo_entries_out},  // COM RxPDO-Map Outputs
+    {0x1a04, 31, lcec_el6021_pdo_entries_in},   // COM TxPDO-Map Inputs
 };
 
 static ec_sync_info_t lcec_el6021_syncs[] = {
@@ -287,8 +333,8 @@ static lcec_modparam_desc_t lcec_el6021_modparams[] = {
 
 static lcec_typelist_t types[] = {
     // clang-format off
-    {"EL6001", LCEC_BECKHOFF_VID, 0x17713052, 0, NULL, lcec_el6021_init, lcec_el6021_modparams},
-    {"EL6021", LCEC_BECKHOFF_VID, 0x17893052, 0, NULL, lcec_el6021_init, lcec_el6021_modparams},
+    {"EL6001", LCEC_BECKHOFF_VID, 0x17713052, LCEC_EL6021_FLAG_RTSCTS, NULL, lcec_el6021_init, lcec_el6021_modparams},
+    {"EL6021", LCEC_BECKHOFF_VID, 0x17853052, 0, NULL, lcec_el6021_init, lcec_el6021_modparams},
     // clang-format on
     {NULL},
 };
@@ -395,16 +441,17 @@ static const lcec_el6021_frame_t *frame_by_string(const char *s) {
 }
 
 // map a termios c_cflag to SDO indices. Returns 0 on success.
-static int cflag_to_config(tcflag_t cflag, uint8_t *baud_idx, uint8_t *frame_idx, uint8_t *rtscts) {
+static int cflag_to_config(tcflag_t cflag, unsigned int ospeed, uint8_t *baud_idx, uint8_t *frame_idx, uint8_t *rtscts) {
   uint8_t data_bits, stop_bits;
   char parity;
   const lcec_el6021_baud_t *b = NULL;
   const lcec_el6021_frame_t *f;
-  tcflag_t cbaud = cflag & CBAUD;
+  tcflag_t cbaud = cflag & LCEC_KCBAUD;
   size_t i;
 
+  // BOTHER carries the rate in c_ospeed (termios2); match it by value
   for (i = 0; i < sizeof(lcec_el6021_baud_table) / sizeof(lcec_el6021_baud_table[0]); i++) {
-    if (lcec_el6021_baud_table[i].speed == cbaud) {
+    if ((cbaud == LCEC_KBOTHER) ? (lcec_el6021_baud_table[i].baud == ospeed) : (lcec_el6021_baud_table[i].speed == cbaud)) {
       b = &lcec_el6021_baud_table[i];
       break;
     }
@@ -449,6 +496,8 @@ static void config_to_ktermios(lcec_el6021_data_t *hal_data, lcec_ktermios_t *ti
 
   memset(tio, 0, sizeof(*tio));
   tio->c_cflag = b->speed | CREAD | CLOCAL;
+  tio->c_ispeed = b->baud;
+  tio->c_ospeed = b->baud;
   if (f != NULL) {
     tio->c_cflag |= (f->data_bits == 7) ? CS7 : CS8;
     if (f->parity != 'N') {
@@ -468,11 +517,14 @@ static void config_to_ktermios(lcec_el6021_data_t *hal_data, lcec_ktermios_t *ti
 
 // mark a new serial port configuration for the RT thread to apply.
 // Returns 0 if the requested configuration is supported.
-static int request_config(lcec_el6021_data_t *hal_data, tcflag_t cflag) {
+static int request_config(lcec_el6021_data_t *hal_data, tcflag_t cflag, unsigned int ospeed) {
   uint8_t baud_idx, frame_idx, rtscts;
 
-  if (cflag_to_config(cflag, &baud_idx, &frame_idx, &rtscts) != 0) {
+  if (cflag_to_config(cflag, ospeed, &baud_idx, &frame_idx, &rtscts) != 0) {
     return -1;
+  }
+  if (rtscts && !hal_data->has_rtscts) {
+    return -1;  // RS422/RS485 terminals have no RTS/CTS
   }
 
   pthread_mutex_lock(&hal_data->lock);
@@ -500,6 +552,7 @@ static int lcec_el6021_init(int comp_id, lcec_slave_t *slave) {
   slave->hal_data = hal_data;
   memset(hal_data, 0, sizeof(*hal_data));
   hal_data->efd = -1;
+  hal_data->stop_efd = -1;
 
   // defaults: 9600 8N1, no handshake
   hal_data->req_baud = baud_by_value(9600)->idx;
@@ -545,8 +598,13 @@ static int lcec_el6021_init(int comp_id, lcec_slave_t *slave) {
     }
   }
 
-  // apply serial configuration to the terminal (PREOP SDO writes)
-  if (lcec_write_sdo8(slave, 0x8000, 0x01, hal_data->req_rtscts) != 0) {
+  // apply serial configuration to the terminal (PREOP SDO writes);
+  // 0x8000:01 is RTS/CTS on the EL6001 but a padding bit on the EL6021
+  hal_data->has_rtscts = (slave->flags & LCEC_EL6021_FLAG_RTSCTS) != 0;
+  if (!hal_data->has_rtscts) {
+    hal_data->req_rtscts = 0;
+  }
+  if (hal_data->has_rtscts && lcec_write_sdo8(slave, 0x8000, 0x01, hal_data->req_rtscts) != 0) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "fail to configure slave %s.%s sdo RtsCts\n", master->name, slave->name);
     return -1;
   }
@@ -567,10 +625,12 @@ static int lcec_el6021_init(int comp_id, lcec_slave_t *slave) {
   config_to_ktermios(hal_data, &hal_data->tio);
 
   // runtime SDO requests for configuration changes while running
-  hal_data->sdo_rtscts = ecrt_slave_config_create_sdo_request(slave->config, 0x8000, 0x01, 1);
+  if (hal_data->has_rtscts) {
+    hal_data->sdo_rtscts = ecrt_slave_config_create_sdo_request(slave->config, 0x8000, 0x01, 1);
+  }
   hal_data->sdo_baud = ecrt_slave_config_create_sdo_request(slave->config, 0x8000, 0x11, 1);
   hal_data->sdo_frame = ecrt_slave_config_create_sdo_request(slave->config, 0x8000, 0x15, 1);
-  if (hal_data->sdo_rtscts == NULL || hal_data->sdo_baud == NULL || hal_data->sdo_frame == NULL) {
+  if ((hal_data->has_rtscts && hal_data->sdo_rtscts == NULL) || hal_data->sdo_baud == NULL || hal_data->sdo_frame == NULL) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to create SDO requests for slave %s.%s\n", master->name,
         slave->name);
     return -1;
@@ -584,10 +644,10 @@ static int lcec_el6021_init(int comp_id, lcec_slave_t *slave) {
   // initialize sync info
   slave->sync_info = lcec_el6021_syncs;
 
-  // initialize POD entries (data windows are contiguous from 0x?000:11)
-  lcec_pdo_init(slave, 0x7001, 0x01, &hal_data->ctrl_os, NULL);
+  // initialize PDO entries (data windows are contiguous from 0x?000:11)
+  lcec_pdo_init(slave, 0x7000, 0x01, &hal_data->ctrl_os, &hal_data->ctrl_bp);
   lcec_pdo_init(slave, 0x7000, 0x11, &hal_data->tx_os, NULL);
-  lcec_pdo_init(slave, 0x6001, 0x01, &hal_data->status_os, NULL);
+  lcec_pdo_init(slave, 0x6000, 0x01, &hal_data->status_os, &hal_data->status_bp);
   lcec_pdo_init(slave, 0x6000, 0x11, &hal_data->rx_os, NULL);
 
   // export pins
@@ -751,7 +811,15 @@ static void lcec_el6021_write(lcec_slave_t *slave, long period) {
 
     case LCEC_EL6021_STATE_WAIT_INIT_RESPONSE:
       if (!(status & (1 << 2))) {
-        // init successful, first TX window is free
+        // Init successful. The terminal restarts its handshake with SW.0 and
+        // SW.1 at 0 (and saw CW.0/CW.1 at 0 during the init), so restart
+        // ours: a stale request toggle left at 1 by an odd number of TX
+        // windows before a re-init (baud/frame change) would make the next
+        // request look like no request, and TX stalls forever.
+        hal_data->tx_req_tgl = 0;
+        hal_data->rx_req_tgl = 0;
+        hal_data->rx_ack_tgl = 0;
+        // first TX window is free
         hal_data->tx_ack_tgl = 1;
         hal_data->control = 0x0000;
         hal_data->state = LCEC_EL6021_STATE_READY;
@@ -829,9 +897,28 @@ static ssize_t cuse_io_writev(int fd, struct iovec *iov, int count, void *userda
   return writev(fd, iov, count);
 }
 
+// fuse_session_exit() only sets a flag; the session loop sits in this read
+// until the kernel sends a request.  Wait on the stop eventfd as well, so
+// lcec_el6021_cuse_stop() can end the loop (EINTR after exit ends it).
 static ssize_t cuse_io_read(int fd, void *buf, size_t buf_len, void *userdata) {
-  (void)userdata;
-  return read(fd, buf, buf_len);
+  lcec_el6021_data_t *hal_data = userdata;
+  struct pollfd pfd[2] = {{fd, POLLIN, 0}, {hal_data->stop_efd, POLLIN, 0}};
+
+  for (;;) {
+    if (poll(pfd, 2, -1) < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      return -1;
+    }
+    if (pfd[1].revents) {
+      errno = EINTR;
+      return -1;
+    }
+    if (pfd[0].revents) {
+      return read(fd, buf, buf_len);
+    }
+  }
 }
 
 static const struct fuse_custom_io cuse_io = {
@@ -917,6 +1004,7 @@ static void cuse_ioctl(fuse_req_t req, int cmd, void *arg, struct fuse_file_info
   lcec_el6021_data_t *hal_data = fuse_req_userdata(req);
   struct iovec iov;
   lcec_ktermios_t tio;
+  size_t tio_size;
   uint32_t avail;
   int mstate;
   (void)fi;
@@ -929,16 +1017,17 @@ static void cuse_ioctl(fuse_req_t req, int cmd, void *arg, struct fuse_file_info
   switch (cmd) {
     case TCGETS:
     case LCEC_TCGETS2:
+      tio_size = (cmd == TCGETS) ? LCEC_KTERMIOS_SIZE : LCEC_KTERMIOS2_SIZE;
       if (!out_bufsz) {
         iov.iov_base = arg;
-        iov.iov_len = sizeof(lcec_ktermios_t);
+        iov.iov_len = tio_size;
         fuse_reply_ioctl_retry(req, NULL, 0, &iov, 1);
         return;
       }
       pthread_mutex_lock(&hal_data->lock);
       tio = hal_data->tio;
       pthread_mutex_unlock(&hal_data->lock);
-      fuse_reply_ioctl(req, 0, &tio, sizeof(tio));
+      fuse_reply_ioctl(req, 0, &tio, tio_size);
       return;
 
     case TCSETS:
@@ -947,13 +1036,16 @@ static void cuse_ioctl(fuse_req_t req, int cmd, void *arg, struct fuse_file_info
     case LCEC_TCSETS2:
     case LCEC_TCSETSW2:
     case LCEC_TCSETSF2:
+      tio_size = (cmd == TCSETS || cmd == TCSETSW || cmd == TCSETSF) ? LCEC_KTERMIOS_SIZE : LCEC_KTERMIOS2_SIZE;
       if (!in_bufsz) {
         iov.iov_base = arg;
-        iov.iov_len = sizeof(lcec_ktermios_t);
+        iov.iov_len = tio_size;
         fuse_reply_ioctl_retry(req, &iov, 1, NULL, 0);
         return;
       }
-      if (request_config(hal_data, ((const lcec_ktermios_t *)in_buf)->c_cflag) != 0) {
+      memset(&tio, 0, sizeof(tio));
+      memcpy(&tio, in_buf, in_bufsz < tio_size ? in_bufsz : tio_size);
+      if (request_config(hal_data, tio.c_cflag, tio.c_ospeed) != 0) {
         rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s: unsupported serial configuration requested\n",
             hal_data->tty_name);
         fuse_reply_err(req, EINVAL);
@@ -969,6 +1061,20 @@ static void cuse_ioctl(fuse_req_t req, int cmd, void *arg, struct fuse_file_info
       }
       if ((long)arg == TCOFLUSH || (long)arg == TCIOFLUSH) {
         hal_data->tx_w = hal_data->tx_r;
+      }
+      fuse_reply_ioctl(req, 0, NULL, 0);
+      return;
+
+    case LCEC_TCSBRK:
+    case LCEC_TCSBRKP:
+      // tcdrain(): wait until the RT side has handed every queued byte to
+      // the terminal (bounded, so a stalled bus cannot hang the caller).
+      // A real break (arg 0) is not supported by the EL6021 and is accepted
+      // as a no-op like TIOCSBRK.
+      if ((long)arg != 0 || cmd == LCEC_TCSBRKP) {
+        for (int i = 0; i < 2000 && ring_avail(&hal_data->tx_w, &hal_data->tx_r) > 0; i++) {
+          usleep(1000);
+        }
       }
       fuse_reply_ioctl(req, 0, NULL, 0);
       return;
@@ -1106,7 +1212,8 @@ static int lcec_el6021_cuse_start(lcec_slave_t *slave) {
   lcec_el6021_data_t *hal_data = (lcec_el6021_data_t *)slave->hal_data;
 
   hal_data->efd = eventfd(0, 0);
-  if (hal_data->efd < 0) {
+  hal_data->stop_efd = eventfd(0, 0);
+  if (hal_data->efd < 0 || hal_data->stop_efd < 0) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s: eventfd failed: %s\n", hal_data->tty_name, strerror(errno));
     return -1;
   }
@@ -1146,12 +1253,15 @@ static void lcec_el6021_cuse_stop(lcec_slave_t *slave) {
     fuse_session_exit(hal_data->cuse_se);
   }
   unused = write(hal_data->efd, &one, sizeof(one));
+  unused = write(hal_data->stop_efd, &one, sizeof(one));
   (void)unused;
 
   pthread_join(hal_data->cuse_thread, NULL);
   pthread_join(hal_data->notify_thread, NULL);
   close(hal_data->efd);
   hal_data->efd = -1;
+  close(hal_data->stop_efd);
+  hal_data->stop_efd = -1;
   hal_data->tty_enabled = 0;
 }
 
