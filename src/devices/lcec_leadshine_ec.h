@@ -78,8 +78,8 @@
 #define LEADSHINE_EC_SM_PDO_ASSIGN(sm) (0x1C10 + (sm))
 
 // Per-slot config object base (0x8000 + slot*SLOT_INCR) and the analog/temperature
-// diagnostic object base (0xA000).  All addresses below are taken from the R3EC
-// ESI (documentation/R3EC-v2.4.xml) and are DependOnSlot, i.e. base + slot*incr.
+// diagnostic object base (0xA000).  All addresses below are taken from the vendor
+// ESI (R3EC v2.4, available from Leadshine) and are DependOnSlot, i.e. base + slot*incr.
 #define LEADSHINE_EC_CFGOBJ  0x8000  // per-slot config object base
 #define LEADSHINE_EC_DIAGOBJ 0xA000  // analog/temp diagnostic (input) object base
 

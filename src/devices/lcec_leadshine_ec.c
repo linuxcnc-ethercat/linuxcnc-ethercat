@@ -27,8 +27,8 @@
 /// the per-slot HAL pins through the `lcec_class_*` helpers, applies each
 /// module's `<modParam>`s, and writes the configured module ident list (0xF030).
 ///
-/// All CoE object / PDO / subindex addresses are taken from the R3EC ESI in
-/// documentation/R3EC-v2.4.xml.  Digital modules default to the bit-wise PDO
+/// All CoE object / PDO / subindex addresses are taken from the vendor ESI
+/// (R3EC v2.4, available from Leadshine).  Digital modules default to the bit-wise PDO
 /// mapping (object 0x6000/0x7000, one BOOL per subindex); packed-word mappings
 /// (0x6001/0x6002) are not used.
 
@@ -93,19 +93,15 @@ static int leadshine_ec_count_slots(lcec_slave_t *slave) {
 
 /// @brief Allocate a persistent "<base>-<kind>-<ch>" HAL pin name.
 static char *leadshine_ec_name(const char *base, const char *kind, int ch) {
-  char buf[HAL_NAME_LEN];
-  snprintf(buf, sizeof(buf), "%s-%s-%d", base, kind, ch);
-  char *s = LCEC_HAL_ALLOCATE_ARRAY(char, (strlen(buf) + 1));
-  strcpy(s, buf);
+  char *s = LCEC_HAL_ALLOCATE_STRING(HAL_NAME_LEN);
+  snprintf(s, HAL_NAME_LEN, "%s-%s-%d", base, kind, ch);
   return s;
 }
 
 /// @brief Allocate a persistent "<base>-<kind>" HAL pin-name prefix.
 static char *leadshine_ec_prefix(const char *base, const char *kind) {
-  char buf[HAL_NAME_LEN];
-  snprintf(buf, sizeof(buf), "%s-%s", base, kind);
-  char *s = LCEC_HAL_ALLOCATE_ARRAY(char, (strlen(buf) + 1));
-  strcpy(s, buf);
+  char *s = LCEC_HAL_ALLOCATE_STRING(HAL_NAME_LEN);
+  snprintf(s, HAL_NAME_LEN, "%s-%s", base, kind);
   return s;
 }
 
@@ -204,7 +200,11 @@ static void leadshine_ec_append_input_pdos(lcec_syncs_t *syncs, lcec_slave_submo
 /// SM0/SM1 are (empty) mailbox syncs; process data lives on SM2 (outputs) and
 /// SM3 (inputs).  All outputs are grouped under SM2 and all inputs under SM3,
 /// because the builder appends PDOs to the most recently added sync.
-static void leadshine_ec_build_syncs(lcec_slave_t *slave, lcec_syncs_t *syncs, int pdo_incr) {
+///
+/// Returns -EINVAL when the configured layout overflows the fixed sync/PDO
+/// capacity (`lcec_syncs_add_*` then set the sticky `syncs->error`), so an
+/// over-sized config is a clear startup error instead of a truncated PDO map.
+static int leadshine_ec_build_syncs(lcec_slave_t *slave, lcec_syncs_t *syncs, int pdo_incr) {
   lcec_syncs_init(slave, syncs);
 
   lcec_syncs_add_sync(syncs, EC_DIR_OUTPUT, EC_WD_DEFAULT);  // SM0 mailbox out
@@ -229,6 +229,7 @@ static void leadshine_ec_build_syncs(lcec_slave_t *slave, lcec_syncs_t *syncs, i
   }
 
   slave->sync_info = &syncs->syncs[0];
+  return syncs->error ? -EINVAL : 0;
 }
 
 // ------------------------------------------------------------------
@@ -276,17 +277,23 @@ static void leadshine_ec_register_aout(lcec_slave_t *slave, leadshine_ec_slot_t 
   }
 }
 
-static void leadshine_ec_register_enc(lcec_slave_t *slave, leadshine_ec_slot_t *slot, const char *base, int count) {
+static int leadshine_ec_register_enc(lcec_slave_t *slave, leadshine_ec_slot_t *slot, const char *base, int count) {
   uint16_t obj = LEADSHINE_EC_INOBJ + slot->id * LEADSHINE_EC_SLOT_INCR;
+  int err;
+
   slot->enc_count = count;
   slot->enc = LCEC_HAL_ALLOCATE_ARRAY(lcec_class_enc_data_t, count);
   slot->enc_pos_os = LCEC_HAL_ALLOCATE_ARRAY(unsigned int, count);
   for (int ch = 0; ch < count; ch++) {
-    class_enc_init(slave, &slot->enc[ch], 32, leadshine_ec_name(base, "enc", ch));
+    // a failed pin export must not reach class_enc_update()'s NULL derefs
+    if ((err = class_enc_init(slave, &slot->enc[ch], 32, leadshine_ec_name(base, "enc", ch))) != 0) {
+      return err;
+    }
     // class_enc registers no PDO itself; map the 32-bit position value here
     // (0x6000:1..N, DINT).
     lcec_pdo_init(slave, obj, ch + 1, &slot->enc_pos_os[ch], NULL);
   }
+  return 0;
 }
 
 // ------------------------------------------------------------------
@@ -373,23 +380,45 @@ static int leadshine_ec_apply_modparams(lcec_slave_t *slave, lcec_slave_submodul
 /// @brief Write the configured module ident list (0xF030) so the coupler
 /// accepts the PDO mapping.  Per the ESI, sub 0 is a USINT count and subs 1..N
 /// are one UDINT (32-bit) module ident each (slot id + 1).
-static void leadshine_ec_write_module_list(lcec_slave_t *slave) {
+///
+/// The count is max_id + 1, so a sparse config must also clear the gap
+/// subindices: a stale ident inside the declared count makes the coupler's
+/// configured-vs-detected check reject the transition.  Write failures are
+/// fatal: with a wrong module list the coupler will not go to OP anyway.
+static int leadshine_ec_write_module_list(lcec_slave_t *slave) {
   int count = 0;
+  int err;
 
   for (lcec_slave_submodule_t *s = slave->submodules; s != NULL; s = s->next) {
-    if (lcec_write_sdo32(slave, LEADSHINE_EC_CONFMODULES, s->id + 1, s->ident) != 0) {
-      rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "%s.%s: failed writing module ident 0x%08x to 0x%04x:%02x\n", slave->master->name,
-          slave->name, s->ident, LEADSHINE_EC_CONFMODULES, s->id + 1);
-    }
     if (s->id + 1 > count) {
       count = s->id + 1;
     }
   }
 
-  if (lcec_write_sdo8(slave, LEADSHINE_EC_CONFMODULES, 0x00, count) != 0) {
-    rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "%s.%s: failed writing module count to 0x%04x:00\n", slave->master->name, slave->name,
-        LEADSHINE_EC_CONFMODULES);
+  // zero every subindex inside the count first (clears gaps and stale idents)
+  for (int i = 1; i <= count; i++) {
+    if ((err = lcec_write_sdo32(slave, LEADSHINE_EC_CONFMODULES, i, 0)) != 0) {
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: failed clearing 0x%04x:%02x\n", slave->master->name, slave->name,
+          LEADSHINE_EC_CONFMODULES, i);
+      return err;
+    }
   }
+
+  for (lcec_slave_submodule_t *s = slave->submodules; s != NULL; s = s->next) {
+    if ((err = lcec_write_sdo32(slave, LEADSHINE_EC_CONFMODULES, s->id + 1, s->ident)) != 0) {
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: failed writing module ident 0x%08x to 0x%04x:%02x\n", slave->master->name,
+          slave->name, s->ident, LEADSHINE_EC_CONFMODULES, s->id + 1);
+      return err;
+    }
+  }
+
+  if ((err = lcec_write_sdo8(slave, LEADSHINE_EC_CONFMODULES, 0x00, count)) != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: failed writing module count to 0x%04x:00\n", slave->master->name, slave->name,
+        LEADSHINE_EC_CONFMODULES);
+    return err;
+  }
+
+  return 0;
 }
 
 /// @brief Explicitly write the SM2/SM3 PDO assignment objects (0x1C12/0x1C13).
@@ -446,9 +475,25 @@ static int lcec_leadshine_ec_init(int comp_id, lcec_slave_t *slave) {
   hal_data->slot_count = leadshine_ec_count_slots(slave);
   hal_data->slots = hal_data->slot_count > 0 ? LCEC_HAL_ALLOCATE_ARRAY(leadshine_ec_slot_t, hal_data->slot_count) : NULL;
 
+  // Validate slot ids before building anything: an out-of-range id would
+  // compute a PDO index colliding with another slot's (id*incr wraps into
+  // the next slot's range, e.g. R2EC id 64 -> RxPDO 0x1A00 == slot 0 TxPDO).
+  // The parser rejects duplicate ids, so this is the only remaining check.
+  for (lcec_slave_submodule_t *s = slave->submodules; s != NULL; s = s->next) {
+    if (s->id >= max_slots) {
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: submodule slot %d exceeds max %d for this coupler\n", master->name,
+          slave->name, s->id, max_slots);
+      return -EINVAL;
+    }
+  }
+
   // Build the dynamic PDO / sync-manager layout (consumed after _init returns).
   lcec_syncs_t *syncs = LCEC_HAL_ALLOCATE(lcec_syncs_t);
-  leadshine_ec_build_syncs(slave, syncs, pdo_incr);
+  if ((err = leadshine_ec_build_syncs(slave, syncs, pdo_incr)) != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: submodule layout exceeds the sync manager / PDO capacity\n", master->name,
+        slave->name);
+    return err;
+  }
 
   // Register HAL pins + PDO entries and apply modparams, one slot at a time.
   int i = 0;
@@ -462,10 +507,6 @@ static int lcec_leadshine_ec_init(int comp_id, lcec_slave_t *slave) {
       rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "%s.%s: unknown submodule ident 0x%08x in slot %d, skipping\n", master->name,
           slave->name, s->ident, s->id);
       continue;
-    }
-    if (s->id >= max_slots) {
-      rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "%s.%s: submodule slot %d exceeds max %d for this coupler\n", master->name,
-          slave->name, s->id, max_slots);
     }
 
     slot->id = s->id;
@@ -481,7 +522,11 @@ static int lcec_leadshine_ec_init(int comp_id, lcec_slave_t *slave) {
         break;
       case MODULE_AIN: leadshine_ec_register_ain(slave, slot, s->name, def->in); break;
       case MODULE_AOUT: leadshine_ec_register_aout(slave, slot, s->name, def->out); break;
-      case MODULE_ENCODER: leadshine_ec_register_enc(slave, slot, s->name, def->in); break;
+      case MODULE_ENCODER:
+        if ((err = leadshine_ec_register_enc(slave, slot, s->name, def->in)) != 0) {
+          return err;
+        }
+        break;
       default: break;
     }
 
@@ -492,7 +537,9 @@ static int lcec_leadshine_ec_init(int comp_id, lcec_slave_t *slave) {
 
   // Tell the coupler which modules the config expects, then force the SM PDO
   // assignment (the master does not reliably assign the input SM by itself).
-  leadshine_ec_write_module_list(slave);
+  if ((err = leadshine_ec_write_module_list(slave)) != 0) {
+    return err;
+  }
   if ((err = leadshine_ec_assign_pdos(slave, syncs)) != 0) {
     return err;
   }
@@ -504,7 +551,7 @@ static int lcec_leadshine_ec_init(int comp_id, lcec_slave_t *slave) {
 
 static void lcec_leadshine_ec_read(lcec_slave_t *slave, long period) {
   lcec_leadshine_ec_data_t *hal_data = (lcec_leadshine_ec_data_t *)slave->hal_data;
-  uint8_t *pd = slave->master->process_data;
+  uint8_t *pd = lcec_slave_pd(slave);
 
   if (!slave->state.operational) {
     return;
