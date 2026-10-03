@@ -2,7 +2,7 @@
 Device: EL6021
 VendorID: "0x00000002"
 VendorName: Beckhoff Automation GmbH & Co. KG
-PID: "0x17893052"
+PID: "0x17853052"
 Description: Beckhoff EL6021 1Ch. RS422/RS485 Serial Interface
 DocumentationURL: http://www.beckhoff.com/EL6021
 DeviceType: Serial Interface
