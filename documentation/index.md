@@ -11,6 +11,8 @@
 - [Multi-rate systems](multi-rate.md): one bus, several HAL threads
   at different rates, using Sync Units.
 - [Master HAL Pins](master-pins.md)
+- [Runtime slave re-initialization](runtime-reinit.md) -- re-applying
+  driver configuration to a slave that was power-cycled while LinuxCNC runs.
 
 ## Development Documentation
 

@@ -45,6 +45,12 @@ driver use, so use it however works best for you.
 See the [PDOs and syncs doc](pdos-and-syncs.md) for a discussion of
 the various ways of mapping PDO entries in LinuxCNC-Ethercat.
 
+If your device forgets configuration that `_init` wrote via SDO or SII
+when it loses power (module lists, PDO assignment, feature bits), add a
+`proc_reinit` hook so LinuxCNC-Ethercat can re-apply it when the
+device returns to the bus.  See [Runtime slave
+re-initialization](runtime-reinit.md).
+
 ### HAL pin and parameter access
 
 LinuxCNC is migrating HAL to typed getter/setter accessors (upstream
@@ -92,6 +98,38 @@ domain, and only `lcec_slave_pd()` points at the right one.  lcec logs an
 error for any slave in such a unit whose driver never calls it.  The
 `period` passed to `proc_read` / `proc_write` is the slave's Sync Unit
 cycle.
+
+### Runtime re-initialization
+
+A slave that is power-cycled (or loses its cable) while LinuxCNC runs
+comes back through INIT with its volatile configuration gone: SII
+writes, and any SDO writes that were not registered with the master,
+must be re-applied or the slave reaches OP with stale config.
+[runtime-reinit.md](runtime-reinit.md) describes the mechanism; the
+driver-side rule is simple:
+
+**Every configuration write your driver makes must be reachable at
+runtime re-init.**  The review litmus test is "if this slave
+power-cycles mid-run, what breaks?"  Preference order for any given
+write:
+
+1. Master-registered configuration (`lcec_write_sdo*` /
+   `ecrt_slave_config_*` at `_init` time): the master owns it and
+   replays it on every INIT->PREOP transition by itself.  Nothing else
+   to do; prefer this whenever possible.
+2. The `proc_reinit` typelist hook, for what the master cannot own:
+   SII writes, dynamically computed values, or writes that need
+   sequencing against other steps.  When the slave returns, the master
+   holds it in PREOP and lcec runs `proc_reinit` before releasing it
+   (needs libethercat with `EC_HAVE_REINIT_HOLD`; without it the slave
+   behaves as before and lcec logs a warning).
+3. Never: a direct write that exists only in `_init`.
+
+The clean way to satisfy this is one `apply_config()`-style function
+holding every device-visible write, called from both `_init` and
+`proc_reinit`; `_init` additionally does the one-time HAL/pin/PDO
+registration.  See `lcec_leadshine_ec.c` for a reference
+implementation.
 
 ### Style points
 
