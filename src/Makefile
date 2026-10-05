@@ -91,7 +91,7 @@ liblcecdevices.a: $(device-objs)
 install: install-user install-realtime
 	true  # override 'install' from $(MODINC)
 
-realtime: lcec.so
+realtime: lcec.so cia402.so
 user: lcec_conf lcec_devices lcec_configgen
 
 # Run all tests (auto-generated above from tests/test_*.c).
@@ -105,7 +105,11 @@ install-user: user
 
 install-realtime: realtime
 	mkdir -p $(DESTDIR)$(RTLIBDIR)/
-	cp lcec.so $(DESTDIR)$(RTLIBDIR)/
+	@if [ -f $(DESTDIR)$(RTLIBDIR)/cia402.so ] && ! cmp -s cia402.so $(DESTDIR)$(RTLIBDIR)/cia402.so; then \
+	  echo "WARNING: overwriting existing $(DESTDIR)$(RTLIBDIR)/cia402.so that differs from the packaged build."; \
+	  echo "  If this is a halcompile-installed copy of the old hal-cia402 component, back it up first."; \
+	fi
+	cp lcec.so cia402.so $(DESTDIR)$(RTLIBDIR)/
 
 lcec.so: lcec_main.o $(lcec-common-objs) liblcecdevices.a
 	$(ECHO) Linking $@
@@ -114,6 +118,13 @@ lcec.so: lcec_main.o $(lcec-common-objs) liblcecdevices.a
 	(echo '{ global : '; tr -s '\0' < $@.sym | xargs -r0 printf '%s;\n' | grep .; echo 'local : * ; };') > $@.ver
 #$(CC) -shared -Bsymbolic $(RTLDFLAGS) -Wl,--version-script,$@.ver -o $@ lcec_main.o $(lcec-comon-objs) -lm
 	$(CC) -shared -Bsymbolic $(RTLDFLAGS) -Wl,--version-script,$@.ver -o $@ lcec_main.o $(lcec-common-objs) -lm $(RTEXTRA_LDFLAGS)
+	chmod -x $@
+
+# The cia402 HAL component is a standalone RTAPI module: no ethercat or
+# device-library linkage, HAL symbols resolve via rtapi at load time.
+cia402.so: cia402.o
+	$(ECHO) Linking $@
+	$(CC) -shared -Bsymbolic $(RTLDFLAGS) -o $@ cia402.o -lm
 	chmod -x $@
 
 lcec_conf: $(lcec-conf-objs) $(lcec-common-objs) liblcecdevices.a

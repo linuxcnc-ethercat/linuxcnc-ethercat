@@ -1,0 +1,23 @@
+#!/bin/sh
+# Move aside an unpackaged halcompile-installed cia402.so before unpack.
+# linuxcnc-ethercat now ships its own cia402 HAL component (ported from
+# dbraun1981/hal-cia402); previous installs following the old docs left a
+# cia402.so in the rtlib dir that dpkg does not own.
+set -e
+
+case "$1" in
+  install|upgrade)
+    for dir in /usr/lib/linuxcnc/modules /usr/lib/linuxcnc/modules-sim; do
+      f="$dir/cia402.so"
+      if [ -f "$f" ] && ! dpkg -S "$f" >/dev/null 2>&1; then
+        mv "$f" "$f.pre-debian-backup"
+        echo "linuxcnc-ethercat: moved unpackaged $f aside to $f.pre-debian-backup" >&2
+        echo "linuxcnc-ethercat: the package now ships its own cia402 HAL component" >&2
+      fi
+    done
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

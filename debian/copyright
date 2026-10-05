@@ -10,6 +10,10 @@ Files: debian/*
 Copyright: 2015 Sascha Ittner <sascha.ittner@modusoft.de>
 License: GPL-2.0+
 
+Files: src/cia402.c
+Copyright: 2019 Dominik Braun <dominik.braun@eventor.de>
+License: GPL-2.0+
+
 License: GPL-2.0+
  This package is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
