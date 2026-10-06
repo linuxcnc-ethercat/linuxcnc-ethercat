@@ -22,6 +22,8 @@ linuxcnc-ethercat (1.47.0-1) unstable; urgency=low
   * fix(conf): require subModule id; reject duplicate ids and names.
   * feat(main): runtime re-initialization of slaves that return to the
     bus.
+  * conf: the deprecated syncToRefClock master attribute stays one
+    more cycle; removal moved to v1.48.0.
 
  -- Luca Toniolo <toniolo.luca@gmail.com>  Tue, 06 Oct 2026 09:00:00 +0800
 

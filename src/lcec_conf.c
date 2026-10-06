@@ -342,7 +342,7 @@ static void parseMasterAttrs(LCEC_CONF_XML_INST_T *inst, int next, const char **
   if (given_sync != 0) {
     fprintf(stderr,
         "%s: WARNING: syncToRefClock is deprecated; use the sign of refClockSyncCycles instead "
-        "(negative = M2R, positive = R2M, 0 = free running). syncToRefClock will be removed in v1.47.0\n",
+        "(negative = M2R, positive = R2M, 0 = free running). syncToRefClock will be removed in v1.48.0\n",
         modname);
   }
 

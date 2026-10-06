@@ -73,7 +73,7 @@ and some of which are required:
   and how to tune the PLL.
 
 - `syncToRefClock="true|false"`: **deprecated**, will be removed in
-  v1.47.0. Alternate spelling of the sign of `refClockSyncCycles`:
+  v1.48.0. Alternate spelling of the sign of `refClockSyncCycles`:
   `"true"` means negative cycles (M2R), `"false"` means positive
   cycles (R2M). Use the sign-based form instead. If you specify both
   they must agree, otherwise the parser errors out. (See
