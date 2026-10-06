@@ -1,3 +1,30 @@
+linuxcnc-ethercat (1.47.0-1) unstable; urgency=low
+
+  * feat(cia402): ship the cia402 HAL component in the package, ported
+    to C from Dominik Braun's hal-cia402 (unmaintained since 2021). No
+    more halcompile --install of an external .comp; existing
+    "loadrt cia402" configs work unchanged. Two behavior fixes vs the
+    old component: the idle controlword is 0x0000 (disable voltage)
+    instead of 0x0004, which wedged some drives in ready-to-switch-on
+    with the power stage fed, and "setp cia402.N.csp-mode 0" now
+    actually selects cyclic velocity mode as documented. An unpackaged
+    halcompile-installed cia402.so is moved aside to
+    cia402.so.pre-debian-backup on package install. Hardware-tested on
+    LinuxCNC 2.10.0~pre2 by yurc and griffin-sisk.
+  * fix(cia402): keep position continuous across the 32-bit rollover
+    of 0x6064: pos-fb is built from the accumulated modular delta in a
+    64-bit counter and the target position is written modulo 2^32, so
+    the command wraps together with the drive. Thanks to yurc,
+    including the hardware test across the wrap.
+  * feat(leadshine): R2EC/R3EC modular coupler driver with <subModule>
+    XML support. Thanks to Abdullah.
+  * fix(leadshine): validate submodule config; harden init paths.
+  * fix(conf): require subModule id; reject duplicate ids and names.
+  * feat(main): runtime re-initialization of slaves that return to the
+    bus.
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Tue, 06 Oct 2026 09:00:00 +0800
+
 linuxcnc-ethercat (1.46.0-1) unstable; urgency=low
 
   * feat(main): schedule Sync Units on the DC grid and add
