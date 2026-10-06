@@ -38,6 +38,11 @@
 ///    `pos_mode`, so `setp cia402.N.csp-mode 0` actually selects cyclic
 ///    velocity mode as documented.  Upstream checked the CSP condition
 ///    first without `pos_mode`, making the CSV branch dead code.
+///
+/// 3. Position survives the 32-bit rollover of 0x6064: `pos-fb` is built
+///    from the accumulated modular delta in a 64-bit counter, and the
+///    target is written modulo 2^32 so it wraps together with the drive.
+///    With a 2^23 encoder 0x6064 wraps after 256 turns.
 
 #include <rtapi.h>
 #include <rtapi_app.h>
@@ -116,6 +121,9 @@ typedef struct {
   bool pos_mode;
   bool init_pos_mode;
   long auto_fault_reset_delay;
+  int64_t pos_acc;  // unwrapped 0x6064
+  int32_t pos_last; // 0x6064 of the previous cycle
+  bool pos_seeded;
 } cia402_inst_t;
 
 static int comp_id;
@@ -362,6 +370,7 @@ static void read_all(cia402_inst_t *inst, long period) {
   hal_s32_t opmode_display = LCEC_PIN_S32_GET(inst->opmode_display);
   bool opmode_cyclic_position, opmode_cyclic_velocity, opmode_homing;
   bool stat_fault, stat_homed;
+  hal_s32_t drv_pos = LCEC_PIN_S32_GET(inst->drv_actual_position);
 
   // check for change in scale values
   LCEC_PARAM_FLOAT_SET(inst->pos_scale,
@@ -369,8 +378,15 @@ static void read_all(cia402_inst_t *inst, long period) {
   LCEC_PARAM_FLOAT_SET(inst->velo_scale,
       check_scale(LCEC_PARAM_FLOAT_GET(inst->velo_scale), &inst->velo_scale_old, &inst->velo_scale_rcpt));
 
-  // read position feedback
-  LCEC_PIN_FLOAT_SET(inst->pos_fb, ((double)LCEC_PIN_S32_GET(inst->drv_actual_position)) * inst->pos_scale_rcpt);
+  // read position feedback, unwrapped across the int32 rollover of 0x6064
+  if (!inst->pos_seeded) {
+    inst->pos_acc = drv_pos;
+    inst->pos_seeded = 1;
+  } else {
+    inst->pos_acc += (int32_t)((uint32_t)drv_pos - (uint32_t)inst->pos_last);
+  }
+  inst->pos_last = drv_pos;
+  LCEC_PIN_FLOAT_SET(inst->pos_fb, ((double)inst->pos_acc) * inst->pos_scale_rcpt);
 
   // read velocity feedback
   LCEC_PIN_FLOAT_SET(inst->velocity_fb, ((double)LCEC_PIN_S32_GET(inst->drv_actual_velocity)) * inst->velo_scale_rcpt);
@@ -460,8 +476,10 @@ static void write_all(cia402_inst_t *inst, long period) {
   }
   LCEC_PIN_U32_SET(inst->controlword, controlword);
 
-  // write position command
-  LCEC_PIN_S32_SET(inst->drv_target_position, (int32_t)(LCEC_PIN_FLOAT_GET(inst->pos_cmd) * LCEC_PARAM_FLOAT_GET(inst->pos_scale)));
+  // write position command modulo 2^32, wrapping together with 0x6064;
+  // a direct (int32_t) cast of a double out of range is undefined
+  LCEC_PIN_S32_SET(
+      inst->drv_target_position, (int32_t)(uint32_t)(int64_t)(LCEC_PIN_FLOAT_GET(inst->pos_cmd) * LCEC_PARAM_FLOAT_GET(inst->pos_scale)));
   // write velocity command
   LCEC_PIN_S32_SET(
       inst->drv_target_velocity, (int32_t)(LCEC_PIN_FLOAT_GET(inst->velocity_cmd) * LCEC_PARAM_FLOAT_GET(inst->velo_scale)));
