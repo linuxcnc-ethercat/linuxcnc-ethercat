@@ -616,7 +616,7 @@ static const lcec_mdp_module_t uc20_modules[] = {
 };
 
 static const lcec_mdp_family_t uc20_family = {
-    .name = "uc20",
+    .name = "UC20",
     .vid = 0x00000fc4,
     .pid = 0x0100000a,
     .revision = 0x00000001,

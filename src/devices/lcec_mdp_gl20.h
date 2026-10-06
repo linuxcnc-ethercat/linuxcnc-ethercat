@@ -1758,7 +1758,7 @@ static const lcec_mdp_module_t gl20_modules[] = {
 };
 
 static const lcec_mdp_family_t gl20_family = {
-    .name = "gl20",
+    .name = "GL20",
     .vid = 0x00100000,
     .pid = 0x10f41001,
     .revision = 0x01006000,

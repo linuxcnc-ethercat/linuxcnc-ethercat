@@ -292,7 +292,8 @@ def emit_pdos(out, prefix, pdos):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--esi", required=True)
-    ap.add_argument("--family", required=True, help="C identifier for this coupler family, e.g. uc20")
+    ap.add_argument("--family", required=True, help="C identifier for this coupler family, e.g. uc20; "
+                    "its uppercase form (UC20) is the <slave type=...> name")
     ap.add_argument("--device", default=None, help="substring filter for the coupler Device name")
     args = ap.parse_args()
 
@@ -369,7 +370,8 @@ def main():
     out.append("};")
     out.append("")
     out.append(f"static const lcec_mdp_family_t {f}_family = {{")
-    out.append(f'    .name = "{f}",')
+    # uppercase, like every other driver's type name (lcec_findslavetype is case-sensitive)
+    out.append(f'    .name = "{f.upper()}",')
     out.append(f"    .vid = 0x{vendor_id:08x},")
     out.append(f"    .pid = 0x{product_code:08x},")
     out.append(f"    .revision = 0x{revision:08x},")

@@ -31,7 +31,8 @@
 ///   3. if the hardware misbehaves in a way the ESI cannot express, add a
 ///      quirk flag to its registration (see lcec_mdp_quirks_t)
 ///
-/// Config usage is the generic `<subModule>` grammar:
+/// Config usage is the generic `<subModule>` grammar; the type name is the
+/// family name in uppercase (documentation/mdp_coupler.md):
 ///
 ///   <slave idx="4" type="UC20" name="io">
 ///     <subModule id="0" ident="12" name="do1"/>
