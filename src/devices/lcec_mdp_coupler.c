@@ -127,6 +127,16 @@ static char *lcec_mdp_name(const char *base, const char *kind, int ch) {
   return s;
 }
 
+/// @brief Allocate a persistent "<base>-<kind>" pin name prefix for the analog
+/// classes, which append "-<ch>-<pin>" themselves.
+static char *lcec_mdp_prefix(const char *base, const char *kind) {
+  char buf[HAL_NAME_LEN];
+  snprintf(buf, sizeof(buf), "%s-%s", base, kind);
+  char *s = LCEC_HAL_ALLOCATE_STRING(strlen(buf) + 1);
+  strcpy(s, buf);
+  return s;
+}
+
 /// @brief Entry's object index for a given slot.
 static uint16_t lcec_mdp_entry_index(const lcec_mdp_family_t *fam, const lcec_mdp_pdo_entry_t *e, uint8_t slot) {
   return e->index + (e->index_dos ? slot * fam->slot_index_incr : 0);
@@ -315,7 +325,7 @@ static int lcec_mdp_register_ain(lcec_slave_t *slave, const lcec_mdp_family_t *f
       const lcec_mdp_pdo_entry_t *e = &def->tx_pdos[p].entries[i];
       if (!lcec_mdp_analog_channels(e)) continue;
       lcec_class_ain_options_t *opt = lcec_ain_options();
-      opt->name_prefix = lcec_mdp_name(base, "ain", ch);
+      opt->name_prefix = lcec_mdp_prefix(base, "ain");
       opt->valueonly = 1;
       opt->value_idx = lcec_mdp_entry_index(fam, e, slot->id);
       opt->value_sidx = e->subindex;
@@ -341,7 +351,7 @@ static int lcec_mdp_register_aout(lcec_slave_t *slave, const lcec_mdp_family_t *
       const lcec_mdp_pdo_entry_t *e = &def->rx_pdos[p].entries[i];
       if (!lcec_mdp_analog_channels(e)) continue;
       lcec_class_aout_options_t *opt = lcec_aout_options();
-      opt->name_prefix = lcec_mdp_name(base, "aout", ch);
+      opt->name_prefix = lcec_mdp_prefix(base, "aout");
       opt->value_sidx = e->subindex;
       slot->aout->channels[ch] = lcec_aout_register_channel(slave, ch, lcec_mdp_entry_index(fam, e, slot->id), opt);
       if (slot->aout->channels[ch] == NULL) return -EIO;
