@@ -36,6 +36,7 @@
 - [Inovance IS620N and SV660 servo drives](inovance.md)
 - [Leadshine R2EC/R3EC modular bus couplers](leadshine_ec.md)
 - [Leadshine stepper drives](leadshine_stepper.md)
+- [MDP modular bus couplers: UTRIO UC20, Inovance GL20](mdp_coupler.md)
 - [Omron MX2 VFD](ommx2.md)
 - [RTelligent ECR and ECT stepper drives](rtec.md)
 - [RTelligent DRV DC servo drives](rtdrv.md)

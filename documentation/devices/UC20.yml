@@ -1,0 +1,11 @@
+---
+Device: UC20
+VendorID: "0x00000fc4"
+VendorName: UTRIO
+PID: "0x0100000a"
+Description: UTRIO UC20-RTU-EC-A modular EtherCAT bus coupler (32 slots)
+DocumentationURL: ""
+DeviceType: Bus Coupler
+Notes: Modular coupler; configure slots with <subModule> tags, see documentation/mdp_coupler.md
+SrcFile: src/devices/lcec_mdp_coupler.c
+TestingStatus: "Tested and working @griffin-sisk (digital modules, bench)"
