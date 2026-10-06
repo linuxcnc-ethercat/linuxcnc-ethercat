@@ -22,6 +22,11 @@
 /// See lcec_mdp_coupler.h for the design.  Module tables are generated from
 /// vendor ESI files by scripts/esi2coupler.py; per-family hardware quirks
 /// are declared in the family registration table below.
+///
+/// The coupler keeps its module list (0xF030) and PDO assignment only in
+/// RAM, so lcec_mdp_apply_config() writes them from `_init` and again from
+/// `proc_reinit` whenever the coupler returns to the bus after a power cycle
+/// (documentation/runtime-reinit.md).
 
 #include "lcec_mdp_coupler.h"
 
@@ -33,6 +38,7 @@
 #include "lcec_mdp_uc20.h"
 
 static int lcec_mdp_coupler_init(int comp_id, lcec_slave_t *slave);
+static int lcec_mdp_coupler_reinit(lcec_slave_t *slave);
 static void lcec_mdp_coupler_read(lcec_slave_t *slave, long period);
 static void lcec_mdp_coupler_write(lcec_slave_t *slave, long period);
 
@@ -59,14 +65,15 @@ static const lcec_mdp_registration_t registrations[] = {
     // slot * 0x40.  The tables reproduce that assignment exactly, so the
     // process image agrees with the slave whether or not it honours
     // reassignment, and NO_PDO_ASSIGN would be safe to add if it turns out
-    // to reject it.  Not yet run in OP.
+    // to reject it.  Run in OP 2026-10-03 with four slots on a 16-slave bus.
     {&gl20_family, 0},
     {NULL, 0},
 };
 
 // The typelist is built from `registrations` at load time, one entry per
-// family, with `flags` = index into `registrations`.
-static lcec_typelist_t types[3];  // registrations count + terminator
+// family, with `flags` = index into `registrations`.  `registrations` carries
+// its own terminator, which becomes the typelist's.
+static lcec_typelist_t types[sizeof(registrations) / sizeof(registrations[0])];
 
 static void AddTypesMdpCoupler(void) __attribute__((constructor));
 static void AddTypesMdpCoupler(void) {
@@ -93,6 +100,10 @@ static void AddTypesMdpCoupler(void) {
     types[i].modules = subs;
     types[i].flags = (uint64_t)i;
     types[i].sourcefile = __FILE__;
+    // only couplers with volatile config need the PREOP hold on return
+    if (fam->download_ident_list || (registrations[i].quirks & LCEC_MDP_QUIRK_EXPLICIT_SM_ASSIGN)) {
+      types[i].proc_reinit = lcec_mdp_coupler_reinit;
+    }
   }
   types[i].name = NULL;
 
@@ -168,8 +179,8 @@ static int lcec_mdp_build_syncs(lcec_slave_t *slave, const lcec_mdp_family_t *fa
   lcec_mdp_append_direction(syncs, slave, fam, 1);
 
   // The counters stop at the cap, so they show what fit, not what was needed.
-  // A coupler contributes every mapping it assigns itself, diagnosis included,
-  // so a five-module GL20 already needs 17 of the 17 available PDOs.
+  // A coupler contributes every mapping it assigns itself, diagnosis included:
+  // a GL20 digital module takes two or three of the 17 available PDOs.
   if (syncs->error) {
     rtapi_print_msg(RTAPI_MSG_ERR,
         LCEC_MSG_PFX "%s.%s: layout exceeds capacity after %d of %d PDOs and %d of %d PDO entries; configure fewer modules\n",
@@ -365,11 +376,13 @@ static int lcec_mdp_register_slot(lcec_slave_t *slave, const lcec_mdp_family_t *
 
 /// @brief Write the configured module ident list (0xF030).
 ///
+/// Volatile on the coupler, so this runs from both `_init` and `_reinit`.
+///
 /// Sub 0 is the USINT count; subs 1..N are UDINT module idents (slot id + 1).
 /// Gap subindices inside the declared count are cleared to 0 so a sparse
 /// config cannot leave stale idents that fail the coupler's configured-vs-
 /// detected check at the SafeOp transition.
-static int lcec_mdp_write_module_list(lcec_slave_t *slave, const lcec_mdp_family_t *fam) {
+static int lcec_mdp_write_module_list(lcec_slave_t *slave) {
   int count = 0;
   int err;
 
@@ -420,6 +433,37 @@ static int lcec_mdp_assign_pdos(lcec_slave_t *slave, lcec_syncs_t *syncs) {
   return 0;
 }
 
+// ------------------------------------------------------------------
+// Per-boot coupler configuration
+// ------------------------------------------------------------------
+
+/// @brief Apply everything the coupler forgets on a power cycle.  Idempotent;
+/// runs from `_init` and from `_reinit` (slave held in PREOP).
+///
+/// 1. 0xF030 configured module list, for families whose ESI sets
+///    DownloadModuleIdentList.
+/// 2. SM2/SM3 PDO assignment (0x1C12/0x1C13), for families with
+///    LCEC_MDP_QUIRK_EXPLICIT_SM_ASSIGN.
+/// @return 0 on success, <0 on the first hard failure.
+static int lcec_mdp_apply_config(lcec_slave_t *slave) {
+  lcec_mdp_coupler_data_t *hal_data = (lcec_mdp_coupler_data_t *)slave->hal_data;
+  int err;
+
+  if (hal_data->family->download_ident_list && (err = lcec_mdp_write_module_list(slave)) != 0) {
+    return err;
+  }
+  if ((hal_data->quirks & LCEC_MDP_QUIRK_EXPLICIT_SM_ASSIGN) && hal_data->syncs != NULL &&
+      (err = lcec_mdp_assign_pdos(slave, hal_data->syncs)) != 0) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: failed to write the PDO assignment (%d)\n", slave->master->name, slave->name, err);
+    return err;
+  }
+  return 0;
+}
+
+// ------------------------------------------------------------------
+// init / reinit / read / write
+// ------------------------------------------------------------------
+
 static int lcec_mdp_coupler_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   const lcec_mdp_registration_t *reg = &registrations[slave->flags];
@@ -456,11 +500,11 @@ static int lcec_mdp_coupler_init(int comp_id, lcec_slave_t *slave) {
   hal_data->slots = slot_count > 0 ? LCEC_HAL_ALLOCATE_ARRAY(lcec_mdp_slot_t, slot_count) : NULL;
 
   // build the dynamic SM/PDO layout (skipped entirely for NO_PDO_ASSIGN
-  // couplers, whose layout is fixed by the 0xF030 ident list)
-  lcec_syncs_t *syncs = NULL;
+  // couplers, whose layout is fixed by the 0xF030 ident list); kept for
+  // the PDO assignment on re-init
   if (!(reg->quirks & LCEC_MDP_QUIRK_NO_PDO_ASSIGN)) {
-    syncs = LCEC_HAL_ALLOCATE(lcec_syncs_t);
-    if ((err = lcec_mdp_build_syncs(slave, fam, syncs)) != 0) {
+    hal_data->syncs = LCEC_HAL_ALLOCATE(lcec_syncs_t);
+    if ((err = lcec_mdp_build_syncs(slave, fam, hal_data->syncs)) != 0) {
       return err;
     }
   }
@@ -482,10 +526,8 @@ static int lcec_mdp_coupler_init(int comp_id, lcec_slave_t *slave) {
     }
   }
 
-  if (fam->download_ident_list && (err = lcec_mdp_write_module_list(slave, fam)) != 0) {
-    return err;
-  }
-  if ((reg->quirks & LCEC_MDP_QUIRK_EXPLICIT_SM_ASSIGN) && syncs != NULL && (err = lcec_mdp_assign_pdos(slave, syncs)) != 0) {
+  // volatile coupler config (module list, PDO assignment)
+  if ((err = lcec_mdp_apply_config(slave)) != 0) {
     return err;
   }
 
@@ -493,6 +535,10 @@ static int lcec_mdp_coupler_init(int comp_id, lcec_slave_t *slave) {
   slave->proc_write = lcec_mdp_coupler_write;
   return 0;
 }
+
+/// @brief Runtime re-initialization after the coupler returned to the bus
+/// (documentation/runtime-reinit.md).  Non-realtime, coupler held in PREOP.
+static int lcec_mdp_coupler_reinit(lcec_slave_t *slave) { return lcec_mdp_apply_config(slave); }
 
 static void lcec_mdp_coupler_read(lcec_slave_t *slave, long period) {
   lcec_mdp_coupler_data_t *hal_data = (lcec_mdp_coupler_data_t *)slave->hal_data;

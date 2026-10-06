@@ -144,6 +144,7 @@ typedef struct {
   uint64_t quirks;
   int slot_count;
   lcec_mdp_slot_t *slots;
+  lcec_syncs_t *syncs;  ///< layout built in _init (NULL for NO_PDO_ASSIGN), reused for the PDO assignment on re-init
 } lcec_mdp_coupler_data_t;
 
 // CoE objects common to all MDP couplers.
