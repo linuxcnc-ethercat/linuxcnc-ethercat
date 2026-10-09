@@ -113,23 +113,28 @@ runtime re-init.**  The review litmus test is "if this slave
 power-cycles mid-run, what breaks?"  Preference order for any given
 write:
 
-1. Master-registered configuration (`lcec_write_sdo*` /
-   `ecrt_slave_config_*` at `_init` time): the master owns it and
+1. Master-registered configuration (`ecrt_slave_config_sdo*` queued
+   writes, including XML `<sdoConfig>` entries): the master owns it and
    replays it on every INIT->PREOP transition by itself.  Nothing else
-   to do; prefer this whenever possible.
+   to do; prefer this whenever possible.  Note that `lcec_write_sdo*`
+   does NOT qualify: it is a direct, blocking
+   `ecrt_master_sdo_download`, invisible to the master's replay
+   machinery.
 2. The `proc_reinit` typelist hook, for what the master cannot own:
-   SII writes, dynamically computed values, or writes that need
-   sequencing against other steps.  When the slave returns, the master
-   holds it in PREOP and lcec runs `proc_reinit` before releasing it
-   (needs libethercat with `EC_HAVE_REINIT_HOLD`; without it the slave
-   behaves as before and lcec logs a warning).
+   SII writes, dynamically computed values, `lcec_write_sdo*` calls, or
+   writes that need sequencing against other steps.  When the slave
+   returns, the master holds it in PREOP and lcec runs `proc_reinit`
+   before releasing it (needs libethercat with `EC_HAVE_REINIT_HOLD`;
+   without it the slave behaves as before and lcec logs a warning).
 3. Never: a direct write that exists only in `_init`.
 
 The clean way to satisfy this is one `apply_config()`-style function
 holding every device-visible write, called from both `_init` and
 `proc_reinit`; `_init` additionally does the one-time HAL/pin/PDO
-registration.  See `lcec_leadshine_ec.c` for a reference
-implementation.
+registration.  See `lcec_leadshine_ec.c` and `lcec_el6021.c` for
+reference implementations.  Drivers built on `lcec_class_cia402` get
+the hook automatically: `ADD_TYPES_WITH_CIA402_MODPARAMS` wires
+`lcec_cia402_slave_reinit`, which re-applies the write-SDO caches.
 
 ### Style points
 
