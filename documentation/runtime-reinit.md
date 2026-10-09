@@ -116,6 +116,7 @@ the SDO writes and is retried on the new instance.
 | Driver | Devices | What `proc_reinit` re-applies |
 |---|---|---|
 | `lcec_leadshine_ec` | R2EC, R3EC couplers | SII CoE feature bits, `0xF030` module list, per-slot modparams, `0x1C12`/`0x1C13` PDO assignment; warns if `0xF050` (detected modules) differs from the configured list |
+| `lcec_mdp_coupler` | UC20, GL20 couplers | `0xF030` module list; `0x1C12`/`0x1C13` PDO assignment for families with `LCEC_MDP_QUIRK_EXPLICIT_SM_ASSIGN` (none so far) |
 
 For every supported slave the XML `<sdoConfig>` entries (except
 complete-access ones, which the master owns) are re-applied as well.

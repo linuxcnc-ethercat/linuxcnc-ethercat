@@ -1,0 +1,11 @@
+---
+Device: GL20
+VendorID: "0x00100000"
+VendorName: Inovance
+PID: "0x10f41001"
+Description: Inovance GL20(GL20S)-RTU-ECT32 modular EtherCAT bus coupler (32 slots)
+DocumentationURL: https://www.inovance.com/
+DeviceType: Bus Coupler
+Notes: Modular coupler; configure slots with <subModule> tags, see documentation/mdp_coupler.md
+SrcFile: src/devices/lcec_mdp_coupler.c
+TestingStatus: "Tested and working @griffin-sisk (0016ETP/1600END digital modules)"

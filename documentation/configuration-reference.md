@@ -226,7 +226,8 @@ in slot 1:
 ```
 
 Refer to the specific driver's documentation (for example
-[leadshine_ec.md](leadshine_ec.md) for the R2EC/R3EC) for the list of
+[leadshine_ec.md](leadshine_ec.md) for the R2EC/R3EC, or
+[mdp_coupler.md](mdp_coupler.md) for the UC20/GL20) for the list of
 supported module `ident`s and the `<modParam>`s available for each.
 
 ### `<syncManagers>`
