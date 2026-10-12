@@ -426,8 +426,8 @@ static void read_all(cia402_inst_t *inst, long period) {
 
   // Statusword bit 13 is mode specific (CiA 402 / IEC 61800-7-201):
   // following error in CSP, homing error in homing mode; it is not read in
-  // the other modes.  Either one means the axis is not where the command
-  // says, so both raise drv-fault like the fault bit does.
+  // the other modes.  Neither one is a fault by itself: a drive that faults
+  // on it also sets bit 3, which drv-fault already reports.
   following_error = opmode_cyclic_position && ((statusword >> 13) & 1);
   homing_error = opmode_homing && ((statusword >> 13) & 1);
   LCEC_PIN_BIT_SET(inst->stat_following_error, following_error);
@@ -437,7 +437,7 @@ static void read_all(cia402_inst_t *inst, long period) {
   if (opmode_homing) {
     stat_homed = ((statusword >> 10) & 1) && ((statusword >> 12) & 1);
     LCEC_PIN_BIT_SET(inst->stat_homed, stat_homed);
-    LCEC_PIN_BIT_SET(inst->stat_homing, !stat_homed && !((statusword >> 10) & 1));
+    LCEC_PIN_BIT_SET(inst->stat_homing, !stat_homed && !((statusword >> 10) & 1) && !homing_error);
   }
 
   // update fault output
@@ -445,7 +445,7 @@ static void read_all(cia402_inst_t *inst, long period) {
     inst->auto_fault_reset_delay -= period;
     LCEC_PIN_BIT_SET(inst->drv_fault, 0);
   } else {
-    LCEC_PIN_BIT_SET(inst->drv_fault, (stat_fault || following_error || homing_error) && LCEC_PIN_BIT_GET(inst->enable));
+    LCEC_PIN_BIT_SET(inst->drv_fault, stat_fault && LCEC_PIN_BIT_GET(inst->enable));
   }
 }
 
