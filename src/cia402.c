@@ -105,6 +105,8 @@ typedef struct {
   hal_bit_t *opmode_homing;
   hal_bit_t *opmode_cyclic_position;
   hal_bit_t *opmode_cyclic_velocity;
+  hal_bit_t *stat_following_error; // statusword bit 13 in CSP
+  hal_bit_t *stat_homing_error;    // statusword bit 13 in homing mode
   hal_bit_t *fault_reset; // pin in
   // parameters (references on the new HAL API, values on the old one)
   lcec_param_float_t pos_scale;
@@ -263,6 +265,10 @@ static int export(char *prefix, cia402_inst_t **inst_out) {
   if ((r = pin_new(HAL_BIT, HAL_OUT, (void **)&inst->opmode_cyclic_position, buf)) != 0) return r;
   rtapi_snprintf(buf, sizeof(buf), "%s.opmode-cyclic-velocity", prefix);
   if ((r = pin_new(HAL_BIT, HAL_OUT, (void **)&inst->opmode_cyclic_velocity, buf)) != 0) return r;
+  rtapi_snprintf(buf, sizeof(buf), "%s.stat-following-error", prefix);
+  if ((r = pin_new(HAL_BIT, HAL_OUT, (void **)&inst->stat_following_error, buf)) != 0) return r;
+  rtapi_snprintf(buf, sizeof(buf), "%s.stat-homing-error", prefix);
+  if ((r = pin_new(HAL_BIT, HAL_OUT, (void **)&inst->stat_homing_error, buf)) != 0) return r;
   rtapi_snprintf(buf, sizeof(buf), "%s.fault-reset", prefix);
   if ((r = pin_new(HAL_BIT, HAL_IN, (void **)&inst->fault_reset, buf)) != 0) return r;
 
@@ -369,7 +375,7 @@ static void read_all(cia402_inst_t *inst, long period) {
   hal_u32_t statusword = LCEC_PIN_U32_GET(inst->statusword);
   hal_s32_t opmode_display = LCEC_PIN_S32_GET(inst->opmode_display);
   bool opmode_cyclic_position, opmode_cyclic_velocity, opmode_homing;
-  bool stat_fault, stat_homed;
+  bool stat_fault, stat_homed, following_error, homing_error;
   hal_s32_t drv_pos = LCEC_PIN_S32_GET(inst->drv_actual_position);
 
   // check for change in scale values
@@ -418,11 +424,20 @@ static void read_all(cia402_inst_t *inst, long period) {
     LCEC_PIN_BIT_SET(inst->stat_target_reached, 0);
   }
 
+  // Statusword bit 13 is mode specific (CiA 402 / IEC 61800-7-201):
+  // following error in CSP, homing error in homing mode; it is not read in
+  // the other modes.  Neither one is a fault by itself: a drive that faults
+  // on it also sets bit 3, which drv-fault already reports.
+  following_error = opmode_cyclic_position && ((statusword >> 13) & 1);
+  homing_error = opmode_homing && ((statusword >> 13) & 1);
+  LCEC_PIN_BIT_SET(inst->stat_following_error, following_error);
+  LCEC_PIN_BIT_SET(inst->stat_homing_error, homing_error);
+
   // home states
   if (opmode_homing) {
     stat_homed = ((statusword >> 10) & 1) && ((statusword >> 12) & 1);
     LCEC_PIN_BIT_SET(inst->stat_homed, stat_homed);
-    LCEC_PIN_BIT_SET(inst->stat_homing, !stat_homed && !((statusword >> 10) & 1));
+    LCEC_PIN_BIT_SET(inst->stat_homing, !stat_homed && !((statusword >> 10) & 1) && !homing_error);
   }
 
   // update fault output
