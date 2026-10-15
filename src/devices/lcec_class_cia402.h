@@ -306,6 +306,10 @@ void lcec_cia402_read(struct lcec_slave *slave, lcec_class_cia402_channel_t *dat
 void lcec_cia402_read_all(struct lcec_slave *slave, lcec_class_cia402_channels_t *channels);
 void lcec_cia402_write(struct lcec_slave *slave, lcec_class_cia402_channel_t *data);
 void lcec_cia402_write_all(struct lcec_slave *slave, lcec_class_cia402_channels_t *channels);
+/// @brief `proc_reinit` for drivers built on this class: re-applies the
+/// write-SDOs after a power cycle.  Wired into every typelist registered
+/// through ADD_TYPES_WITH_CIA402_MODPARAMS.
+int lcec_cia402_slave_reinit(struct lcec_slave *slave);
 lcec_class_cia402_options_t *lcec_cia402_options(void);
 lcec_class_cia402_channel_options_t *lcec_cia402_channel_options(void);
 void lcec_cia402_rename_multiaxis_channels(lcec_class_cia402_options_t *opt);
@@ -326,6 +330,7 @@ lcec_ratio lcec_cia402_decode_ratio_modparam(const char *value, int max_denomina
     all_modparams = lcec_cia402_modparams(channels, chan_mps, base_mps, chan_docs, base_docs);     \
     for (i = 0; types[i].name != NULL; i++) {                                                      \
       types[i].modparams = all_modparams;                                                          \
+      types[i].proc_reinit = lcec_cia402_slave_reinit;                                             \
     }                                                                                              \
     lcec_addtypes(types, __FILE__);                                                                \
   }
