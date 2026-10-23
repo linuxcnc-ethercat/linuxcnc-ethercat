@@ -76,7 +76,8 @@ Digital modules:
   0xffff (hold everything) and the module remembers it, so without this
   outputs could stay on after a crash or cable fault.
 - `inputFilter0` .. `inputFilter3` (U32, default 10): input filter time
-  in ms, one per group of 8 channels.
+  in ms, one per group of 8 channels.  R3 modules only; R2 digital input
+  modules have no filter setting and the driver rejects the modParam.
 
 Analog modules:
 

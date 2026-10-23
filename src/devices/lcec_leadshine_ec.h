@@ -102,6 +102,11 @@
 #define LEADSHINE_EC_MAX_SLOTS(f)              ((int)((f) & 0xff))
 #define LEADSHINE_EC_PDO_INCR(f)               ((int)(((f) >> 8) & 0xff))
 
+/// @brief Set when the coupler's digital input modules have a config object
+/// with input filters (R3 only; R2 DI modules have no 0x8000 object at all).
+#define LEADSHINE_EC_F_DI_FILTER     ((uint64_t)1 << 16)
+#define LEADSHINE_EC_HAS_DI_FILTER(f) (((f) & LEADSHINE_EC_F_DI_FILTER) != 0)
+
 /// @brief Kind of module in a slot; selects the PDO shape and HAL class.
 typedef enum {
   MODULE_UNKNOWN = 0,
@@ -169,10 +174,10 @@ typedef struct {
 static const lcec_modparam_desc_t leadshine_ec_digital_params[] = {
     {"safeState", LEADSHINE_EC_MP_SAFESTATE, MODPARAM_TYPE_U32, "0",
         "Per-output mask applied when EtherCAT is lost: 1 = hold last value, 0 = switch off (default, always written)"},
-    {"inputFilter0", LEADSHINE_EC_MP_INPUTFILTER(0), MODPARAM_TYPE_U32, "10", "Input filter time group 0 (channels 0-7), 0-255 ms"},
-    {"inputFilter1", LEADSHINE_EC_MP_INPUTFILTER(1), MODPARAM_TYPE_U32, "10", "Input filter time group 1 (channels 8-15), 0-255 ms"},
-    {"inputFilter2", LEADSHINE_EC_MP_INPUTFILTER(2), MODPARAM_TYPE_U32, "10", "Input filter time group 2 (channels 16-23), 0-255 ms"},
-    {"inputFilter3", LEADSHINE_EC_MP_INPUTFILTER(3), MODPARAM_TYPE_U32, "10", "Input filter time group 3 (channels 24-31), 0-255 ms"},
+    {"inputFilter0", LEADSHINE_EC_MP_INPUTFILTER(0), MODPARAM_TYPE_U32, "10", "Input filter time group 0 (channels 0-7), 0-255 ms (R3 only)"},
+    {"inputFilter1", LEADSHINE_EC_MP_INPUTFILTER(1), MODPARAM_TYPE_U32, "10", "Input filter time group 1 (channels 8-15), 0-255 ms (R3 only)"},
+    {"inputFilter2", LEADSHINE_EC_MP_INPUTFILTER(2), MODPARAM_TYPE_U32, "10", "Input filter time group 2 (channels 16-23), 0-255 ms (R3 only)"},
+    {"inputFilter3", LEADSHINE_EC_MP_INPUTFILTER(3), MODPARAM_TYPE_U32, "10", "Input filter time group 3 (channels 24-31), 0-255 ms (R3 only)"},
     {NULL},
 };
 

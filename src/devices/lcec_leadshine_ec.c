@@ -45,7 +45,7 @@ static void lcec_leadshine_ec_write(lcec_slave_t *slave, long period);
 
 static lcec_typelist_t types[] = {
     {"R2EC", LCEC_LEADSHINE_VID, 0x61400005, 0, NULL, lcec_leadshine_ec_init, NULL, LEADSHINE_EC_FLAG(32, 0x10)},
-    {"R3EC", LCEC_LEADSHINE_VID, 0x61400025, 0, NULL, lcec_leadshine_ec_init, NULL, LEADSHINE_EC_FLAG(64, 0x08)},
+    {"R3EC", LCEC_LEADSHINE_VID, 0x61400025, 0, NULL, lcec_leadshine_ec_init, NULL, LEADSHINE_EC_FLAG(64, 0x08) | LEADSHINE_EC_F_DI_FILTER},
     {NULL},
 };
 
@@ -328,11 +328,20 @@ static int leadshine_ec_apply_modparams(lcec_slave_t *slave, lcec_slave_submodul
   }
 
   // digital input filters: one 16-bit value per group of 8 channels, sub 3..6.
+  // Only R3 DI modules have this object; R2 DI modules have no config object.
   if (def->type == MODULE_DIN || def->type == MODULE_DIO) {
     int groups = (def->in + 7) / 8;
     for (int g = 0; g < groups && g < 4; g++) {
       v = lcec_submodule_modparam_get(sub, LEADSHINE_EC_MP_INPUTFILTER(g));
-      if (v != NULL && (err = lcec_write_sdo16(slave, cfg, LEADSHINE_EC_SUB_FILTER_BASE + g, v->u32 & 0xffff)) != 0) {
+      if (v == NULL) {
+        continue;
+      }
+      if (!LEADSHINE_EC_HAS_DI_FILTER(slave->flags)) {
+        rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: subModule %s: inputFilter%d is not supported (R2 digital input modules have no filter setting)\n",
+            slave->master->name, slave->name, sub->name, g);
+        return -EINVAL;
+      }
+      if ((err = lcec_write_sdo16(slave, cfg, LEADSHINE_EC_SUB_FILTER_BASE + g, v->u32 & 0xffff)) != 0) {
         return err;
       }
     }
