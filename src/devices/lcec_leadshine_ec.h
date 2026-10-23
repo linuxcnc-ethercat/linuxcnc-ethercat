@@ -107,6 +107,19 @@
 #define LEADSHINE_EC_F_DI_FILTER     ((uint64_t)1 << 16)
 #define LEADSHINE_EC_HAS_DI_FILTER(f) (((f) & LEADSHINE_EC_F_DI_FILTER) != 0)
 
+/// @brief Set on the R2EC type, for R2EC-specific firmware handling.
+#define LEADSHINE_EC_F_R2EC     ((uint64_t)1 << 17)
+#define LEADSHINE_EC_IS_R2EC(f) (((f) & LEADSHINE_EC_F_R2EC) != 0)
+
+/// @brief R2EC firmware revision (0x1018:03) that passes no process data for
+/// the PM-E0200 encoder modules, in either direction: the coupler skips the
+/// module, so mapping its PDOs shifts every module after it by the encoder's
+/// size.  Seen on hardware (R2EC sw 0x02000600 with a PM-E0200-D rev
+/// 0x23101601): the relay module after the encoder was driven by the bytes
+/// meant for the encoder.  On this revision encoder slots default to
+/// processData=0.
+#define LEADSHINE_EC_R2EC_REV_ENC_NO_PD 0x21031810
+
 /// @brief Kind of module in a slot; selects the PDO shape and HAL class.
 typedef enum {
   MODULE_UNKNOWN = 0,
@@ -154,6 +167,7 @@ typedef struct {
 
 /// @brief Per-slave HAL data: one entry per configured `<subModule>`.
 typedef struct {
+  uint32_t coupler_rev;  // coupler revision (0x1018:03), 0 if unknown
   int slot_count;
   leadshine_ec_slot_t *slots;
 } lcec_leadshine_ec_data_t;
@@ -170,6 +184,7 @@ typedef struct {
 #define LEADSHINE_EC_MP_ENC_MAXVALUE   5
 #define LEADSHINE_EC_MP_ENC_COUNTMODE  6
 #define LEADSHINE_EC_MP_ENC_FILTER     7
+#define LEADSHINE_EC_MP_ENC_PROCDATA   8
 
 static const lcec_modparam_desc_t leadshine_ec_digital_params[] = {
     {"safeState", LEADSHINE_EC_MP_SAFESTATE, MODPARAM_TYPE_U32, "0",
@@ -196,6 +211,9 @@ static const lcec_modparam_desc_t leadshine_ec_encoder_params[] = {
     {"maxValue", LEADSHINE_EC_MP_ENC_MAXVALUE, MODPARAM_TYPE_S32, "100000", "Maximum encoder value"},
     {"countMode", LEADSHINE_EC_MP_ENC_COUNTMODE, MODPARAM_TYPE_U32, "0", "Counting mode"},
     {"encoderFilter", LEADSHINE_EC_MP_ENC_FILTER, MODPARAM_TYPE_U32, "2", "Encoder input filter"},
+    {"processData", LEADSHINE_EC_MP_ENC_PROCDATA, MODPARAM_TYPE_U32, "1",
+        "0 = keep the module in the coupler's module list but map no process data (no pins); "
+        "default 0 on R2EC rev 0x21031810, whose firmware passes no data for encoder modules, else 1"},
     {NULL},
 };
 

@@ -44,7 +44,7 @@ static void lcec_leadshine_ec_read(lcec_slave_t *slave, long period);
 static void lcec_leadshine_ec_write(lcec_slave_t *slave, long period);
 
 static lcec_typelist_t types[] = {
-    {"R2EC", LCEC_LEADSHINE_VID, 0x61400005, 0, NULL, lcec_leadshine_ec_init, NULL, LEADSHINE_EC_FLAG(32, 0x10)},
+    {"R2EC", LCEC_LEADSHINE_VID, 0x61400005, 0, NULL, lcec_leadshine_ec_init, NULL, LEADSHINE_EC_FLAG(32, 0x10) | LEADSHINE_EC_F_R2EC},
     {"R3EC", LCEC_LEADSHINE_VID, 0x61400025, 0, NULL, lcec_leadshine_ec_init, NULL, LEADSHINE_EC_FLAG(64, 0x08) | LEADSHINE_EC_F_DI_FILTER},
     {NULL},
 };
@@ -80,6 +80,24 @@ static const leadshine_ec_module_def_t *leadshine_ec_find_module(uint32_t ident)
     }
   }
   return NULL;
+}
+
+/// @brief Does this slot exchange process data?
+///
+/// Encoder modules honour their `processData` modparam; without it they
+/// default to no process data on the R2EC firmware that passes none for them
+/// (see LEADSHINE_EC_R2EC_REV_ENC_NO_PD).  Every other module always does.
+static int leadshine_ec_has_pd(lcec_slave_t *slave, lcec_slave_submodule_t *s, const leadshine_ec_module_def_t *def) {
+  lcec_leadshine_ec_data_t *hal_data = (lcec_leadshine_ec_data_t *)slave->hal_data;
+  LCEC_CONF_MODPARAM_VAL_T *v;
+
+  if (def->type != MODULE_ENCODER) {
+    return 1;
+  }
+  if ((v = lcec_submodule_modparam_get(s, LEADSHINE_EC_MP_ENC_PROCDATA)) != NULL) {
+    return v->u32 != 0;
+  }
+  return !(LEADSHINE_EC_IS_R2EC(slave->flags) && hal_data->coupler_rev == LEADSHINE_EC_R2EC_REV_ENC_NO_PD);
 }
 
 /// @brief Count the configured submodules on a slave.
@@ -214,7 +232,7 @@ static int leadshine_ec_build_syncs(lcec_slave_t *slave, lcec_syncs_t *syncs, in
   lcec_syncs_add_sync(syncs, EC_DIR_OUTPUT, EC_WD_DEFAULT);
   for (lcec_slave_submodule_t *s = slave->submodules; s != NULL; s = s->next) {
     const leadshine_ec_module_def_t *def = leadshine_ec_find_module(s->ident);
-    if (def != NULL) {
+    if (def != NULL && leadshine_ec_has_pd(slave, s, def)) {
       leadshine_ec_append_output_pdos(syncs, s, def, pdo_incr);
     }
   }
@@ -223,7 +241,7 @@ static int leadshine_ec_build_syncs(lcec_slave_t *slave, lcec_syncs_t *syncs, in
   lcec_syncs_add_sync(syncs, EC_DIR_INPUT, EC_WD_DEFAULT);
   for (lcec_slave_submodule_t *s = slave->submodules; s != NULL; s = s->next) {
     const leadshine_ec_module_def_t *def = leadshine_ec_find_module(s->ident);
-    if (def != NULL) {
+    if (def != NULL && leadshine_ec_has_pd(slave, s, def)) {
       leadshine_ec_append_input_pdos(syncs, s, def, pdo_incr);
     }
   }
@@ -575,6 +593,29 @@ static int lcec_leadshine_ec_init(int comp_id, lcec_slave_t *slave) {
     return err;
   }
 
+  // Encoder modules: report what is done with their process data.
+  if (lcec_read_sdo32(slave, 0x1018, 0x03, &hal_data->coupler_rev) != 0) {
+    hal_data->coupler_rev = 0;
+  }
+  for (lcec_slave_submodule_t *s = slave->submodules; s != NULL; s = s->next) {
+    const leadshine_ec_module_def_t *def = leadshine_ec_find_module(s->ident);
+    int known_bad = LEADSHINE_EC_IS_R2EC(slave->flags) && hal_data->coupler_rev == LEADSHINE_EC_R2EC_REV_ENC_NO_PD;
+    if (def == NULL || def->type != MODULE_ENCODER || !known_bad) {
+      continue;
+    }
+    if (leadshine_ec_has_pd(slave, s, def)) {
+      rtapi_print_msg(RTAPI_MSG_ERR,
+          LCEC_MSG_PFX "%s.%s: WARNING: subModule %s: R2EC rev 0x%08x passes no process data for %s; with processData=1 every "
+                       "module after slot %d is shifted. Use processData=0 or put the encoder in the last slot.\n",
+          master->name, slave->name, s->name, hal_data->coupler_rev, def->name, s->id);
+    } else {
+      rtapi_print_msg(RTAPI_MSG_ERR,
+          LCEC_MSG_PFX "%s.%s: subModule %s (%s): R2EC rev 0x%08x passes no process data for encoder modules; "
+                       "mapping none (processData=0), no encoder pins.\n",
+          master->name, slave->name, s->name, def->name, hal_data->coupler_rev);
+    }
+  }
+
   // Build the dynamic PDO / sync-manager layout (consumed after _init returns).
   lcec_syncs_t *syncs = LCEC_HAL_ALLOCATE(lcec_syncs_t);
   if ((err = leadshine_ec_build_syncs(slave, syncs, pdo_incr)) != 0) {
@@ -611,6 +652,9 @@ static int lcec_leadshine_ec_init(int comp_id, lcec_slave_t *slave) {
       case MODULE_AIN: leadshine_ec_register_ain(slave, slot, s->name, def->in); break;
       case MODULE_AOUT: leadshine_ec_register_aout(slave, slot, s->name, def->out); break;
       case MODULE_ENCODER:
+        if (!leadshine_ec_has_pd(slave, s, def)) {
+          break;
+        }
         if ((err = leadshine_ec_register_enc(slave, slot, s->name, def->in)) != 0) {
           return err;
         }

@@ -91,6 +91,10 @@ Encoder modules (applied to every channel of the module):
 - `minValue` / `maxValue` (S32, default -100000 / 100000).
 - `countMode` (U32, default 0).
 - `encoderFilter` (U32, default 2).
+- `processData` (U32): 0 = keep the module in the coupler's module list
+  but map no process data for it (no encoder pins); 1 = map it.  Default
+  1, except on an R2EC with revision 0x21031810, where it defaults to 0
+  (see below).
 
 ## Notes
 
@@ -101,6 +105,17 @@ Encoder modules (applied to every channel of the module):
   modules as ready-to-paste `<subModule>` lines.  You can also read the
   list yourself with the bus in PREOP:
   `ethercat upload -t uint32 0xf050 1` (then 2, 3, ...).
+- **R2EC revision 0x21031810 (software 0x02000600) passes no process
+  data for PM-E0200 encoder modules**, in either direction (seen with a
+  PM-E0200-D, revision 0x23101601, FPGA 0x23102701).  The coupler accepts
+  the encoder PDO mapping and reaches OP, but skips the module, so every
+  module after it is shifted by the encoder's size: on test hardware the
+  relay module after the encoder was driven by the bytes meant for the
+  encoder.  On that revision the driver therefore maps no process data for
+  encoder modules by default (`processData=0`, logged at startup), which
+  keeps the rest of the bus correct; the encoder itself is not usable.  If
+  `processData=1` is set explicitly it is honoured, with a warning.
+  Newer coupler firmware may behave differently.
 - Slot ids are validated at startup: an out-of-range slot, a duplicate
   slot id, or a duplicate module name is a configuration error.
 - A sparse slot layout (e.g. modules in slots 0 and 3 only) is
