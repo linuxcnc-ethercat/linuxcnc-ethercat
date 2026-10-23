@@ -69,8 +69,12 @@ object (0x8000 + slot) at startup.
 
 Digital modules:
 
-- `safeState` (U32, default 0): output value when the link is lost.
-  Bits 0-15 at sub 1, bits 16-31 (32-channel modules) at sub 2.
+- `safeState` (U32, default 0): per-output mask applied when the
+  EtherCAT link is lost: 1 = hold the last value, 0 = switch the output
+  off.  Bits 0-15 at sub 1, bits 16-31 (32-channel modules) at sub 2.
+  This is always written, even when not set: the vendor ESI sets
+  0xffff (hold everything) and the module remembers it, so without this
+  outputs could stay on after a crash or cable fault.
 - `inputFilter0` .. `inputFilter3` (U32, default 10): input filter time
   in ms, one per group of 8 channels.
 

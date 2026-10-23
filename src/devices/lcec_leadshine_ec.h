@@ -84,8 +84,8 @@
 #define LEADSHINE_EC_DIAGOBJ 0xA000  // analog/temp diagnostic (input) object base
 
 // Config-object subindices (per the ESI DT8000 layouts).
-#define LEADSHINE_EC_SUB_SAFESTATE_LO 1  // DO/relay: output state on link loss, bits 0-15  (UINT16)
-#define LEADSHINE_EC_SUB_SAFESTATE_HI 2  // DO 32-ch: output state on link loss, bits 16-31 (UINT16)
+#define LEADSHINE_EC_SUB_SAFESTATE_LO 1  // DO/relay: hold-on-link-loss mask, bits 0-15  (UINT16)
+#define LEADSHINE_EC_SUB_SAFESTATE_HI 2  // DO 32-ch: hold-on-link-loss mask, bits 16-31 (UINT16)
 #define LEADSHINE_EC_SUB_FILTER_BASE  3  // DI: input filter, subindices 3..6 per 8-channel group (UINT16)
 #define LEADSHINE_EC_SUB_ANALOG_BASE  1  // AIN/AOUT: per-channel range/mode config, sub 1..4 (USINT8)
 #define LEADSHINE_EC_SUB_ENC_MODE     1  // encoder: operation mode (USINT8)
@@ -167,7 +167,8 @@ typedef struct {
 #define LEADSHINE_EC_MP_ENC_FILTER     7
 
 static const lcec_modparam_desc_t leadshine_ec_digital_params[] = {
-    {"safeState", LEADSHINE_EC_MP_SAFESTATE, MODPARAM_TYPE_U32, "0", "Output value when link is lost (0 = all off)"},
+    {"safeState", LEADSHINE_EC_MP_SAFESTATE, MODPARAM_TYPE_U32, "0",
+        "Per-output mask applied when EtherCAT is lost: 1 = hold last value, 0 = switch off (default, always written)"},
     {"inputFilter0", LEADSHINE_EC_MP_INPUTFILTER(0), MODPARAM_TYPE_U32, "10", "Input filter time group 0 (channels 0-7), 0-255 ms"},
     {"inputFilter1", LEADSHINE_EC_MP_INPUTFILTER(1), MODPARAM_TYPE_U32, "10", "Input filter time group 1 (channels 8-15), 0-255 ms"},
     {"inputFilter2", LEADSHINE_EC_MP_INPUTFILTER(2), MODPARAM_TYPE_U32, "10", "Input filter time group 2 (channels 16-23), 0-255 ms"},

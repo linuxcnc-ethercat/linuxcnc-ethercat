@@ -297,8 +297,9 @@ static int leadshine_ec_register_enc(lcec_slave_t *slave, leadshine_ec_slot_t *s
 }
 
 // ------------------------------------------------------------------
-// Modparam application (per slot).  Addresses per the R3EC ESI DT8000 layouts.
-// Writes are only issued for modparams the user actually set.
+// Modparam application (per slot).  Addresses per the R2EC/R3EC ESI DT8000
+// layouts.  Writes are only issued for modparams the user actually set, except
+// the digital output hold mask, which is always written (see below).
 // ------------------------------------------------------------------
 
 static int leadshine_ec_apply_modparams(lcec_slave_t *slave, lcec_slave_submodule_t *sub, const leadshine_ec_module_def_t *def) {
@@ -306,17 +307,23 @@ static int leadshine_ec_apply_modparams(lcec_slave_t *slave, lcec_slave_submodul
   uint16_t cfg = LEADSHINE_EC_CFGOBJ + sub->id * LEADSHINE_EC_SLOT_INCR;
   int err;
 
-  // digital output safe state: 16-bit low word (bits 0-15) at sub 1, high word
-  // (bits 16-31) at sub 2 for 32-channel modules.
+  // digital output hold mask: per output, 1 = keep the last value when the
+  // EtherCAT link is lost, 0 = switch it off.  16-bit low word (bits 0-15) at
+  // sub 1, high word (bits 16-31) at sub 2 for 32-channel modules.  Always
+  // written: the vendor ESI init commands set 0xffff (hold everything), and the
+  // module keeps whatever was last written, so a module that was ever
+  // configured from the ESI would otherwise leave outputs latched on after a
+  // LinuxCNC crash or cable fault.  Seen on R2EC hardware.
   if (def->type == MODULE_DOUT || def->type == MODULE_DIO) {
-    v = lcec_submodule_modparam_get(sub, LEADSHINE_EC_MP_SAFESTATE);
-    if (v != NULL) {
-      if ((err = lcec_write_sdo16(slave, cfg, LEADSHINE_EC_SUB_SAFESTATE_LO, v->u32 & 0xffff)) != 0) {
-        return err;
-      }
-      if (def->out > 16 && (err = lcec_write_sdo16(slave, cfg, LEADSHINE_EC_SUB_SAFESTATE_HI, (v->u32 >> 16) & 0xffff)) != 0) {
-        return err;
-      }
+    uint32_t hold = 0;
+    if ((v = lcec_submodule_modparam_get(sub, LEADSHINE_EC_MP_SAFESTATE)) != NULL) {
+      hold = v->u32;
+    }
+    if ((err = lcec_write_sdo16(slave, cfg, LEADSHINE_EC_SUB_SAFESTATE_LO, hold & 0xffff)) != 0) {
+      return err;
+    }
+    if (def->out > 16 && (err = lcec_write_sdo16(slave, cfg, LEADSHINE_EC_SUB_SAFESTATE_HI, (hold >> 16) & 0xffff)) != 0) {
+      return err;
     }
   }
 
