@@ -393,6 +393,71 @@ static int leadshine_ec_apply_modparams(lcec_slave_t *slave, lcec_slave_submodul
   return 0;
 }
 
+/// @brief Compare the configured submodules with the modules the coupler
+/// detected on its backplane (0xF050).
+///
+/// A mismatch makes the coupler refuse SafeOp, which otherwise only shows up as
+/// a slave stuck in PreOp.  Report every differing slot plus the detected list
+/// as ready-to-use `<subModule>` lines.  Returns -EINVAL on a mismatch; a
+/// failed read of 0xF050 is only a warning, so it cannot block startup.
+static int leadshine_ec_check_detected(lcec_slave_t *slave) {
+  lcec_master_t *master = slave->master;
+  int max_slots = LEADSHINE_EC_MAX_SLOTS(slave->flags);
+  uint8_t count;
+  uint32_t ident;
+  int mismatch = 0;
+
+  if (lcec_read_sdo8(slave, LEADSHINE_EC_READMODULES, 0x00, &count) != 0) {
+    rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "%s.%s: cannot read detected module list (0x%04x), not checking slots\n", master->name,
+        slave->name, LEADSHINE_EC_READMODULES);
+    return 0;
+  }
+  if (count > max_slots) {
+    count = max_slots;
+  }
+
+  for (int i = 0; i < max_slots; i++) {
+    lcec_slave_submodule_t *s;
+    uint32_t want = 0;
+
+    ident = 0;
+    if (i < count && lcec_read_sdo32(slave, LEADSHINE_EC_READMODULES, i + 1, &ident) != 0) {
+      rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "%s.%s: cannot read 0x%04x:%02x, not checking slots\n", master->name, slave->name,
+          LEADSHINE_EC_READMODULES, i + 1);
+      return 0;
+    }
+    if (ident == 0xffffffff) {
+      ident = 0;  // the coupler reports unpopulated slots as 0xffffffff
+    }
+    for (s = slave->submodules; s != NULL && s->id != i; s = s->next) {
+    }
+    if (s != NULL) {
+      want = s->ident;
+    }
+    if (want != ident) {
+      const leadshine_ec_module_def_t *w = leadshine_ec_find_module(want), *d = leadshine_ec_find_module(ident);
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: slot %d: configured %s (0x%08x), detected %s (0x%08x)\n", master->name,
+          slave->name, i, want ? (w ? w->name : "unknown") : "empty", want, ident ? (d ? d->name : "unknown") : "empty", ident);
+      mismatch = 1;
+    }
+  }
+
+  if (mismatch) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: the coupler detected these modules:\n", master->name, slave->name);
+    for (int i = 0; i < count; i++) {
+      const leadshine_ec_module_def_t *d;
+      if (lcec_read_sdo32(slave, LEADSHINE_EC_READMODULES, i + 1, &ident) != 0) {
+        break;
+      }
+      d = leadshine_ec_find_module(ident);
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "  <subModule id=\"%d\" ident=\"0x%08x\" name=\"...\"/>  <!-- %s -->\n", i, ident,
+          d ? d->name : "unsupported module");
+    }
+    return -EINVAL;
+  }
+  return 0;
+}
+
 /// @brief Write the configured module ident list (0xF030) so the coupler
 /// accepts the PDO mapping.  Per the ESI, sub 0 is a USINT count and subs 1..N
 /// are one UDINT (32-bit) module ident each (slot id + 1).
@@ -501,6 +566,13 @@ static int lcec_leadshine_ec_init(int comp_id, lcec_slave_t *slave) {
           slave->name, s->id, max_slots);
       return -EINVAL;
     }
+  }
+
+  // Make sure the config matches the backplane before touching any module
+  // object: with a wrong layout the per-slot config writes below would go to
+  // objects that don't exist and fail with an unhelpful SDO abort.
+  if ((err = leadshine_ec_check_detected(slave)) != 0) {
+    return err;
   }
 
   // Build the dynamic PDO / sync-manager layout (consumed after _init returns).

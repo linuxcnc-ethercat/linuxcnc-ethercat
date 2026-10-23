@@ -94,6 +94,13 @@ Encoder modules (applied to every channel of the module):
 
 ## Notes
 
+- `<subModule id>` is the 0-based backplane position: the module
+  directly next to the coupler is `id="0"`.  At startup the driver
+  compares the configuration against the coupler's detected module list
+  (0xF050); on a mismatch it refuses to start and logs the detected
+  modules as ready-to-paste `<subModule>` lines.  You can also read the
+  list yourself with the bus in PREOP:
+  `ethercat upload -t uint32 0xf050 1` (then 2, 3, ...).
 - Slot ids are validated at startup: an out-of-range slot, a duplicate
   slot id, or a duplicate module name is a configuration error.
 - A sparse slot layout (e.g. modules in slots 0 and 3 only) is
