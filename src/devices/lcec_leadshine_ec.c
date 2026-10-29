@@ -44,8 +44,8 @@ static void lcec_leadshine_ec_read(lcec_slave_t *slave, long period);
 static void lcec_leadshine_ec_write(lcec_slave_t *slave, long period);
 
 static lcec_typelist_t types[] = {
-    {"R2EC", LCEC_LEADSHINE_VID, 0x61400005, 0, NULL, lcec_leadshine_ec_init, NULL, LEADSHINE_EC_FLAG(32, 0x10)},
-    {"R3EC", LCEC_LEADSHINE_VID, 0x61400025, 0, NULL, lcec_leadshine_ec_init, NULL, LEADSHINE_EC_FLAG(64, 0x08)},
+    {"R2EC", LCEC_LEADSHINE_VID, 0x61400005, 0, NULL, lcec_leadshine_ec_init, NULL, LEADSHINE_EC_FLAG(32, 0x10) | LEADSHINE_EC_F_R2EC},
+    {"R3EC", LCEC_LEADSHINE_VID, 0x61400025, 0, NULL, lcec_leadshine_ec_init, NULL, LEADSHINE_EC_FLAG(64, 0x08) | LEADSHINE_EC_F_DI_FILTER},
     {NULL},
 };
 
@@ -80,6 +80,24 @@ static const leadshine_ec_module_def_t *leadshine_ec_find_module(uint32_t ident)
     }
   }
   return NULL;
+}
+
+/// @brief Does this slot exchange process data?
+///
+/// Encoder modules honour their `processData` modparam; without it they
+/// default to no process data on the R2EC firmware that passes none for them
+/// (see LEADSHINE_EC_R2EC_REV_ENC_NO_PD).  Every other module always does.
+static int leadshine_ec_has_pd(lcec_slave_t *slave, lcec_slave_submodule_t *s, const leadshine_ec_module_def_t *def) {
+  lcec_leadshine_ec_data_t *hal_data = (lcec_leadshine_ec_data_t *)slave->hal_data;
+  LCEC_CONF_MODPARAM_VAL_T *v;
+
+  if (def->type != MODULE_ENCODER) {
+    return 1;
+  }
+  if ((v = lcec_submodule_modparam_get(s, LEADSHINE_EC_MP_ENC_PROCDATA)) != NULL) {
+    return v->u32 != 0;
+  }
+  return !(LEADSHINE_EC_IS_R2EC(slave->flags) && hal_data->coupler_rev == LEADSHINE_EC_R2EC_REV_ENC_NO_PD);
 }
 
 /// @brief Count the configured submodules on a slave.
@@ -214,7 +232,7 @@ static int leadshine_ec_build_syncs(lcec_slave_t *slave, lcec_syncs_t *syncs, in
   lcec_syncs_add_sync(syncs, EC_DIR_OUTPUT, EC_WD_DEFAULT);
   for (lcec_slave_submodule_t *s = slave->submodules; s != NULL; s = s->next) {
     const leadshine_ec_module_def_t *def = leadshine_ec_find_module(s->ident);
-    if (def != NULL) {
+    if (def != NULL && leadshine_ec_has_pd(slave, s, def)) {
       leadshine_ec_append_output_pdos(syncs, s, def, pdo_incr);
     }
   }
@@ -223,7 +241,7 @@ static int leadshine_ec_build_syncs(lcec_slave_t *slave, lcec_syncs_t *syncs, in
   lcec_syncs_add_sync(syncs, EC_DIR_INPUT, EC_WD_DEFAULT);
   for (lcec_slave_submodule_t *s = slave->submodules; s != NULL; s = s->next) {
     const leadshine_ec_module_def_t *def = leadshine_ec_find_module(s->ident);
-    if (def != NULL) {
+    if (def != NULL && leadshine_ec_has_pd(slave, s, def)) {
       leadshine_ec_append_input_pdos(syncs, s, def, pdo_incr);
     }
   }
@@ -297,8 +315,9 @@ static int leadshine_ec_register_enc(lcec_slave_t *slave, leadshine_ec_slot_t *s
 }
 
 // ------------------------------------------------------------------
-// Modparam application (per slot).  Addresses per the R3EC ESI DT8000 layouts.
-// Writes are only issued for modparams the user actually set.
+// Modparam application (per slot).  Addresses per the R2EC/R3EC ESI DT8000
+// layouts.  Writes are only issued for modparams the user actually set, except
+// the digital output hold mask, which is always written (see below).
 // ------------------------------------------------------------------
 
 static int leadshine_ec_apply_modparams(lcec_slave_t *slave, lcec_slave_submodule_t *sub, const leadshine_ec_module_def_t *def) {
@@ -306,26 +325,41 @@ static int leadshine_ec_apply_modparams(lcec_slave_t *slave, lcec_slave_submodul
   uint16_t cfg = LEADSHINE_EC_CFGOBJ + sub->id * LEADSHINE_EC_SLOT_INCR;
   int err;
 
-  // digital output safe state: 16-bit low word (bits 0-15) at sub 1, high word
-  // (bits 16-31) at sub 2 for 32-channel modules.
+  // digital output hold mask: per output, 1 = keep the last value when the
+  // EtherCAT link is lost, 0 = switch it off.  16-bit low word (bits 0-15) at
+  // sub 1, high word (bits 16-31) at sub 2 for 32-channel modules.  Always
+  // written: the vendor ESI init commands set 0xffff (hold everything), and the
+  // module keeps whatever was last written, so a module that was ever
+  // configured from the ESI would otherwise leave outputs latched on after a
+  // LinuxCNC crash or cable fault.  Seen on R2EC hardware.
   if (def->type == MODULE_DOUT || def->type == MODULE_DIO) {
-    v = lcec_submodule_modparam_get(sub, LEADSHINE_EC_MP_SAFESTATE);
-    if (v != NULL) {
-      if ((err = lcec_write_sdo16(slave, cfg, LEADSHINE_EC_SUB_SAFESTATE_LO, v->u32 & 0xffff)) != 0) {
-        return err;
-      }
-      if (def->out > 16 && (err = lcec_write_sdo16(slave, cfg, LEADSHINE_EC_SUB_SAFESTATE_HI, (v->u32 >> 16) & 0xffff)) != 0) {
-        return err;
-      }
+    uint32_t hold = 0;
+    if ((v = lcec_submodule_modparam_get(sub, LEADSHINE_EC_MP_SAFESTATE)) != NULL) {
+      hold = v->u32;
+    }
+    if ((err = lcec_write_sdo16(slave, cfg, LEADSHINE_EC_SUB_SAFESTATE_LO, hold & 0xffff)) != 0) {
+      return err;
+    }
+    if (def->out > 16 && (err = lcec_write_sdo16(slave, cfg, LEADSHINE_EC_SUB_SAFESTATE_HI, (hold >> 16) & 0xffff)) != 0) {
+      return err;
     }
   }
 
   // digital input filters: one 16-bit value per group of 8 channels, sub 3..6.
+  // Only R3 DI modules have this object; R2 DI modules have no config object.
   if (def->type == MODULE_DIN || def->type == MODULE_DIO) {
     int groups = (def->in + 7) / 8;
     for (int g = 0; g < groups && g < 4; g++) {
       v = lcec_submodule_modparam_get(sub, LEADSHINE_EC_MP_INPUTFILTER(g));
-      if (v != NULL && (err = lcec_write_sdo16(slave, cfg, LEADSHINE_EC_SUB_FILTER_BASE + g, v->u32 & 0xffff)) != 0) {
+      if (v == NULL) {
+        continue;
+      }
+      if (!LEADSHINE_EC_HAS_DI_FILTER(slave->flags)) {
+        rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: subModule %s: inputFilter%d is not supported (R2 digital input modules have no filter setting)\n",
+            slave->master->name, slave->name, sub->name, g);
+        return -EINVAL;
+      }
+      if ((err = lcec_write_sdo16(slave, cfg, LEADSHINE_EC_SUB_FILTER_BASE + g, v->u32 & 0xffff)) != 0) {
         return err;
       }
     }
@@ -374,6 +408,71 @@ static int leadshine_ec_apply_modparams(lcec_slave_t *slave, lcec_slave_submodul
     }
   }
 
+  return 0;
+}
+
+/// @brief Compare the configured submodules with the modules the coupler
+/// detected on its backplane (0xF050).
+///
+/// A mismatch makes the coupler refuse SafeOp, which otherwise only shows up as
+/// a slave stuck in PreOp.  Report every differing slot plus the detected list
+/// as ready-to-use `<subModule>` lines.  Returns -EINVAL on a mismatch; a
+/// failed read of 0xF050 is only a warning, so it cannot block startup.
+static int leadshine_ec_check_detected(lcec_slave_t *slave) {
+  lcec_master_t *master = slave->master;
+  int max_slots = LEADSHINE_EC_MAX_SLOTS(slave->flags);
+  uint8_t count;
+  uint32_t ident;
+  int mismatch = 0;
+
+  if (lcec_read_sdo8(slave, LEADSHINE_EC_READMODULES, 0x00, &count) != 0) {
+    rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "%s.%s: cannot read detected module list (0x%04x), not checking slots\n", master->name,
+        slave->name, LEADSHINE_EC_READMODULES);
+    return 0;
+  }
+  if (count > max_slots) {
+    count = max_slots;
+  }
+
+  for (int i = 0; i < max_slots; i++) {
+    lcec_slave_submodule_t *s;
+    uint32_t want = 0;
+
+    ident = 0;
+    if (i < count && lcec_read_sdo32(slave, LEADSHINE_EC_READMODULES, i + 1, &ident) != 0) {
+      rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "%s.%s: cannot read 0x%04x:%02x, not checking slots\n", master->name, slave->name,
+          LEADSHINE_EC_READMODULES, i + 1);
+      return 0;
+    }
+    if (ident == 0xffffffff) {
+      ident = 0;  // the coupler reports unpopulated slots as 0xffffffff
+    }
+    for (s = slave->submodules; s != NULL && s->id != i; s = s->next) {
+    }
+    if (s != NULL) {
+      want = s->ident;
+    }
+    if (want != ident) {
+      const leadshine_ec_module_def_t *w = leadshine_ec_find_module(want), *d = leadshine_ec_find_module(ident);
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: slot %d: configured %s (0x%08x), detected %s (0x%08x)\n", master->name,
+          slave->name, i, want ? (w ? w->name : "unknown") : "empty", want, ident ? (d ? d->name : "unknown") : "empty", ident);
+      mismatch = 1;
+    }
+  }
+
+  if (mismatch) {
+    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "%s.%s: the coupler detected these modules:\n", master->name, slave->name);
+    for (int i = 0; i < count; i++) {
+      const leadshine_ec_module_def_t *d;
+      if (lcec_read_sdo32(slave, LEADSHINE_EC_READMODULES, i + 1, &ident) != 0) {
+        break;
+      }
+      d = leadshine_ec_find_module(ident);
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "  <subModule id=\"%d\" ident=\"0x%08x\" name=\"...\"/>  <!-- %s -->\n", i, ident,
+          d ? d->name : "unsupported module");
+    }
+    return -EINVAL;
+  }
   return 0;
 }
 
@@ -487,6 +586,36 @@ static int lcec_leadshine_ec_init(int comp_id, lcec_slave_t *slave) {
     }
   }
 
+  // Make sure the config matches the backplane before touching any module
+  // object: with a wrong layout the per-slot config writes below would go to
+  // objects that don't exist and fail with an unhelpful SDO abort.
+  if ((err = leadshine_ec_check_detected(slave)) != 0) {
+    return err;
+  }
+
+  // Encoder modules: report what is done with their process data.
+  if (lcec_read_sdo32(slave, 0x1018, 0x03, &hal_data->coupler_rev) != 0) {
+    hal_data->coupler_rev = 0;
+  }
+  for (lcec_slave_submodule_t *s = slave->submodules; s != NULL; s = s->next) {
+    const leadshine_ec_module_def_t *def = leadshine_ec_find_module(s->ident);
+    int known_bad = LEADSHINE_EC_IS_R2EC(slave->flags) && hal_data->coupler_rev == LEADSHINE_EC_R2EC_REV_ENC_NO_PD;
+    if (def == NULL || def->type != MODULE_ENCODER || !known_bad) {
+      continue;
+    }
+    if (leadshine_ec_has_pd(slave, s, def)) {
+      rtapi_print_msg(RTAPI_MSG_ERR,
+          LCEC_MSG_PFX "%s.%s: WARNING: subModule %s: R2EC rev 0x%08x passes no process data for %s; with processData=1 every "
+                       "module after slot %d is shifted. Use processData=0 or put the encoder in the last slot.\n",
+          master->name, slave->name, s->name, hal_data->coupler_rev, def->name, s->id);
+    } else {
+      rtapi_print_msg(RTAPI_MSG_ERR,
+          LCEC_MSG_PFX "%s.%s: subModule %s (%s): R2EC rev 0x%08x passes no process data for encoder modules; "
+                       "mapping none (processData=0), no encoder pins.\n",
+          master->name, slave->name, s->name, def->name, hal_data->coupler_rev);
+    }
+  }
+
   // Build the dynamic PDO / sync-manager layout (consumed after _init returns).
   lcec_syncs_t *syncs = LCEC_HAL_ALLOCATE(lcec_syncs_t);
   if ((err = leadshine_ec_build_syncs(slave, syncs, pdo_incr)) != 0) {
@@ -523,6 +652,9 @@ static int lcec_leadshine_ec_init(int comp_id, lcec_slave_t *slave) {
       case MODULE_AIN: leadshine_ec_register_ain(slave, slot, s->name, def->in); break;
       case MODULE_AOUT: leadshine_ec_register_aout(slave, slot, s->name, def->out); break;
       case MODULE_ENCODER:
+        if (!leadshine_ec_has_pd(slave, s, def)) {
+          break;
+        }
         if ((err = leadshine_ec_register_enc(slave, slot, s->name, def->in)) != 0) {
           return err;
         }

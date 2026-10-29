@@ -84,8 +84,8 @@
 #define LEADSHINE_EC_DIAGOBJ 0xA000  // analog/temp diagnostic (input) object base
 
 // Config-object subindices (per the ESI DT8000 layouts).
-#define LEADSHINE_EC_SUB_SAFESTATE_LO 1  // DO/relay: output state on link loss, bits 0-15  (UINT16)
-#define LEADSHINE_EC_SUB_SAFESTATE_HI 2  // DO 32-ch: output state on link loss, bits 16-31 (UINT16)
+#define LEADSHINE_EC_SUB_SAFESTATE_LO 1  // DO/relay: hold-on-link-loss mask, bits 0-15  (UINT16)
+#define LEADSHINE_EC_SUB_SAFESTATE_HI 2  // DO 32-ch: hold-on-link-loss mask, bits 16-31 (UINT16)
 #define LEADSHINE_EC_SUB_FILTER_BASE  3  // DI: input filter, subindices 3..6 per 8-channel group (UINT16)
 #define LEADSHINE_EC_SUB_ANALOG_BASE  1  // AIN/AOUT: per-channel range/mode config, sub 1..4 (USINT8)
 #define LEADSHINE_EC_SUB_ENC_MODE     1  // encoder: operation mode (USINT8)
@@ -101,6 +101,24 @@
 #define LEADSHINE_EC_FLAG(max_slots, pdo_incr) (((uint64_t)(max_slots) & 0xff) | (((uint64_t)(pdo_incr) & 0xff) << 8))
 #define LEADSHINE_EC_MAX_SLOTS(f)              ((int)((f) & 0xff))
 #define LEADSHINE_EC_PDO_INCR(f)               ((int)(((f) >> 8) & 0xff))
+
+/// @brief Set when the coupler's digital input modules have a config object
+/// with input filters (R3 only; R2 DI modules have no 0x8000 object at all).
+#define LEADSHINE_EC_F_DI_FILTER     ((uint64_t)1 << 16)
+#define LEADSHINE_EC_HAS_DI_FILTER(f) (((f) & LEADSHINE_EC_F_DI_FILTER) != 0)
+
+/// @brief Set on the R2EC type, for R2EC-specific firmware handling.
+#define LEADSHINE_EC_F_R2EC     ((uint64_t)1 << 17)
+#define LEADSHINE_EC_IS_R2EC(f) (((f) & LEADSHINE_EC_F_R2EC) != 0)
+
+/// @brief R2EC firmware revision (0x1018:03) that passes no process data for
+/// the PM-E0200 encoder modules, in either direction: the coupler skips the
+/// module, so mapping its PDOs shifts every module after it by the encoder's
+/// size.  Seen on hardware (R2EC sw 0x02000600 with a PM-E0200-D rev
+/// 0x23101601): the relay module after the encoder was driven by the bytes
+/// meant for the encoder.  On this revision encoder slots default to
+/// processData=0.
+#define LEADSHINE_EC_R2EC_REV_ENC_NO_PD 0x21031810
 
 /// @brief Kind of module in a slot; selects the PDO shape and HAL class.
 typedef enum {
@@ -149,6 +167,7 @@ typedef struct {
 
 /// @brief Per-slave HAL data: one entry per configured `<subModule>`.
 typedef struct {
+  uint32_t coupler_rev;  // coupler revision (0x1018:03), 0 if unknown
   int slot_count;
   leadshine_ec_slot_t *slots;
 } lcec_leadshine_ec_data_t;
@@ -165,13 +184,15 @@ typedef struct {
 #define LEADSHINE_EC_MP_ENC_MAXVALUE   5
 #define LEADSHINE_EC_MP_ENC_COUNTMODE  6
 #define LEADSHINE_EC_MP_ENC_FILTER     7
+#define LEADSHINE_EC_MP_ENC_PROCDATA   8
 
 static const lcec_modparam_desc_t leadshine_ec_digital_params[] = {
-    {"safeState", LEADSHINE_EC_MP_SAFESTATE, MODPARAM_TYPE_U32, "0", "Output value when link is lost (0 = all off)"},
-    {"inputFilter0", LEADSHINE_EC_MP_INPUTFILTER(0), MODPARAM_TYPE_U32, "10", "Input filter time group 0 (channels 0-7), 0-255 ms"},
-    {"inputFilter1", LEADSHINE_EC_MP_INPUTFILTER(1), MODPARAM_TYPE_U32, "10", "Input filter time group 1 (channels 8-15), 0-255 ms"},
-    {"inputFilter2", LEADSHINE_EC_MP_INPUTFILTER(2), MODPARAM_TYPE_U32, "10", "Input filter time group 2 (channels 16-23), 0-255 ms"},
-    {"inputFilter3", LEADSHINE_EC_MP_INPUTFILTER(3), MODPARAM_TYPE_U32, "10", "Input filter time group 3 (channels 24-31), 0-255 ms"},
+    {"safeState", LEADSHINE_EC_MP_SAFESTATE, MODPARAM_TYPE_U32, "0",
+        "Per-output mask applied when EtherCAT is lost: 1 = hold last value, 0 = switch off (default, always written)"},
+    {"inputFilter0", LEADSHINE_EC_MP_INPUTFILTER(0), MODPARAM_TYPE_U32, "10", "Input filter time group 0 (channels 0-7), 0-255 ms (R3 only)"},
+    {"inputFilter1", LEADSHINE_EC_MP_INPUTFILTER(1), MODPARAM_TYPE_U32, "10", "Input filter time group 1 (channels 8-15), 0-255 ms (R3 only)"},
+    {"inputFilter2", LEADSHINE_EC_MP_INPUTFILTER(2), MODPARAM_TYPE_U32, "10", "Input filter time group 2 (channels 16-23), 0-255 ms (R3 only)"},
+    {"inputFilter3", LEADSHINE_EC_MP_INPUTFILTER(3), MODPARAM_TYPE_U32, "10", "Input filter time group 3 (channels 24-31), 0-255 ms (R3 only)"},
     {NULL},
 };
 
@@ -190,6 +211,9 @@ static const lcec_modparam_desc_t leadshine_ec_encoder_params[] = {
     {"maxValue", LEADSHINE_EC_MP_ENC_MAXVALUE, MODPARAM_TYPE_S32, "100000", "Maximum encoder value"},
     {"countMode", LEADSHINE_EC_MP_ENC_COUNTMODE, MODPARAM_TYPE_U32, "0", "Counting mode"},
     {"encoderFilter", LEADSHINE_EC_MP_ENC_FILTER, MODPARAM_TYPE_U32, "2", "Encoder input filter"},
+    {"processData", LEADSHINE_EC_MP_ENC_PROCDATA, MODPARAM_TYPE_U32, "1",
+        "0 = keep the module in the coupler's module list but map no process data (no pins); "
+        "default 0 on R2EC rev 0x21031810, whose firmware passes no data for encoder modules, else 1"},
     {NULL},
 };
 
