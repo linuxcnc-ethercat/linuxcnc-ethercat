@@ -1,3 +1,22 @@
+linuxcnc-ethercat (1.48.0-1) unstable; urgency=low
+
+  * feat(mdp): add a generic ETG.5001 MDP modular coupler driver with
+    ESI-generated module tables for UTRIO UC20 and Inovance GL20.
+    Handles dynamic PDO layouts, digital/analog HAL pins, module ident
+    list configuration, and runtime re-initialization. Thanks to
+    griffin-sisk, including live GL20 hardware testing.
+  * feat(cia402): decode statusword bit 13 by operation mode and expose
+    stat-following-error (CSP) and stat-homing-error (homing). Fix
+    stat-homing so a homing error no longer reads as homing in progress.
+  * fix(ethercat): keep binaries built against our fork compatible with
+    vanilla libethercat. Resolve optional SII/re-init APIs at runtime
+    instead of requiring LIBETHERCAT_1.6.13 during ELF loading; vanilla
+    installs retain base driver operation and disable optional features.
+  * conf: the deprecated syncToRefClock master attribute stays
+    supported longer; removal moved to v1.50.0.
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Thu, 29 Oct 2026 11:20:05 +0800
+
 linuxcnc-ethercat (1.47.0-1) unstable; urgency=low
 
   * feat(cia402): ship the cia402 HAL component in the package, ported
