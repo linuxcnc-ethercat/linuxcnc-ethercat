@@ -183,6 +183,9 @@ jobs:
                   done
 
 
+            - name: Verify vanilla libethercat compatibility
+              run: ./scripts/check-optional-ethercat-symbols.sh
+
             - name: Verify CUSE serial support
               # The EL6001/EL6021 driver exposes its tty via CUSE, which
               # needs libfuse3 >= 3.12 at build time. bullseye ships 3.10

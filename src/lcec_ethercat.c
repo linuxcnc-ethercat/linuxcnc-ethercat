@@ -26,6 +26,54 @@ static int lcec_param_newfv(hal_type_t type, hal_param_dir_t dir, void *data_add
 static int lcec_param_newfv_list(void *base, const lcec_paramdesc_t *list, va_list ap);
 int lcec_comp_id = -1;
 
+/* Resolve fork-only APIs at load time. Direct references would make binaries
+   built against our headers fail during ELF loading with vanilla libethercat,
+   before the existing feature fallbacks could run. */
+#if !defined(__KERNEL__) && (defined(EC_HAVE_SII_ACCESS) || defined(EC_HAVE_REINIT_HOLD))
+#include <dlfcn.h>
+
+#ifdef EC_HAVE_SII_ACCESS
+static int (*ecrt_master_sii_read_fn)(ec_master_t *, uint16_t, uint16_t, uint16_t *, size_t);
+static int (*ecrt_master_sii_write_fn)(ec_master_t *, uint16_t, uint16_t, const uint16_t *, size_t);
+#endif
+#ifdef EC_HAVE_REINIT_HOLD
+static int (*ecrt_slave_config_reinit_done_fn)(ec_slave_config_t *);
+#endif
+
+static void lcec_resolve_optional_symbols(void) __attribute__((constructor));
+static void lcec_resolve_optional_symbols(void) {
+#ifdef EC_HAVE_SII_ACCESS
+  ecrt_master_sii_read_fn = dlsym(RTLD_DEFAULT, "ecrt_master_sii_read");
+  ecrt_master_sii_write_fn = dlsym(RTLD_DEFAULT, "ecrt_master_sii_write");
+#endif
+#ifdef EC_HAVE_REINIT_HOLD
+  ecrt_slave_config_reinit_done_fn = dlsym(RTLD_DEFAULT, "ecrt_slave_config_reinit_done");
+#endif
+}
+#endif
+
+/// @brief Whether runtime slave re-initialization is available in the loaded libethercat.
+int lcec_reinit_hold_available(void) {
+#if defined(EC_HAVE_REINIT_HOLD) && !defined(__KERNEL__)
+  return ecrt_slave_config_reinit_done_fn != NULL;
+#else
+  return 0;
+#endif
+}
+
+/// @brief Confirm runtime slave re-initialization through the optional libethercat API.
+int lcec_slave_config_reinit_done(lcec_slave_t *slave) {
+#if defined(EC_HAVE_REINIT_HOLD) && !defined(__KERNEL__)
+  if (ecrt_slave_config_reinit_done_fn == NULL) {
+    return -ENOSYS;
+  }
+  return ecrt_slave_config_reinit_done_fn(slave->config);
+#else
+  (void)slave;
+  return -ENOSYS;
+#endif
+}
+
 /// @brief Find the slave with a specified index underneath a specific master.
 lcec_slave_t *lcec_slave_by_index(lcec_master_t *master, int index) {
   lcec_slave_t *slave;
@@ -753,12 +801,23 @@ int lcec_slave_apply_sdo_config(lcec_slave_t *slave) {
 // SII (EEPROM) access
 // ------------------------------------------------------------------
 
+static int lcec_sii_unsupported(lcec_slave_t *slave) {
+  rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s: SII access needs a libethercat with EC_HAVE_SII_ACCESS\n", slave->master->name,
+      slave->name);
+  return -ENOSYS;
+}
+
 /// @brief Read one 16-bit word from a slave's SII image.
 /// @return 0 for success, <0 for failure (-ENOSYS without SII support).
 int lcec_sii_read16(lcec_slave_t *slave, uint16_t word_offset, uint16_t *value) {
-#ifdef EC_HAVE_SII_ACCESS
+#if defined(EC_HAVE_SII_ACCESS) && !defined(__KERNEL__)
   uint16_t raw;
-  int err = ecrt_master_sii_read(slave->master->master, slave->index, word_offset, &raw, 1);
+  int err;
+
+  if (ecrt_master_sii_read_fn == NULL) {
+    return lcec_sii_unsupported(slave);
+  }
+  err = ecrt_master_sii_read_fn(slave->master->master, slave->index, word_offset, &raw, 1);
   if (err != 0) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s: SII read of word 0x%04x failed (%d)\n", slave->master->name, slave->name,
         word_offset, err);
@@ -769,9 +828,7 @@ int lcec_sii_read16(lcec_slave_t *slave, uint16_t word_offset, uint16_t *value) 
 #else
   (void)word_offset;
   (void)value;
-  rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s: SII access needs a libethercat with EC_HAVE_SII_ACCESS\n", slave->master->name,
-      slave->name);
-  return -ENOSYS;
+  return lcec_sii_unsupported(slave);
 #endif
 }
 
@@ -779,11 +836,15 @@ int lcec_sii_read16(lcec_slave_t *slave, uint16_t word_offset, uint16_t *value) 
 /// state.  No checksum handling for words 0..7.
 /// @return 0 for success, <0 for failure.
 int lcec_sii_write16(lcec_slave_t *slave, uint16_t word_offset, uint16_t value) {
-#ifdef EC_HAVE_SII_ACCESS
+#if defined(EC_HAVE_SII_ACCESS) && !defined(__KERNEL__)
   uint16_t raw;
   int err;
+
+  if (ecrt_master_sii_write_fn == NULL) {
+    return lcec_sii_unsupported(slave);
+  }
   EC_WRITE_U16(&raw, value);
-  if ((err = ecrt_master_sii_write(slave->master->master, slave->index, word_offset, &raw, 1)) != 0) {
+  if ((err = ecrt_master_sii_write_fn(slave->master->master, slave->index, word_offset, &raw, 1)) != 0) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s: SII write of word 0x%04x failed (%d)\n", slave->master->name, slave->name,
         word_offset, err);
     return err;
@@ -792,9 +853,7 @@ int lcec_sii_write16(lcec_slave_t *slave, uint16_t word_offset, uint16_t value) 
 #else
   (void)word_offset;
   (void)value;
-  rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s: SII access needs a libethercat with EC_HAVE_SII_ACCESS\n", slave->master->name,
-      slave->name);
-  return -ENOSYS;
+  return lcec_sii_unsupported(slave);
 #endif
 }
 

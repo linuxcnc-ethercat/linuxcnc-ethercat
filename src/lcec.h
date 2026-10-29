@@ -594,6 +594,8 @@ int lcec_sii_write16(lcec_slave_t *slave, uint16_t word_offset, uint16_t value);
 int lcec_sii_find_category(lcec_slave_t *slave, uint16_t cat_type, uint16_t *word_offset, uint16_t *word_count);
 int lcec_sii_update_coe_details(lcec_slave_t *slave, uint8_t set_mask, uint8_t clear_mask, int *changed);
 int lcec_slave_apply_sdo_config(lcec_slave_t *slave);
+int lcec_reinit_hold_available(void);
+int lcec_slave_config_reinit_done(lcec_slave_t *slave);
 
 int lcec_pin_newf(hal_type_t type, hal_pin_dir_t dir, void **data_ptr_addr, const char *fmt, ...);
 int lcec_pin_newf_list(void *base, const lcec_pindesc_t *list, ...);

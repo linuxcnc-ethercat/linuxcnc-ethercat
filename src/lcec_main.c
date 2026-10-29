@@ -368,19 +368,24 @@ int rtapi_app_main(void) {
       // the one proc_init just configured
       if (slave->proc_reinit != NULL) {
 #if defined(EC_HAVE_REINIT_HOLD) && !defined(__KERNEL__)
-        if (ecrt_slave_config_flag(slave->config, "ReinitHold", 1) != 0 || ecrt_slave_config_reinit_done(slave->config) != 0) {
+        if (!lcec_reinit_hold_available()) {
+          slave->proc_reinit = NULL;
+        } else if (ecrt_slave_config_flag(slave->config, "ReinitHold", 1) != 0 || lcec_slave_config_reinit_done(slave) != 0) {
           rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to enable runtime re-initialization for slave %s.%s\n", master->name,
               slave->name);
           goto fail2;
+        } else {
+          rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "runtime re-initialization enabled for slave %s.%s\n", master->name, slave->name);
         }
-        rtapi_print_msg(RTAPI_MSG_DBG, LCEC_MSG_PFX "runtime re-initialization enabled for slave %s.%s\n", master->name, slave->name);
 #else
-        rtapi_print_msg(RTAPI_MSG_WARN,
-            LCEC_MSG_PFX "slave %s.%s supports runtime re-initialization, but this libethercat does not (EC_HAVE_REINIT_HOLD); "
-                         "a power-cycled slave will need a LinuxCNC restart\n",
-            master->name, slave->name);
         slave->proc_reinit = NULL;
 #endif
+        if (slave->proc_reinit == NULL) {
+          rtapi_print_msg(RTAPI_MSG_WARN,
+              LCEC_MSG_PFX "slave %s.%s supports runtime re-initialization, but this libethercat does not (EC_HAVE_REINIT_HOLD); "
+                           "a power-cycled slave will need a LinuxCNC restart\n",
+              master->name, slave->name);
+        }
       }
 
       // configure dc for this slave
@@ -1369,12 +1374,10 @@ static int lcec_slave_reinit(lcec_slave_t *slave) {
     return err;
   }
 
-#ifdef EC_HAVE_REINIT_HOLD
-  if ((err = ecrt_slave_config_reinit_done(slave->config)) != 0) {
+  if ((err = lcec_slave_config_reinit_done(slave)) != 0) {
     rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "slave %s.%s: releasing the PREOP hold failed (%d)\n", master->name, slave->name, err);
     return err;
   }
-#endif
 
   return 0;
 }

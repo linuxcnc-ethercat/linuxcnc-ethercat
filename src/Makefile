@@ -8,7 +8,7 @@ include Makefile.clean
 #CC=g++
 
 RTLDFLAGS += -Wl,-rpath,$(LIBDIR)
-RTEXTRA_LDFLAGS += -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -L$(LIBDIR) -llinuxcnchal -lethercat -lrt -lpthread
+RTEXTRA_LDFLAGS += -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -L$(LIBDIR) -llinuxcnchal -lethercat -lrt -lpthread -ldl
 
 # optional CUSE support (exposes serial terminals like EL6001/EL6021 as
 # userspace character devices); enabled when libfuse3 >= 3.12 is available
@@ -128,15 +128,15 @@ cia402.so: cia402.o
 	chmod -x $@
 
 lcec_conf: $(lcec-conf-objs) $(lcec-common-objs) liblcecdevices.a
-	$(CC) -o $@ $(lcec-conf-objs) $(lcec-common-objs) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm $(FUSE3_LIBS) $(EXTRA_LDFLAGS)
+	$(CC) -o $@ $(lcec-conf-objs) $(lcec-common-objs) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm -ldl $(FUSE3_LIBS) $(EXTRA_LDFLAGS)
 
 lcec_devices: lcec_devices.o $(lcec-common-objs) liblcecdevices.a
-	$(CC) -o $@ lcec_devices.o $(lcec-common-objs) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm $(FUSE3_LIBS) $(EXTRA_LDFLAGS)
+	$(CC) -o $@ lcec_devices.o $(lcec-common-objs) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm -ldl $(FUSE3_LIBS) $(EXTRA_LDFLAGS)
 
 lcec_configgen: lcec_configgen.o $(lcec-common-objs) liblcecdevices.a
-	$(CC) -o $@ lcec_configgen.o $(lcec-common-objs) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm $(FUSE3_LIBS) $(EXTRA_LDFLAGS)
+	$(CC) -o $@ lcec_configgen.o $(lcec-common-objs) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm -ldl $(FUSE3_LIBS) $(EXTRA_LDFLAGS)
 
 # Rule for compiling tests/*.bin files.  We're naming test excutables *.bin so we can use wildcards in .gitignore and `make clean` to match them.
 tests/%.bin: tests/%.o $(lcec-common-objs) liblcecdevices.a
-	$(CC) -o $@ $(subst .bin,.o,$@) $(lcec-common-objs) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm -lpthread $(FUSE3_LIBS) $(EXTRA_LDFLAGS)
+	$(CC) -o $@ $(subst .bin,.o,$@) $(lcec-common-objs) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm -ldl -lpthread $(FUSE3_LIBS) $(EXTRA_LDFLAGS)
 
