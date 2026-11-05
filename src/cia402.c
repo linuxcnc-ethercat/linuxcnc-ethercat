@@ -119,6 +119,7 @@ typedef struct {
   bool enable_old;
   bool stat_homed_old;
   bool home_seen_unhomed;
+  bool home_start_sent;
   double pos_scale_rcpt;
   double velo_scale_rcpt;
   bool pos_mode;
@@ -437,11 +438,12 @@ static void read_all(cia402_inst_t *inst, long period) {
   // home states
   if (opmode_homing) {
     stat_homed = ((statusword >> 10) & 1) && ((statusword >> 12) & 1);
-    if (LCEC_PIN_BIT_GET(inst->home) && !stat_homed) {
+    if (LCEC_PIN_BIT_GET(inst->home) && inst->home_start_sent && !stat_homed) {
       inst->home_seen_unhomed = true;
     }
     LCEC_PIN_BIT_SET(inst->stat_homed, stat_homed);
-    LCEC_PIN_BIT_SET(inst->stat_homing, !stat_homed && !((statusword >> 10) & 1) && !homing_error);
+    LCEC_PIN_BIT_SET(inst->stat_homing, inst->home_start_sent && !stat_homed &&
+        !((statusword >> 10) & 1) && !homing_error);
   }
 
   // update fault output
@@ -507,8 +509,9 @@ static void write_all(cia402_inst_t *inst, long period) {
   LCEC_PIN_S32_SET(
       inst->drv_target_velocity, (int32_t)(LCEC_PIN_FLOAT_GET(inst->velocity_cmd) * LCEC_PARAM_FLOAT_GET(inst->velo_scale)));
 
-  // Reset home only after unhomed status was observed in actual homing mode.
-  // Status bits left over from CSP can otherwise cancel and restart a request.
+  // Reset home only after unhomed status was observed following the start
+  // request in actual homing mode.  Status bits left over from cyclic modes can
+  // otherwise cancel and restart a request.
   if (home && inst->home_seen_unhomed &&
       (LCEC_PIN_BIT_GET(inst->stat_homed) && !inst->stat_homed_old) &&
       LCEC_PIN_BIT_GET(inst->opmode_homing)) {
@@ -525,9 +528,16 @@ static void write_all(cia402_inst_t *inst, long period) {
       LCEC_PIN_S32_SET(inst->opmode, OPMODE_CYCLIC_VELOCITY);
     }
   }
-  // mode Home and start homing
+  // Request homing mode first.  Assert the start edge only after the drive
+  // acknowledges mode 6 with operation enabled; some drives ignore a bit-4
+  // edge delivered in the same PDO cycle as the mode change and never start.
+  inst->home_start_sent = false;
   if (home) {
     LCEC_PIN_S32_SET(inst->opmode, OPMODE_HOMING);
-    LCEC_PIN_U32_SET(inst->controlword, controlword | (1 << 4));
+    if (LCEC_PIN_BIT_GET(inst->opmode_homing) &&
+        LCEC_PIN_BIT_GET(inst->stat_op_enabled)) {
+      LCEC_PIN_U32_SET(inst->controlword, controlword | (1 << 4));
+      inst->home_start_sent = true;
+    }
   }
 }
