@@ -53,6 +53,7 @@ which is the source of truth.  Common modules:
 | 0x61100205 | PM-0016-N | digital out (NPN) | 16 |
 | 0x61110205 | PM-0016-P | digital out (PNP) | 16 |
 | 0x61100405 | PM-0032-N | digital out (NPN) | 32 |
+| 0x61900205 | PM-0016-R | relay out | 16 |
 | 0x61100225 | PM-1616-N | mixed I/O | 16+16 |
 | 0x61000025 | PM-A0400-IV | analog in | 4 |
 | 0x61000205 | PM-A0004-IV | analog out | 4 |
@@ -69,10 +70,15 @@ object (0x8000 + slot) at startup.
 
 Digital modules:
 
-- `safeState` (U32, default 0): output value when the link is lost.
-  Bits 0-15 at sub 1, bits 16-31 (32-channel modules) at sub 2.
+- `safeState` (U32, default 0): per-output mask applied when the
+  EtherCAT link is lost: 1 = hold the last value, 0 = switch the output
+  off.  Bits 0-15 at sub 1, bits 16-31 (32-channel modules) at sub 2.
+  This is always written, even when not set: the vendor ESI sets
+  0xffff (hold everything) and the module remembers it, so without this
+  outputs could stay on after a crash or cable fault.
 - `inputFilter0` .. `inputFilter3` (U32, default 10): input filter time
-  in ms, one per group of 8 channels.
+  in ms, one per group of 8 channels.  R3 modules only; R2 digital input
+  modules have no filter setting and the driver rejects the modParam.
 
 Analog modules:
 
@@ -86,9 +92,37 @@ Encoder modules (applied to every channel of the module):
 - `minValue` / `maxValue` (S32, default -100000 / 100000).
 - `countMode` (U32, default 0).
 - `encoderFilter` (U32, default 2).
+- `processData` (U32): 0 = keep the module in the coupler's module list
+  but map no process data for it (no encoder pins); 1 = map it.  Default
+  1, except on an R2EC with revision 0x21031810, where it defaults to 0
+  (see below).
 
 ## Notes
 
+- `<subModule id>` is the 0-based backplane position: the module
+  directly next to the coupler is `id="0"`.  At startup the driver
+  compares the configuration against the coupler's detected module list
+  (0xF050); on a mismatch it refuses to start and logs the detected
+  modules as ready-to-paste `<subModule>` lines.  You can also read the
+  list yourself with the bus in PREOP:
+  `ethercat upload -t uint32 0xf050 1` (then 2, 3, ...).
+- The coupler lays out process data in backplane slot order, whatever
+  PDO order is assigned; the driver always uses slot order.
+- **R2EC revision 0x21031810 (software 0x02000600) passes no process
+  data for PM-E0200 encoder modules**, in either direction (seen with a
+  PM-E0200-D, revision 0x23101601, FPGA 0x23102701).  The coupler accepts
+  the encoder PDO mapping and reaches OP, but skips the module, so every
+  module after it is shifted by the encoder's size: on test hardware the
+  relay module after the encoder was driven by the bytes meant for the
+  encoder.  On that revision the driver therefore maps no process data for
+  encoder modules by default (`processData=0`, logged at startup), which
+  keeps the rest of the bus correct; the encoder itself is not usable.  If
+  `processData=1` is set explicitly it is honoured, with a warning.
+  Newer coupler firmware may behave differently.
+- Tested on an R2EC (revision 0x21031810) with PM-0032-N, PM-3200,
+  PM-E0200-D and PM-0016-R: all 32 outputs, 16 relays and an output to
+  input loopback verified on the hardware (4 ms round trip at a 1 ms
+  cycle); hold-on-link-loss behaviour verified.
 - Slot ids are validated at startup: an out-of-range slot, a duplicate
   slot id, or a duplicate module name is a configuration error.
 - A sparse slot layout (e.g. modules in slots 0 and 3 only) is
