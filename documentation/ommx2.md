@@ -2,6 +2,10 @@
 
 The `lcec_ommx2` driver supports the Omron MX2 VFD with Omron's 3G3AX-MX2-ECT EtherCAT module.
 
+Documentation:
+
+* Omron i574 [MX2/RX Series EtherCAT Communication Unit User’s Manual](https://files.omron.eu/downloads/latest/manual/en/i574_mx2_rx_ethercat_option_board_users_manual_en.pdf?v=1739370045)
+
 ## Setup
 
 In your XML file, you should have an entry somewhat like this:
@@ -42,12 +46,33 @@ critical.
 
 ## Configuration
 
-TBD
+The minimal parameters for Ethercat control to work are:
+
+<pre>
+Parameter   Name                Setting
+A001        Frequency source    04 Option (i.e. Ethercat option module)
+A002        Command source      04 Option
+H004        Motor poles         <set to number of poles of your motor>
+</pre>
+
+The number of motor poles determines how VFD output frequency maps to motor RPM set by `srv-target-vl`.
+
+Other parameters must be set to match your VFD and motor combination.
 
 ## Inputs
 
-TBD
+* `srv-cia-controlword` (u32)
+    * set controlword to 10 for spindle stop
+    * set controlword to 15 for spindle run
+* `srv-target-vl` (s32)
+    * target velocity in RPM
+    * connect to spindle.N.speed-out (float)
 
 ## Outputs
 
-TBD
+* `srv-cia-statusword` (u32)
+    * Bits 0-7 and 9 follow the cia402 standard, others not used.
+    * shows 592   `0b1001010000`  when spindle is not running
+    * shows 567   `0b1000110111`  when spindle is running fwd/rev
+* `srv-actual-vl` (s32)
+    * actual RPM, positive for forward, negative for reverse.
