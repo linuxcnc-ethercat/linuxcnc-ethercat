@@ -52,7 +52,7 @@ The minimal parameters for Ethercat control to work are:
 Parameter   Name                Setting
 A001        Frequency source    04 Option (i.e. Ethercat option module)
 A002        Command source      04 Option
-H004        Motor poles         <set to number of poles of your motor>
+H004        Motor poles         (set to number of poles of your motor)
 </pre>
 
 The number of motor poles determines how VFD output frequency maps to motor RPM set by `srv-target-vl`.
