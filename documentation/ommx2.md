@@ -52,10 +52,12 @@ The minimal parameters for Ethercat control to work are:
 Parameter   Name                Setting
 A001        Frequency source    04 Option (i.e. Ethercat option module)
 A002        Command source      04 Option
-H004        Motor poles         (set to number of poles of your motor)
+H004        Motor poles         set to number of poles of your motor. requires vfd power-cycle to take effect.
 </pre>
 
-The number of motor poles determines how VFD output frequency maps to motor RPM set by `srv-target-vl`.
+The number of motor poles $p$ determines how VFD output frequency $f$ maps to motor RPM set by `srv-target-vl`:
+
+$$RPM = \frac{120 \cdot f]{p}
 
 Other parameters must be set to match your VFD and motor combination.
 
@@ -66,7 +68,7 @@ Other parameters must be set to match your VFD and motor combination.
     * set controlword to 15 for spindle run
 * `srv-target-vl` (s32)
     * target velocity in RPM
-    * connect to spindle.N.speed-out (float)
+    * connect to spindle.N.speed-out (float) with conv_float_s32
 
 ## Outputs
 
@@ -75,4 +77,4 @@ Other parameters must be set to match your VFD and motor combination.
     * shows 592   `0b1001010000`  when spindle is not running
     * shows 567   `0b1000110111`  when spindle is running fwd/rev
 * `srv-actual-vl` (s32)
-    * actual RPM, positive for forward, negative for reverse.
+    * actual RPM, positive for forward, negative for reverse. The accuracy of this RPM depends on drive mode and may be 1-3% for open-loop volts-per-Hz control mode.
