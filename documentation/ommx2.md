@@ -57,7 +57,7 @@ H004        Motor poles         set to number of poles of your motor. requires v
 
 The number of motor poles $p$ determines how VFD output frequency $f$ maps to motor RPM set by `srv-target-vl`:
 
-$$RPM = \frac{120 \cdot f]{p}$$
+$$RPM = \frac{120 \cdot f}{p}$$
 
 Other parameters must be set to match your VFD and motor combination.
 
