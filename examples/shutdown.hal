@@ -1,0 +1,5 @@
+# Request PREOP while lcec continues cyclic process-data exchange.
+loadusr -w ethercat states PREOP
+
+# Wait until every slave reports PREOP; give up after six seconds.
+loadusr -w timeout 6 sh -c 'until test "`ethercat slaves | grep -cv " PREOP "`" = 0; do sleep 0.05; done'
