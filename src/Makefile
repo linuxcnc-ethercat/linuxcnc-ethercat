@@ -7,7 +7,6 @@ include Makefile.clean
 
 #CC=g++
 
-RTLDFLAGS += -Wl,-rpath,$(LIBDIR)
 RTEXTRA_LDFLAGS += -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -L$(LIBDIR) -llinuxcnchal -lethercat -lrt -lpthread -ldl
 
 # optional CUSE support (exposes serial terminals like EL6001/EL6021 as
@@ -116,27 +115,27 @@ lcec.so: lcec_main.o $(lcec-common-objs) liblcecdevices.a
 	ld -d -r -o $@.tmp lcec_main.o $(lcec-common-objs)
 	objcopy -j .rtapi_export -O binary $@.tmp $@.sym
 	(echo '{ global : '; tr -s '\0' < $@.sym | xargs -r0 printf '%s;\n' | grep .; echo 'local : * ; };') > $@.ver
-#$(CC) -shared -Bsymbolic $(RTLDFLAGS) -Wl,--version-script,$@.ver -o $@ lcec_main.o $(lcec-comon-objs) -lm
-	$(CC) -shared -Bsymbolic $(RTLDFLAGS) -Wl,--version-script,$@.ver -o $@ lcec_main.o $(lcec-common-objs) -lm $(RTEXTRA_LDFLAGS)
+#$(CC) -shared -Bsymbolic -Wl,--version-script,$@.ver -o $@ lcec_main.o $(lcec-comon-objs) -lm
+	$(CC) -shared -Bsymbolic -Wl,--version-script,$@.ver -o $@ lcec_main.o $(lcec-common-objs) -lm $(RTEXTRA_LDFLAGS)
 	chmod -x $@
 
 # The cia402 HAL component is a standalone RTAPI module: no ethercat or
 # device-library linkage, HAL symbols resolve via rtapi at load time.
 cia402.so: cia402.o
 	$(ECHO) Linking $@
-	$(CC) -shared -Bsymbolic $(RTLDFLAGS) -o $@ cia402.o -lm
+	$(CC) -shared -Bsymbolic -o $@ cia402.o -lm
 	chmod -x $@
 
 lcec_conf: $(lcec-conf-objs) $(lcec-common-objs) liblcecdevices.a
-	$(CC) -o $@ $(lcec-conf-objs) $(lcec-common-objs) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm -ldl $(FUSE3_LIBS) $(EXTRA_LDFLAGS)
+	$(CC) -o $@ $(lcec-conf-objs) $(lcec-common-objs) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm -ldl $(FUSE3_LIBS) $(EXTRA_LDFLAGS)
 
 lcec_devices: lcec_devices.o $(lcec-common-objs) liblcecdevices.a
-	$(CC) -o $@ lcec_devices.o $(lcec-common-objs) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm -ldl $(FUSE3_LIBS) $(EXTRA_LDFLAGS)
+	$(CC) -o $@ lcec_devices.o $(lcec-common-objs) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm -ldl $(FUSE3_LIBS) $(EXTRA_LDFLAGS)
 
 lcec_configgen: lcec_configgen.o $(lcec-common-objs) liblcecdevices.a
-	$(CC) -o $@ lcec_configgen.o $(lcec-common-objs) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm -ldl $(FUSE3_LIBS) $(EXTRA_LDFLAGS)
+	$(CC) -o $@ lcec_configgen.o $(lcec-common-objs) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm -ldl $(FUSE3_LIBS) $(EXTRA_LDFLAGS)
 
 # Rule for compiling tests/*.bin files.  We're naming test excutables *.bin so we can use wildcards in .gitignore and `make clean` to match them.
 tests/%.bin: tests/%.o $(lcec-common-objs) liblcecdevices.a
-	$(CC) -o $@ $(subst .bin,.o,$@) $(lcec-common-objs) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm -ldl -lpthread $(FUSE3_LIBS) $(EXTRA_LDFLAGS)
+	$(CC) -o $@ $(subst .bin,.o,$@) $(lcec-common-objs) -L$(LIBDIR) -llinuxcnchal -lexpat -Wl,--whole-archive liblcecdevices.a -Wl,--no-whole-archive -lethercat -lm -ldl -lpthread $(FUSE3_LIBS) $(EXTRA_LDFLAGS)
 
