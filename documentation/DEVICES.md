@@ -204,6 +204,7 @@ Description | Driver | EtherCAT VID:PID | Device Type | Testing Status | Notes
 [Beckhoff EL9512 Power supply terminal 12V](http://www.beckhoff.com/EL9512) | [el95xx](../src/devices/lcec_el95xx.c) | 0x2:0x25283052 | System Terminals |  | 
 [Beckhoff EL9515 Power supply terminal 15V](http://www.beckhoff.com/EL9515) | [el95xx](../src/devices/lcec_el95xx.c) | 0x2:0x252b3052 | System Terminals |  | 
 [Beckhoff EL9576 Brake chopper terminal](http://www.beckhoff.com/EL9576) | [el95xx](../src/devices/lcec_el95xx.c) | 0x2:0x25683052 | System Terminals |  | 
+[Beckhoff EM2042 16Ch. Dig. Output 24V, 0.5A, D-Sub connection](http://www.beckhoff.com/EM2042) | [el2xxx](../src/devices/lcec_el2xxx.c) | 0x2:0x07fa3452 | Digital Output | tested and working @mintracer | 
 [Beckhoff EM3701, 1Ch. differential pressure measuring terminal 100hPa (100mbar)](http://www.beckhoff.com/EM3701) | [el3xxx](../src/devices/lcec_el3xxx.c) | 0x2:0x0e753452 | Analog Input |  | 
 [Beckhoff EM3702  2Ch. relative pressure measuring terminal 7,500 hPa (7.5 bar)](http://www.beckhoff.com/EM3702) | [el3xxx](../src/devices/lcec_el3xxx.c) | 0x2:0x0e763452 | Analog Input | Uncertain; @scottlaird has one | 
 [Beckhoff EM3712  2Ch relative pressure measuring terminal -1,000...+1,000 hPa (-1...+1 bar)](http://www.beckhoff.com/EM3712) | [el3xxx](../src/devices/lcec_el3xxx.c) | 0x2:0x0e803452 | Analog Input |  | 
