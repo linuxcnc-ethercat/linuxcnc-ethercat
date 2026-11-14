@@ -1,0 +1,11 @@
+---
+Device: EM2042
+VendorID: "0x00000002"
+VendorName: Beckhoff Automation GmbH & Co. KG
+PID: "0x07fa3452"
+Description: Beckhoff EM2042 16Ch. Dig. Output 24V, 0.5A, D-Sub connection
+DocumentationURL: http://www.beckhoff.com/EM2042
+DeviceType: Digital Output
+Notes: ""
+SrcFile: src/devices/lcec_el2xxx.c
+TestingStatus: "tested by @mintracer"
