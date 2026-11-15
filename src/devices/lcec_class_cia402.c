@@ -122,6 +122,18 @@ static lcec_class_cia402_enabled_t *lcec_cia402_enabled(lcec_class_cia402_channe
   return enabled;
 }
 
+// Re-init registry: every registered (slave, channel) pair, so
+// lcec_cia402_slave_reinit() finds a slave's channels without knowing the
+// driver's hal_data layout.  Appended during the single-threaded config
+// phase, never removed: lock-free for the re-init thread.
+typedef struct lcec_cia402_reinit_entry_t {
+  lcec_slave_t *slave;
+  lcec_class_cia402_channel_t *channel;
+  struct lcec_cia402_reinit_entry_t *next;
+} lcec_cia402_reinit_entry_t;
+
+static lcec_cia402_reinit_entry_t *reinit_registry;
+
 /// @brief Allocate a block of memory for holding the results from
 /// `count` calls to `lcec_cia402_register_device() and friends.
 ///
@@ -469,6 +481,13 @@ lcec_class_cia402_channel_t *lcec_cia402_register_channel(
   FOR_ALL_WRITE_PDOS_DO(SET_OPTIONAL_DEFAULTS);
   FOR_ALL_WRITE_SDOS_DO(SET_OPTIONAL_DEFAULTS);
 
+  // Record for lcec_cia402_slave_reinit(); see reinit_registry.
+  lcec_cia402_reinit_entry_t *reinit_entry = LCEC_ALLOCATE(lcec_cia402_reinit_entry_t);
+  reinit_entry->slave = slave;
+  reinit_entry->channel = data;
+  reinit_entry->next = reinit_registry;
+  reinit_registry = reinit_entry;
+
   return data;
 }
 
@@ -562,6 +581,31 @@ void lcec_cia402_write_all(lcec_slave_t *slave, lcec_class_cia402_channels_t *ch
   for (int i = 0; i < channels->count; i++) {
     lcec_cia402_write(slave, channels->channels[i]);
   }
+}
+
+// Force one rewrite of every enabled write-SDO: !pin always differs from
+// the pin.  The race with the RT thread touching name##_old is benign
+// (an extra write of the same value worst case).
+#define INVALIDATE_OPT_SDO(name)                        \
+  do {                                                  \
+    if (data->enabled->enable_##name) {                 \
+      data->name##_old = !LCEC_PIN_GET(data->name);     \
+    }                                                   \
+  } while (0)
+
+/// @brief proc_reinit for drivers built on this class: a power-cycled drive
+/// returns with factory defaults behind the write-SDOs while name##_old
+/// still says written.  Invalidate the caches; the RT thread then rewrites
+/// via the per-SDO requests as usual, keeping ec_sdo_request_t access
+/// single-threaded.  Wired into every consumer's typelist by
+/// ADD_TYPES_WITH_CIA402_MODPARAMS.
+int lcec_cia402_slave_reinit(lcec_slave_t *slave) {
+  for (lcec_cia402_reinit_entry_t *e = reinit_registry; e != NULL; e = e->next) {
+    if (e->slave != slave) continue;
+    lcec_class_cia402_channel_t *data = e->channel;
+    FOR_ALL_WRITE_SDOS_DO(INVALIDATE_OPT_SDO);
+  }
+  return 0;
 }
 
 #define ENABLE_MODPARAM(name) {PDO_MP_NAME_##name, CIA402_MP_ENABLE_##name, MODPARAM_TYPE_BIT},

@@ -256,6 +256,7 @@ static ec_sync_info_t lcec_el6021_syncs[] = {
 };
 
 static int lcec_el6021_init(int comp_id, lcec_slave_t *slave);
+static int lcec_el6021_apply_config(lcec_slave_t *slave);
 static void lcec_el6021_cleanup(lcec_slave_t *slave);
 static void lcec_el6021_read(lcec_slave_t *slave, long period);
 static void lcec_el6021_write(lcec_slave_t *slave, long period);
@@ -277,8 +278,10 @@ static lcec_modparam_desc_t lcec_el6021_modparams[] = {
 
 static lcec_typelist_t types[] = {
     // clang-format off
-    {"EL6001", LCEC_BECKHOFF_VID, 0x17713052, LCEC_EL6021_FLAG_RTSCTS, NULL, lcec_el6021_init, lcec_el6021_modparams},
-    {"EL6021", LCEC_BECKHOFF_VID, 0x17853052, 0, NULL, lcec_el6021_init, lcec_el6021_modparams},
+    {"EL6001", LCEC_BECKHOFF_VID, 0x17713052, 0, NULL, lcec_el6021_init, lcec_el6021_modparams, LCEC_EL6021_FLAG_RTSCTS,
+        NULL, NULL, lcec_el6021_apply_config},
+    {"EL6021", LCEC_BECKHOFF_VID, 0x17853052, 0, NULL, lcec_el6021_init, lcec_el6021_modparams, 0, NULL, NULL,
+        lcec_el6021_apply_config},
     // clang-format on
     {NULL},
 };
@@ -367,6 +370,43 @@ static int request_config(lcec_el6021_data_t *hal_data, tcflag_t cflag, unsigned
   return 0;
 }
 
+/// @brief Apply the requested serial configuration (0x8000:01/11/15) and
+/// resync cur_/pend_.  Shared by _init and proc_reinit: a power-cycled
+/// terminal reverts to factory defaults, so re-apply the last termios
+/// request (req_* survives in hal_data).  Safe against the RT thread,
+/// which returns early while the slave is not operational.
+static int lcec_el6021_apply_config(lcec_slave_t *slave) {
+  lcec_el6021_data_t *hal_data = (lcec_el6021_data_t *)slave->hal_data;
+  uint8_t rtscts, baud, frame;
+
+  pthread_mutex_lock(&hal_data->lock);
+  rtscts = hal_data->req_rtscts;
+  baud = hal_data->req_baud;
+  frame = hal_data->req_frame;
+  pthread_mutex_unlock(&hal_data->lock);
+
+  // 0x8000:01 is RTS/CTS on the EL6001 but a padding bit on the EL6021
+  if (hal_data->has_rtscts && lcec_write_sdo8(slave, 0x8000, 0x01, rtscts) != 0) {
+    rtapi_print_msg(
+        RTAPI_MSG_ERR, LCEC_MSG_PFX "fail to configure slave %s.%s sdo RtsCts\n", slave->master->name, slave->name);
+    return -1;
+  }
+  if (lcec_write_sdo8(slave, 0x8000, 0x11, baud) != 0) {
+    rtapi_print_msg(
+        RTAPI_MSG_ERR, LCEC_MSG_PFX "fail to configure slave %s.%s sdo BaudRate\n", slave->master->name, slave->name);
+    return -1;
+  }
+  if (lcec_write_sdo8(slave, 0x8000, 0x15, frame) != 0) {
+    rtapi_print_msg(
+        RTAPI_MSG_ERR, LCEC_MSG_PFX "fail to configure slave %s.%s sdo DataFrame\n", slave->master->name, slave->name);
+    return -1;
+  }
+  hal_data->cur_rtscts = hal_data->pend_rtscts = rtscts;
+  hal_data->cur_baud = hal_data->pend_baud = baud;
+  hal_data->cur_frame = hal_data->pend_frame = frame;
+  return 0;
+}
+
 static int lcec_el6021_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   (void)comp_id;
@@ -383,6 +423,7 @@ static int lcec_el6021_init(int comp_id, lcec_slave_t *slave) {
   memset(hal_data, 0, sizeof(*hal_data));
   hal_data->efd = -1;
   hal_data->stop_efd = -1;
+  pthread_mutex_init(&hal_data->lock, NULL);
 
   // defaults: 9600 8N1, no handshake
   hal_data->req_baud = lcec_el6021_baud_by_value(9600)->idx;
@@ -428,30 +469,14 @@ static int lcec_el6021_init(int comp_id, lcec_slave_t *slave) {
     }
   }
 
-  // apply serial configuration to the terminal (PREOP SDO writes);
-  // 0x8000:01 is RTS/CTS on the EL6001 but a padding bit on the EL6021
+  // apply serial configuration to the terminal (PREOP SDO writes)
   hal_data->has_rtscts = (slave->flags & LCEC_EL6021_FLAG_RTSCTS) != 0;
   if (!hal_data->has_rtscts) {
     hal_data->req_rtscts = 0;
   }
-  if (hal_data->has_rtscts && lcec_write_sdo8(slave, 0x8000, 0x01, hal_data->req_rtscts) != 0) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "fail to configure slave %s.%s sdo RtsCts\n", master->name, slave->name);
-    return -1;
+  if ((err = lcec_el6021_apply_config(slave)) != 0) {
+    return err;
   }
-  if (lcec_write_sdo8(slave, 0x8000, 0x11, hal_data->req_baud) != 0) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "fail to configure slave %s.%s sdo BaudRate\n", master->name, slave->name);
-    return -1;
-  }
-  if (lcec_write_sdo8(slave, 0x8000, 0x15, hal_data->req_frame) != 0) {
-    rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "fail to configure slave %s.%s sdo DataFrame\n", master->name, slave->name);
-    return -1;
-  }
-  hal_data->cur_rtscts = hal_data->req_rtscts;
-  hal_data->cur_baud = hal_data->req_baud;
-  hal_data->cur_frame = hal_data->req_frame;
-  hal_data->pend_rtscts = hal_data->req_rtscts;
-  hal_data->pend_baud = hal_data->req_baud;
-  hal_data->pend_frame = hal_data->req_frame;
   config_to_ktermios(hal_data, &hal_data->tio);
 
   // runtime SDO requests for configuration changes while running
@@ -487,7 +512,6 @@ static int lcec_el6021_init(int comp_id, lcec_slave_t *slave) {
 
   // initialize state
   hal_data->state = LCEC_EL6021_STATE_REQUEST_INIT;
-  pthread_mutex_init(&hal_data->lock, NULL);
 
 #ifdef LCEC_HAVE_CUSE
   err = lcec_el6021_cuse_start(slave);
