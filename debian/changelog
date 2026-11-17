@@ -1,3 +1,16 @@
+linuxcnc-ethercat (1.49.0-1) unstable; urgency=low
+
+  * fix(cia402): reject stale homed status when entering homing mode and
+    acknowledge homing mode before starting. Document CSP PDO mapping.
+  * fix(build): remove hard-coded rpaths from installed binaries. Thanks
+    to NTULINUX.
+  * feat(drivers): add Beckhoff EM2042 16-channel digital output
+    terminal. Thanks to mintracer, including hardware testing.
+  * docs: add an orderly EtherCAT shutdown example using the standard
+    IgH ethercat tool to request PREOP before stopping realtime threads.
+
+ -- Luca Toniolo <toniolo.luca@gmail.com>  Tue, 17 Nov 2026 15:10:41 +0800
+
 linuxcnc-ethercat (1.48.0-1) unstable; urgency=low
 
   * feat(mdp): add a generic ETG.5001 MDP modular coupler driver with

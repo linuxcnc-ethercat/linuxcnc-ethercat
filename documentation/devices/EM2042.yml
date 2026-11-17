@@ -8,4 +8,4 @@ DocumentationURL: http://www.beckhoff.com/EM2042
 DeviceType: Digital Output
 Notes: ""
 SrcFile: src/devices/lcec_el2xxx.c
-TestingStatus: "tested by @mintracer"
+TestingStatus: "tested and working @mintracer"
