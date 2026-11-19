@@ -1,0 +1,44 @@
+<!--
+  Example: two Delta ASDA-B3-E drives in CSP mode, homed by the drives.
+
+  appTimePeriod must equal [EMCMOT]SERVO_PERIOD in the INI file.
+
+  eGearRatio  OD 6093h.  16777216/500000 gives 500000 PUU per motor revolution
+              with the 24 bit encoder.  The driver sets srv-pulses-per-rev to
+              500000 to match.
+  enableHM    maps OD 6060h/6061h and adds the homing pins.
+  homeMethod  OD 6098h.  Delta's method 36 is written as -1: run onto the hard
+              stop, then back to the Z pulse.  (37 = -2, 38 = -3, 39 = -4.)
+  homeOffset  OD 607Ch, distance from the Z pulse to the drive's zero [PUU].
+
+  homeTorqueLevel_pct  drive parameter P1.087: torque level that counts as
+                       "hard stop reached" [% of rated torque]
+  homeTorqueTime_ms    drive parameter P1.088: time the torque has to stay
+                       above that level [ms]
+
+  The homing speeds and acceleration are set from the HAL file.
+-->
+<masters>
+  <master idx="0" appTimePeriod="1000000" refClockSyncCycles="1000">
+    <slave idx="0" type="DeASDB3" name="x">
+      <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/>
+      <modParam name="opmode" value="CSP"/>
+      <modParam name="eGearRatio" value="16777216/500000"/>
+      <modParam name="enableHM" value="true"/>
+      <modParam name="homeMethod" value="-1"/>
+      <modParam name="homeOffset" value="0"/>
+      <modParam name="homeTorqueLevel_pct" value="5"/>
+      <modParam name="homeTorqueTime_ms" value="100"/>
+    </slave>
+    <slave idx="1" type="DeASDB3" name="y">
+      <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/>
+      <modParam name="opmode" value="CSP"/>
+      <modParam name="eGearRatio" value="16777216/500000"/>
+      <modParam name="enableHM" value="true"/>
+      <modParam name="homeMethod" value="-1"/>
+      <modParam name="homeOffset" value="0"/>
+      <modParam name="homeTorqueLevel_pct" value="5"/>
+      <modParam name="homeTorqueTime_ms" value="100"/>
+    </slave>
+  </master>
+</masters>
