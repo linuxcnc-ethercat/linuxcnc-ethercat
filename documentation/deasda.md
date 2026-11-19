@@ -39,14 +39,23 @@ To ensure that a change in operational mode does not occur during the linuxcnc r
     </slave>
 ```
 
-There is 1 `<modParam>` setting:
+The following `<modParam>` settings are available:
 
 - `opmode`: controls the operational mode based on Object 6060h: Modes of operation.
   Supported modes are:
   - `CSV`: Cyclic Synchronous Velocity mode (Value for 0x6060: 9) DEFAULT when modParam not used.
   - `CSP`: Cyclic Synchronous Position mode (Value for 0x6060: 8)
-    
-All of these settings are case insensitive.
+- `enableDigitalOutput`: `true`/`false`, maps the digital outputs (A2 and A3 only, default `true`).
+- `enableHM`: `true`/`false`, enables drive-internal homing (default `false`). See [Homing Mode](#homing-mode).
+- `homeMethod`: homing method, written to Object 6098h at startup. See [Homing Mode](#homing-mode).
+- `homeOffset`: home offset in PUU, written to Object 607Ch at startup. See [Homing Mode](#homing-mode).
+- `homeTorqueLevel`: A3 and B3 only. Torque level in % for homing on a hard stop (1 to 300), written to
+  drive parameter P1.087 at startup. See [Homing Mode](#homing-mode).
+- `homeTorqueTime`: A3 and B3 only. Time in ms the torque has to stay above the level (2 to 2000), written
+  to drive parameter P1.088 at startup. See [Homing Mode](#homing-mode).
+- `eGearRatio`: E-Gear ratio, written to Object 6093h at startup. See [Setting Pulses per Rev with Egear](#setting-pulses-per-rev-with-egear).
+
+The `opmode` values are case insensitive.
 
 ## Encoder count and Axis Movement Scale
 
@@ -91,16 +100,136 @@ Another example:
 lcec.0.A3.extenc-scale 3200
 ```
 
-### Setting Pulses per Rev with Egear 
+### Setting Pulses per Rev with Egear
 
-TODO:
+ASDA drives use an electronic gear ("E-Gear") to translate between the position unit used on the bus
+(PUU, "pulse of user unit") and encoder pulses:
+
 ```
-ASDA series drive follow the concept of using egear to translate between encoder pulses and external input. This setting relates the encoder's pprev with the pitch of the ballscrew and additional transmission factors of belt drives if these are in place.
-
-For a ball screw pitch of p = 5mm, a gearing ratio of 1:1 the calculcation would be as follows:
+encoder pulses = PUU * N / M
 ```
-TODO/
 
+`N` is the numerator (Object 6093h sub 1, drive parameter P1.044) and `M` the denominator (Object
+6093h sub 2, P1.045). All position objects of the drive (target position, actual position, home
+offset) are in PUU, so one motor revolution is `encoder resolution * M / N` PUU.
+
+In EtherCAT mode the drive resets the E-Gear ratio to 1:1 on every power cycle (unless P3.012.Z is
+set to 1), which is what this driver assumes by default. To use a different ratio, set it with
+the `eGearRatio` modParam, written as `numerator/denominator` (`numerator:denominator` also works):
+
+```xml
+    <slave idx="1" type="DeASDA3" name="A3">
+      <modParam name="opmode" value="CSP"/>
+      <modParam name="eGearRatio" value="16777216/100000"/>
+    </slave>
+```
+
+This example makes an A3 motor with a 24 bit encoder use 100,000 PUU per revolution.
+
+Notes:
+- The driver adjusts the default of `srv-pulses-per-rev` to match: default encoder resolution *
+  M / N (100,000 in the example above). If your motor does not have the default encoder resolution
+  of the drive series, set `srv-pulses-per-rev` yourself to `encoder resolution * M / N`.
+- Pick a ratio where `encoder resolution * M / N` is an integer, otherwise the position scaling
+  is slightly off.
+- The drive limits the ratio to 1 < N/M < 262144 on A3/B3 (N: 1 to 2^29-1, M: 1 to 2^31-1), see
+  P1.044/P1.045 in the drive manual.
+- The drive only accepts a new ratio while the servo is off. The driver writes it during startup.
+- Changing the ratio re-defines the position system of the drive, so the axis needs to be homed
+  again.
+- Velocities (0.1 rpm) are not affected by the E-Gear ratio.
+
+## Homing Mode
+
+The drive can home itself (CiA 402 Homing mode, Object 6060h = 6), using the home switch, the
+limit switches, the encoder Z pulse or a hard stop. Add `enableHM` to enable this:
+
+```xml
+    <slave idx="1" type="DeASDA3" name="A3">
+      <modParam name="opmode" value="CSP"/>
+      <modParam name="enableHM" value="true"/>
+      <modParam name="homeMethod" value="1"/>
+      <modParam name="homeOffset" value="0"/>
+    </slave>
+```
+
+`enableHM` adds Objects 6060h (Modes of operation) and 6061h (Modes of operation display) to the
+PDO mapping, so the driver can switch between homing mode and CSP/CSV while running, and adds
+these pins:
+
+```
+bit   I/O lcec.0.A3.srv-home               | Start homing. The driver clears it when homing is complete.
+bit   OUT lcec.0.A3.srv-homed              | Drive reports "homing is complete" (statusword bit 12 in homing mode)
+bit   OUT lcec.0.A3.srv-homing             | Homing is running
+bit   OUT lcec.0.A3.srv-homing-error       | Drive reports a homing error (statusword bit 13 in homing mode)
+s32   OUT lcec.0.A3.srv-opmode-display     | Active mode of the drive (6061h): 6 = homing, 8 = CSP, 9 = CSV
+float OUT lcec.0.A3.srv-pos-fb             | CSP only: position feedback for joint.N.motor-pos-fb, see below
+s32   IN  lcec.0.A3.srv-home-method        | Homing method (6098h)
+u32   IN  lcec.0.A3.srv-home-velocity-fast | Speed during search for the switch (6099h sub 1)
+u32   IN  lcec.0.A3.srv-home-velocity-slow | Speed during search for zero / the Z pulse (6099h sub 2)
+u32   IN  lcec.0.A3.srv-home-accel         | Homing acceleration (609Ah)
+```
+
+The four `srv-home-*` setting pins start out with the values that are set in the drive (after
+`homeMethod` has been applied). Changing a pin writes the new value to the drive. Don't change
+them while homing is running.
+
+Units and values, see the description of the objects in the EtherCAT chapter of the drive manual:
+- `homeMethod` / `srv-home-method`: 1 to 35 are the CiA 402 methods (15, 16, 31 and 32 are
+  reserved), 35 defines the current position as the origin. A3 and B3 also accept -1 to -4 for
+  homing on a hard stop. The drive default is 0, so a method has to be set before homing.
+- `homeOffset`: PUU.
+- `srv-home-velocity-fast` / `srv-home-velocity-slow`: 0.1 rpm by default (range 1 to 20000 and 1
+  to 5000 on A3/B3).
+- `srv-home-accel`: by default the time in ms to accelerate from 0 to 3000 rpm.
+
+### Homing sequence
+
+1. Turn the servo on as usual (`srv-switch-on`, `srv-enable-volt`, `srv-enable`).
+2. Set `srv-home`. The driver requests homing mode, waits until the drive reports it in
+   `srv-opmode-display` and then sets the homing start bit (controlword bit 4).
+3. The drive moves on its own. `srv-homing` is on. The driver ignores `srv-pos-cmd` / `srv-vel-cmd`
+   while the drive is not in CSP/CSV mode.
+4. When the drive reports that homing is complete, the driver sets `srv-homed`, clears `srv-home`
+   and switches back to CSP/CSV.
+
+`srv-home` is also cleared if the drive reports a fault. On a homing error `srv-homing-error`
+is set and `srv-home` stays on; clear it to leave homing mode.
+
+Homing changes the actual position of the drive (Object 6064h), so the position feedback jumps
+when homing completes. In CSP mode the commanded position has to follow that jump, which is what
+LinuxCNC does when it homes on an encoder index. So connect `srv-home` like an index-enable pin
+and use `srv-pos-fb` as the position feedback:
+
+```
+net x-index-enable joint.0.index-enable <=> lcec.0.A3.srv-home
+net x-pos-fb       lcec.0.A3.srv-pos-fb  => joint.0.motor-pos-fb
+```
+
+and set up the joint in the INI file to home on index without a switch search (`HOME_SEARCH_VEL = 0`,
+a small non-zero `HOME_LATCH_VEL`, `HOME_USE_INDEX = YES`). `HOME_LATCH_VEL` is not used to move
+the motor, the drive uses its own homing speeds.
+
+`srv-pos-fb` is the actual position of the drive, in the same units as `srv-pos-cmd`. While
+`srv-home` is set it reports `srv-pos-cmd` instead: the drive moves on its own during homing and
+LinuxCNC would otherwise stop with a following error. `enc-pos` and `enc-pos-abs` always show the
+real position. `srv-pos-fb` only exists in CSP mode.
+
+After homing, the joint position is the position of the drive plus `HOME_OFFSET`.
+
+Homing on a hard stop (methods -1 to -4, A3 and B3) also needs the drive parameters P1.087 and
+P1.088. The drive takes the stop as reached when the motor torque has been above the level of
+P1.087 (% of rated torque, drive default 1) for the time of P1.088 (ms, drive default 2000). Set
+them with `homeTorqueLevel` and `homeTorqueTime`:
+
+```xml
+      <modParam name="homeMethod" value="-1"/>
+      <modParam name="homeTorqueLevel" value="5"/>
+      <modParam name="homeTorqueTime" value="100"/>
+```
+
+A level that is too low makes the drive take friction for the stop; start low and raise it until
+the axis reliably reaches the stop.
 
 ## Exposed Pins Common
 
