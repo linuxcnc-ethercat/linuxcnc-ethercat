@@ -155,7 +155,8 @@ typedef struct {
   hal_bit_t *homing;
   hal_bit_t *homing_error;
   hal_s32_t *opmode_display;
-  hal_float_t *pos_fb;  // CSP only
+  hal_float_t *pos_fb;
+  hal_float_t *pos_cmd;  // CSV only, in CSP the position command is cmd_value
   hal_s32_t *home_method;
   hal_u32_t *home_velocity_fast;
   hal_u32_t *home_velocity_slow;
@@ -288,6 +289,14 @@ static const lcec_pindesc_t slave_pins_hm[] = {
 // Position feedback for joint.N.motor-pos-fb, which doesn't trip a following error while the drive is homing.
 static const lcec_pindesc_t slave_pins_hm_csp[] = {
     {HAL_FLOAT, HAL_OUT, offsetof(lcec_deasda_data_t, pos_fb), "%s.%s.%s.srv-pos-fb"},
+    {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
+};
+
+// In CSV the drive only gets a velocity, so the position command of the joint needs its own pin.  It is only
+// used to generate srv-pos-fb while the drive is homing.
+static const lcec_pindesc_t slave_pins_hm_csv[] = {
+    {HAL_FLOAT, HAL_OUT, offsetof(lcec_deasda_data_t, pos_fb), "%s.%s.%s.srv-pos-fb"},
+    {HAL_FLOAT, HAL_IN, offsetof(lcec_deasda_data_t, pos_cmd), "%s.%s.%s.srv-pos-cmd"},
     {HAL_TYPE_UNSPECIFIED, HAL_DIR_UNSPECIFIED, -1, NULL},
 };
 
@@ -550,6 +559,8 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
     if ((err = lcec_pin_newf_list(hal_data, slave_pins_hm, LCEC_MODULE_NAME, master->name, slave->name)) != 0) return err;
     if (operationmode == DEASDA_OPMODE_CSP) {
       if ((err = lcec_pin_newf_list(hal_data, slave_pins_hm_csp, LCEC_MODULE_NAME, master->name, slave->name)) != 0) return err;
+    } else {
+      if ((err = lcec_pin_newf_list(hal_data, slave_pins_hm_csv, LCEC_MODULE_NAME, master->name, slave->name)) != 0) return err;
     }
 
     // The homing settings are not mapped; they are written through SDO requests whenever a pin changes.
@@ -776,7 +787,7 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
   // with the falling edge of `srv-home`.
   if (hal_data->pos_fb != NULL) {
     if (LCEC_PIN_BIT_GET(hal_data->home)) {
-      LCEC_PIN_FLOAT_SET(hal_data->pos_fb, LCEC_PIN_FLOAT_GET(hal_data->cmd_value));
+      LCEC_PIN_FLOAT_SET(hal_data->pos_fb, LCEC_PIN_FLOAT_GET(hal_data->pos_cmd != NULL ? hal_data->pos_cmd : hal_data->cmd_value));
     } else if (LCEC_PARAM_U32_GET(hal_data->pprev) > 0) {
       LCEC_PIN_FLOAT_SET(hal_data->pos_fb,
           (double)(int32_t)pos_cnt * LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) / (double)LCEC_PARAM_U32_GET(hal_data->pprev));

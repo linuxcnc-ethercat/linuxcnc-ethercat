@@ -143,9 +143,14 @@ Pins with <modParam name="enableHM" value="true"/>:
     Active mode of operation of the drive (6 = homing, 8 = CSP, 9 = CSV).
 
   FLOAT OUT srv-pos-fb
-    CSP mode only. Actual position of the drive in units of srv-pos-cmd.
+    Actual position of the drive in units of srv-pos-cmd.
     Follows srv-pos-cmd while srv-home is set, to prevent a following
     error while the drive is homing. Connect to joint.N.motor-pos-fb.
+
+  FLOAT IN srv-pos-cmd
+    CSV mode only (in CSP mode this is the regular command pin).
+    Position command of the joint. It is not sent to the drive, it is
+    only used for srv-pos-fb while the drive is homing.
 
   S32 IN srv-home-method
     Homing method (0x6098).

@@ -163,7 +163,8 @@ bit   OUT lcec.0.A3.srv-homed              | Drive reports "homing is complete" 
 bit   OUT lcec.0.A3.srv-homing             | Homing is running
 bit   OUT lcec.0.A3.srv-homing-error       | Drive reports a homing error (statusword bit 13 in homing mode)
 s32   OUT lcec.0.A3.srv-opmode-display     | Active mode of the drive (6061h): 6 = homing, 8 = CSP, 9 = CSV
-float OUT lcec.0.A3.srv-pos-fb             | CSP only: position feedback for joint.N.motor-pos-fb, see below
+float OUT lcec.0.A3.srv-pos-fb             | Position feedback for joint.N.motor-pos-fb, see below
+float IN  lcec.0.A3.srv-pos-cmd            | CSV only: position command of the joint, see below
 s32   IN  lcec.0.A3.srv-home-method        | Homing method (6098h)
 u32   IN  lcec.0.A3.srv-home-velocity-fast | Speed during search for the switch (6099h sub 1)
 u32   IN  lcec.0.A3.srv-home-velocity-slow | Speed during search for zero / the Z pulse (6099h sub 2)
@@ -197,9 +198,9 @@ Units and values, see the description of the objects in the EtherCAT chapter of 
 is set and `srv-home` stays on; clear it to leave homing mode.
 
 Homing changes the actual position of the drive (Object 6064h), so the position feedback jumps
-when homing completes. In CSP mode the commanded position has to follow that jump, which is what
-LinuxCNC does when it homes on an encoder index. So connect `srv-home` like an index-enable pin
-and use `srv-pos-fb` as the position feedback:
+when homing completes. The commanded position has to follow that jump, which is what LinuxCNC does
+when it homes on an encoder index. So connect `srv-home` like an index-enable pin and use
+`srv-pos-fb` as the position feedback:
 
 ```
 net x-index-enable joint.0.index-enable <=> lcec.0.A3.srv-home
@@ -213,7 +214,26 @@ the motor, the drive uses its own homing speeds.
 `srv-pos-fb` is the actual position of the drive, in the same units as `srv-pos-cmd`. While
 `srv-home` is set it reports `srv-pos-cmd` instead: the drive moves on its own during homing and
 LinuxCNC would otherwise stop with a following error. `enc-pos` and `enc-pos-abs` always show the
-real position. `srv-pos-fb` only exists in CSP mode.
+real position.
+
+#### CSV mode
+
+In CSV mode the position loop is closed in HAL, usually with a `pid` component, and the drive only
+gets a velocity. The driver then has no position command to report while the drive is homing, so
+`enableHM` adds a `srv-pos-cmd` input in CSV mode as well. Connect the position command of the
+joint to it, next to the PID, and connect `srv-home` to the `index-enable` pin of the PID as well:
+
+```
+net x-pos-cmd      joint.0.motor-pos-cmd => pid.x.command lcec.0.A3.srv-pos-cmd
+net x-pos-fb       lcec.0.A3.srv-pos-fb  => pid.x.feedback joint.0.motor-pos-fb
+net x-vel-cmd      pid.x.output          => lcec.0.A3.srv-vel-cmd
+net x-index-enable joint.0.index-enable <=> lcec.0.A3.srv-home
+net x-index-enable pid.x.index-enable
+```
+
+The driver sends a velocity of 0 instead of `srv-vel-cmd` while the drive is homing and until it
+is back in CSV mode. In CSV mode `srv-pos-cmd` is not sent to the drive, it is only used for
+`srv-pos-fb`.
 
 After homing, the joint position is the position of the drive plus `HOME_OFFSET`.
 
@@ -232,7 +252,8 @@ A level that is too low makes the drive take friction for the stop; start low an
 the axis reliably reaches the stop.
 
 See [examples/deasdb3-homing](../examples/deasdb3-homing) for a complete configuration with two
-B3 drives.
+B3 drives in CSP mode, and [examples/deasdb3-homing-csv](../examples/deasdb3-homing-csv) for the
+same machine in CSV mode.
 
 ## Exposed Pins Common
 
