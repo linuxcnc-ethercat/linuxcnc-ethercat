@@ -76,8 +76,8 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave);
 // Settings for homing on a hard stop.  The ESI file of the A2 doesn't list these two objects, so they are
 // only offered for the x3 drives.
 #define DEASDA_MODPARAMS_HARDSTOP                                                                                               \
-  {"homeTorqueLevel", M_HOMETORQUELVL, MODPARAM_TYPE_U32, NULL, "Hard stop homing: torque level in % (P1.087, 0x2157)"},       \
-      {"homeTorqueTime", M_HOMETORQUETM, MODPARAM_TYPE_U32, NULL, "Hard stop homing: level reached timer in ms (P1.088, 0x2158)"}
+  {"homeTorqueLevel_pct", M_HOMETORQUELVL, MODPARAM_TYPE_U32, NULL, "Hard stop homing: torque level in % (P1.087, 0x2157)"},       \
+      {"homeTorqueTime_ms", M_HOMETORQUETM, MODPARAM_TYPE_U32, NULL, "Hard stop homing: level reached timer in ms (P1.088, 0x2158)"}
 
 static const lcec_modparam_desc_t lcec_deasda_modparams[] = {
     {"opmode", M_OPERATIONMODE, MODPARAM_TYPE_STRING, "CSP", "Operation mode, CSV or CSP"},
@@ -476,20 +476,20 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
   pval = lcec_modparam_get(slave, M_HOMETORQUELVL);
   if (pval != NULL) {
     if (pval->u32 < 1 || pval->u32 > 300) {
-      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "homeTorqueLevel %u of slave %s.%s is out of range (1 to 300 %%)\n",
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "homeTorqueLevel_pct %u of slave %s.%s is out of range (1 to 300 %%)\n",
           (unsigned)pval->u32, master->name, slave->name);
       return -1;
     }
-    if (lcec_write_sdo16_modparam(slave, 0x2157, 0x00, pval->u32, "homeTorqueLevel") != 0) return -1;
+    if (lcec_write_sdo16_modparam(slave, 0x2157, 0x00, pval->u32, "homeTorqueLevel_pct") != 0) return -1;
   }
   pval = lcec_modparam_get(slave, M_HOMETORQUETM);
   if (pval != NULL) {
     if (pval->u32 < 2 || pval->u32 > 2000) {
-      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "homeTorqueTime %u of slave %s.%s is out of range (2 to 2000 ms)\n",
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "homeTorqueTime_ms %u of slave %s.%s is out of range (2 to 2000 ms)\n",
           (unsigned)pval->u32, master->name, slave->name);
       return -1;
     }
-    if (lcec_write_sdo16_modparam(slave, 0x2158, 0x00, pval->u32, "homeTorqueTime") != 0) return -1;
+    if (lcec_write_sdo16_modparam(slave, 0x2158, 0x00, pval->u32, "homeTorqueTime_ms") != 0) return -1;
   }
 
   // set interpolation time period

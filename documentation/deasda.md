@@ -49,9 +49,9 @@ The following `<modParam>` settings are available:
 - `enableHM`: `true`/`false`, enables drive-internal homing (default `false`). See [Homing Mode](#homing-mode).
 - `homeMethod`: homing method, written to Object 6098h at startup. See [Homing Mode](#homing-mode).
 - `homeOffset`: home offset in PUU, written to Object 607Ch at startup. See [Homing Mode](#homing-mode).
-- `homeTorqueLevel`: A3 and B3 only. Torque level in % for homing on a hard stop (1 to 300), written to
+- `homeTorqueLevel_pct`: A3 and B3 only. Torque level in % for homing on a hard stop (1 to 300), written to
   drive parameter P1.087 at startup. See [Homing Mode](#homing-mode).
-- `homeTorqueTime`: A3 and B3 only. Time in ms the torque has to stay above the level (2 to 2000), written
+- `homeTorqueTime_ms`: A3 and B3 only. Time in ms the torque has to stay above the level (2 to 2000), written
   to drive parameter P1.088 at startup. See [Homing Mode](#homing-mode).
 - `eGearRatio`: E-Gear ratio, written to Object 6093h at startup. See [Setting Pulses per Rev with Egear](#setting-pulses-per-rev-with-egear).
 
@@ -220,12 +220,12 @@ After homing, the joint position is the position of the drive plus `HOME_OFFSET`
 Homing on a hard stop (methods -1 to -4, A3 and B3) also needs the drive parameters P1.087 and
 P1.088. The drive takes the stop as reached when the motor torque has been above the level of
 P1.087 (% of rated torque, drive default 1) for the time of P1.088 (ms, drive default 2000). Set
-them with `homeTorqueLevel` and `homeTorqueTime`:
+them with `homeTorqueLevel_pct` and `homeTorqueTime_ms`:
 
 ```xml
       <modParam name="homeMethod" value="-1"/>
-      <modParam name="homeTorqueLevel" value="5"/>
-      <modParam name="homeTorqueTime" value="100"/>
+      <modParam name="homeTorqueLevel_pct" value="5"/>
+      <modParam name="homeTorqueTime_ms" value="100"/>
 ```
 
 A level that is too low makes the drive take friction for the stop; start low and raise it until
