@@ -69,10 +69,12 @@ Pins:
     motor has reached requested velocity
 
   BIT OUT srv-limit-active
-    motor driver has reached some limit.
+    motor driver has reached some limit (statusword bit 11; on A3 and B3
+    also the positive and negative limit in statusword bits 14 and 15).
 
   BIT OUT srv-zero-speed
-    motor has stopped
+    motor has stopped: the actual speed is below the zero speed detection
+    level of the drive (0x606F, drive parameter P1.038, default 10 rpm)
 
   S32 OUT srv-enc-raw
     raw value from motor encoder without offset calculation. This

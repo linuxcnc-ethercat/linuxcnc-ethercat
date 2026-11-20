@@ -340,6 +340,13 @@ bit   OUT lcec.0.A3.srv-volt-enabled
 bit   OUT lcec.0.A3.srv-warning
 bit   OUT lcec.0.A3.srv-zero-speed
 ```
+Notes:
+- `srv-zero-speed` is true while the actual speed is below the zero speed detection level of the
+  drive (Object 606Fh, drive parameter P1.038, default 10 rpm). The level is read from the drive at
+  startup.
+- `srv-limit-active` is statusword bit 11 (internal limit active). On A3 and B3 it is also true
+  while the drive reports the positive or negative limit (statusword bits 14 and 15).
+
 _Digital Inputs and Outputs at CN1_
 ```
 bit   OUT lcec.0.A3.din-1

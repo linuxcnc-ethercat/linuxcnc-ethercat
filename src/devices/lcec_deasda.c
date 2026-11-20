@@ -29,6 +29,7 @@
 #define FLAG_LOWRES_ENC  1 << 0  // Device uses low res encoder as default
 #define FLAG_HIGHRES_ENC 1 << 1  // Device uses high res encoder as default x3 series
 #define FLAG_DOUT        1 << 2  // Device has digital outputs
+#define FLAG_LIMIT_BITS  1 << 3  // Device reports the positive/negative limit in statusword bits 14 and 15
 
 #define M_OPERATIONMODE 0
 #define M_DIGITALOUT    1
@@ -46,6 +47,9 @@
 #define DEASDA_RPM_RCPT   (1.0 / DEASDA_RPM_FACTOR)
 #define DEASDA_RPM_MUL    (60.0)
 #define DEASDA_RPM_DIV    (1.0 / 60.0)
+
+// Zero speed detection level in 0.1 rpm, if it can't be read from the drive (0x606F, drive default).
+#define DEASDA_ZERO_SPEED_DEFLT 100
 
 #define DEASDA_FAULT_AUTORESET_CYCLES  100
 #define DEASDA_FAULT_AUTORESET_RETRIES 3
@@ -116,8 +120,9 @@ static const drive_operationmodes_t drive_operationmodes[] = {
 // configurations.
 static lcec_typelist_t types[] = {
     {"DeASDA", LCEC_DELTA_VID, 0x10305070, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_LOWRES_ENC | FLAG_DOUT},
-    {"DeASDA3", LCEC_DELTA_VID, 0x00006010, 0, NULL, lcec_deasda_init, lcec_deasda_modparams_a3, FLAG_HIGHRES_ENC | FLAG_DOUT},
-    {"DeASDB3", LCEC_DELTA_VID, 0x00006080, 0, NULL, lcec_deasda_init, lcec_deasda_modparams_b3, FLAG_HIGHRES_ENC},
+    {"DeASDA3", LCEC_DELTA_VID, 0x00006010, 0, NULL, lcec_deasda_init, lcec_deasda_modparams_a3,
+        FLAG_HIGHRES_ENC | FLAG_DOUT | FLAG_LIMIT_BITS},
+    {"DeASDB3", LCEC_DELTA_VID, 0x00006080, 0, NULL, lcec_deasda_init, lcec_deasda_modparams_b3, FLAG_HIGHRES_ENC | FLAG_LIMIT_BITS},
     {NULL},
 };
 
@@ -205,6 +210,9 @@ typedef struct {
   unsigned int torque_pdo_os;
   unsigned int opmode_pdo_os;
   unsigned int opmode_display_pdo_os;
+
+  int limit_bits;       // statusword bits 14/15 are the positive/negative limit
+  uint16_t zero_speed_level;  // zero speed detection level of the drive [0.1 rpm]
 
   int hm_enabled;         // homing mode support is mapped and exported
   int8_t opmode_cyclic;   // configured cyclic mode (CSP or CSV)
@@ -442,6 +450,13 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
   hal_data = LCEC_HAL_ALLOCATE(lcec_deasda_data_t);
   slave->hal_data = hal_data;
   hal_data->hm_enabled = enable_hm;
+  hal_data->limit_bits = (flags & FLAG_LIMIT_BITS) != 0;
+
+  // Zero speed detection level of the drive (0x606F, drive parameter P1.038), for srv-zero-speed.
+  hal_data->zero_speed_level = DEASDA_ZERO_SPEED_DEFLT;
+  if (lcec_read_sdo16(slave, 0x606f, 0x00, &hal_data->zero_speed_level) != 0) {
+    hal_data->zero_speed_level = DEASDA_ZERO_SPEED_DEFLT;
+  }
   hal_data->opmode_cyclic = operationmode;
   hal_data->opmode_current = operationmode;
 
@@ -772,8 +787,13 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
   LCEC_PIN_BIT_SET(hal_data->warning, (status >> 7) & 0x01);
   LCEC_PIN_BIT_SET(hal_data->remote, (status >> 9) & 0x01);
   LCEC_PIN_BIT_SET(hal_data->at_speed, (status >> 10) & 0x01);
-  LCEC_PIN_BIT_SET(hal_data->limit_active, (status >> 11) & 0x01);
-  LCEC_PIN_BIT_SET(hal_data->zero_speed, (status >> 12) & 0x01);
+  // Bit 11 is "internal limit active" in CiA 402.  The x3 drives don't use it (reserved), they report the
+  // positive and negative limit in bits 14 and 15.
+  if (hal_data->limit_bits) {
+    LCEC_PIN_BIT_SET(hal_data->limit_active, (status & ((1 << 11) | (1 << 14) | (1 << 15))) != 0);
+  } else {
+    LCEC_PIN_BIT_SET(hal_data->limit_active, (status >> 11) & 0x01);
+  }
 
   if (hal_data->hm_enabled) lcec_deasda_read_homing(hal_data, pd, status, period);
 
@@ -798,6 +818,9 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
 
   // read current speed
   speed_raw = EC_READ_S32(&pd[hal_data->currvel_pdo_os]);
+  // Statusword bit 12 is only "zero speed" in profile velocity mode; in CSP and CSV it is "mode is in
+  // effect".  So compare the actual speed with the zero speed detection level of the drive instead.
+  LCEC_PIN_BIT_SET(hal_data->zero_speed, llabs((long long)speed_raw) < hal_data->zero_speed_level);
   rpm = (double)speed_raw * DEASDA_RPM_FACTOR;
   LCEC_PIN_FLOAT_SET(hal_data->vel_fb_rpm, rpm);
   LCEC_PIN_FLOAT_SET(hal_data->vel_fb_rpm_abs, fabs(rpm));
