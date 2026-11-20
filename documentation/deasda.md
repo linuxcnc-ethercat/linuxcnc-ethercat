@@ -389,6 +389,10 @@ float IN     lcec.0.A3.srv-pos-cmd| Connect to position command from either join
 
 Note: 
 - x.x.x.srv-operation-mode is set to 8 by the driver 
+- The position of the drive is a 32 bit value in PUU. With the default E-Gear ratio of 1:1 and a
+  24 bit encoder that is only +/-128 motor revolutions. Beyond that the position wraps around; the
+  driver lets the command wrap the same way and extends the feedback (`enc-pos`, `enc-pos-abs`,
+  `srv-pos-fb`) to 64 bit. For long axes, consider a lower resolution with `eGearRatio`.
 
 ## How to file a bug
 

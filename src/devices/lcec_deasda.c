@@ -1025,7 +1025,11 @@ static void lcec_deasda_write_csp(lcec_slave_t *slave, long period) {
   // ASDA Drives expect target Position in PUU (Pulse per User Unit)
   // See https://www.deltaww.com/en-US/FAQ/228
   // Calculation accordingly based on pprev and pos_scale (i.e. pitch of ball screw)
-  pos_puu = (int32_t)(LCEC_PIN_FLOAT_GET(hal_data->cmd_value) * LCEC_PARAM_U32_GET(hal_data->pprev) / LCEC_PARAM_FLOAT_GET(hal_data->pos_scale));
+  // The position of the drive is a 32 bit value that wraps, and the encoder class extends the feedback to
+  // 64 bit.  So let the command wrap the same way; casting a double that doesn't fit straight to int32_t
+  // is undefined.
+  pos_puu = (int32_t)(uint32_t)(int64_t)(
+      LCEC_PIN_FLOAT_GET(hal_data->cmd_value) * LCEC_PARAM_U32_GET(hal_data->pprev) / LCEC_PARAM_FLOAT_GET(hal_data->pos_scale));
   // Homing redefines the position of the drive, and the drive moves on its own while it is homing.  Keep
   // the target on the actual position until CSP is active again, so there is no jump when it takes over.
   if (hold) pos_puu = EC_READ_S32(&pd[hal_data->currpos_pdo_os]);
