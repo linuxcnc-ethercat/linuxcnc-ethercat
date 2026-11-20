@@ -182,10 +182,11 @@ and 127; other values are not sent to the drive, and homing does not start with 
 Units and values, see the description of the objects in the EtherCAT chapter of the drive manual:
 - `homeMethod` / `srv-home-method`: 1 to 35 are the CiA 402 methods (15, 16, 31 and 32 are
   reserved), 35 defines the current position as the origin. A3 and B3 also accept -1 to -4 for
-  homing on a hard stop. The drive default is 0, so a method has to be set before homing.
+  homing on a hard stop; the A2 has no hard stop methods. The drive default is 0, so a method has
+  to be set before homing.
 - `homeOffset`: PUU.
 - `srv-home-velocity-fast` / `srv-home-velocity-slow`: 0.1 rpm by default (range 1 to 20000 and 1
-  to 5000 on A3/B3).
+  to 5000 on A3/B3, 1 to 2000 and 1 to 500 on A2).
 - `srv-home-accel`: by default the time in ms to accelerate from 0 to 3000 rpm.
 
 ### Homing sequence
@@ -345,7 +346,10 @@ Notes:
   drive (Object 606Fh, drive parameter P1.038, default 10 rpm). The level is read from the drive at
   startup.
 - `srv-limit-active` is statusword bit 11 (internal limit active). On A3 and B3 it is also true
-  while the drive reports the positive or negative limit (statusword bits 14 and 15).
+  while the drive reports the positive or negative limit (statusword bits 14 and 15). The A2 does
+  not support this status bit, so the pin stays false there; use `din-neg-lim` and `din-pos-lim`.
+- On the A2, `din-1` to `din-7` only follow the digital inputs if drive parameter P3-18 U is set to
+  1 or 2.
 
 _Digital Inputs and Outputs at CN1_
 ```

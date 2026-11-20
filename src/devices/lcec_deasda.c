@@ -77,8 +77,8 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave);
       {"homeOffset", M_HOMEOFFSET, MODPARAM_TYPE_S32, NULL, "Home offset in PUU (0x607C)"},                                          \
       {"eGearRatio", M_EGEARRATIO, MODPARAM_TYPE_STRING, NULL, "E-Gear ratio (0x6093), as numerator/denominator"}
 
-// Settings for homing on a hard stop.  The ESI file of the A2 doesn't list these two objects, so they are
-// only offered for the x3 drives.
+// Settings for homing on a hard stop.  The A2 has no hard stop homing methods (0x6098 is 0 to 35 there),
+// so they are only offered for the x3 drives.
 #define DEASDA_MODPARAMS_HARDSTOP                                                                                               \
   {"homeTorqueLevel_pct", M_HOMETORQUELVL, MODPARAM_TYPE_U32, NULL, "Hard stop homing: torque level in % (P1.087, 0x2157)"},       \
       {"homeTorqueTime_ms", M_HOMETORQUETM, MODPARAM_TYPE_U32, NULL, "Hard stop homing: level reached timer in ms (P1.088, 0x2158)"}
@@ -788,7 +788,7 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
   LCEC_PIN_BIT_SET(hal_data->remote, (status >> 9) & 0x01);
   LCEC_PIN_BIT_SET(hal_data->at_speed, (status >> 10) & 0x01);
   // Bit 11 is "internal limit active" in CiA 402.  The x3 drives don't use it (reserved), they report the
-  // positive and negative limit in bits 14 and 15.
+  // positive and negative limit in bits 14 and 15.  The A2 supports neither.
   if (hal_data->limit_bits) {
     LCEC_PIN_BIT_SET(hal_data->limit_active, (status & ((1 << 11) | (1 << 14) | (1 << 15))) != 0);
   } else {
