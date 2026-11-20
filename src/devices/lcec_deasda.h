@@ -50,6 +50,13 @@ Pins:
   BIT OUT srv-fault
     fault status flag from motor driver
 
+  U32 OUT srv-error-code
+    CiA 402 error code of the current alarm (0x603F), 0 without alarm
+
+  U32 OUT srv-alarm-code
+    alarm code as shown on the display of the drive (P0-01), 0 without
+    alarm
+
   BIT OUT srv-volt-enabled
     voltage-enabled status flag from motor driver
 

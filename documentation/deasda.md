@@ -315,9 +315,11 @@ bit   OUT lcec.0.A3.slave-state-safeop
 ```
 _Drive Status and Control_
 ```
+u32   OUT lcec.0.A3.srv-alarm-code
 bit   OUT lcec.0.A3.srv-at-speed
 bit   IN  lcec.0.A3.srv-enable 
 bit   IN  lcec.0.A3.srv-enable-volt
+u32   OUT lcec.0.A3.srv-error-code
 bit   OUT lcec.0.A3.srv-fault
 bit   IN  lcec.0.A3.srv-fault-reset 
 bit   IN  lcec.0.A3.srv-halt
@@ -342,6 +344,12 @@ bit   OUT lcec.0.A3.srv-warning
 bit   OUT lcec.0.A3.srv-zero-speed
 ```
 Notes:
+- `srv-error-code` and `srv-alarm-code` tell which alarm the drive has while it reports a fault or
+  a warning, and are 0 otherwise. `srv-alarm-code` is the alarm as shown on the display of the
+  drive (drive parameter P0-01): 0x0009 is AL009, 0x0180 is AL180. `srv-error-code` is the CiA 402
+  error code (Object 603Fh); the alarm list in the EtherCAT chapter of the drive manual has both.
+  The codes are read from the drive when the alarm shows up and every 0.5 s after that, so they
+  lag `srv-fault` by a few cycles.
 - `srv-zero-speed` is true while the actual speed is below the zero speed detection level of the
   drive (Object 606Fh, drive parameter P1.038, default 10 rpm). The level is read from the drive at
   startup.

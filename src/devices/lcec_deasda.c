@@ -51,6 +51,9 @@
 // Zero speed detection level in 0.1 rpm, if it can't be read from the drive (0x606F, drive default).
 #define DEASDA_ZERO_SPEED_DEFLT 100
 
+// How often the alarm codes are read again while the drive reports a fault or a warning.
+#define DEASDA_ALARM_REFRESH_NS 500000000LL
+
 #define DEASDA_FAULT_AUTORESET_CYCLES  100
 #define DEASDA_FAULT_AUTORESET_RETRIES 3
 
@@ -161,6 +164,8 @@ typedef struct {
   hal_bit_t *fault_reset;
   hal_bit_t *halt;
   hal_u32_t *operation_mode;
+  hal_u32_t *error_code;
+  hal_u32_t *alarm_code;
   hal_float_t *cmd_value;
 
   // homing mode (only exported with <modParam name="enableHM" value="true"/>)
@@ -214,6 +219,12 @@ typedef struct {
   int limit_bits;       // statusword bits 14/15 are the positive/negative limit
   uint16_t zero_speed_level;  // zero speed detection level of the drive [0.1 rpm]
 
+  // The alarm codes are not mapped, to leave the PDO mapping alone; they are read while there is an alarm.
+  ec_sdo_request_t *error_code_sdo;  // 0x603F, CiA 402 error code
+  ec_sdo_request_t *alarm_code_sdo;  // 0x2001, drive parameter P0-01: alarm code as shown on the drive
+  int alarm_read_pending;
+  long long alarm_refresh_time;
+
   int hm_enabled;         // homing mode support is mapped and exported
   int8_t opmode_cyclic;   // configured cyclic mode (CSP or CSV)
   int8_t opmode_current;  // last value of 0x6061
@@ -261,6 +272,8 @@ static const lcec_pindesc_t slave_pins[] = {
     {HAL_BIT, HAL_IN, offsetof(lcec_deasda_data_t, fault_reset), "%s.%s.%s.srv-fault-reset"},
     {HAL_BIT, HAL_IN, offsetof(lcec_deasda_data_t, halt), "%s.%s.%s.srv-halt"},
     {HAL_U32, HAL_OUT, offsetof(lcec_deasda_data_t, operation_mode), "%s.%s.%s.srv-operation-mode"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_deasda_data_t, error_code), "%s.%s.%s.srv-error-code"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_deasda_data_t, alarm_code), "%s.%s.%s.srv-alarm-code"},
     {HAL_FLOAT, HAL_OUT, offsetof(lcec_deasda_data_t, torque),
         "%s.%s.%s.srv-torque-rel"},  // relative value (5) - hence current would be redundant
     {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, di_1), "%s.%s.%s.din-1"},
@@ -450,6 +463,8 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
   hal_data = LCEC_HAL_ALLOCATE(lcec_deasda_data_t);
   slave->hal_data = hal_data;
   hal_data->hm_enabled = enable_hm;
+  hal_data->error_code_sdo = ecrt_slave_config_create_sdo_request(slave->config, 0x603f, 0x00, 2);
+  hal_data->alarm_code_sdo = ecrt_slave_config_create_sdo_request(slave->config, 0x2001, 0x00, 2);
   hal_data->limit_bits = (flags & FLAG_LIMIT_BITS) != 0;
 
   // Zero speed detection level of the drive (0x606F, drive parameter P1.038), for srv-zero-speed.
@@ -743,6 +758,57 @@ static void lcec_deasda_read_homing(lcec_deasda_data_t *hal_data, uint8_t *pd, u
   hal_data->home_done_time = 0;
 }
 
+/// @brief Read the alarm codes of the drive through SDO requests.
+///
+/// @param active The drive reports a fault or a warning.
+static void lcec_deasda_read_alarm(lcec_deasda_data_t *hal_data, int active, long period) {
+  ec_request_state_t error_state, alarm_state;
+
+  if (hal_data->error_code_sdo == NULL || hal_data->alarm_code_sdo == NULL) return;
+
+  error_state = ecrt_sdo_request_state(hal_data->error_code_sdo);
+  alarm_state = ecrt_sdo_request_state(hal_data->alarm_code_sdo);
+
+  if (hal_data->alarm_read_pending) {
+    // wait for both reads to finish
+    if (error_state == EC_REQUEST_BUSY || alarm_state == EC_REQUEST_BUSY) {
+      if (!active) {
+        LCEC_PIN_U32_SET(hal_data->error_code, 0);
+        LCEC_PIN_U32_SET(hal_data->alarm_code, 0);
+      }
+      return;
+    }
+    hal_data->alarm_read_pending = 0;
+
+    // a result that arrives after the alarm is gone is dropped
+    if (active) {
+      if (error_state == EC_REQUEST_SUCCESS) {
+        LCEC_PIN_U32_SET(hal_data->error_code, EC_READ_U16(ecrt_sdo_request_data(hal_data->error_code_sdo)));
+      }
+      if (alarm_state == EC_REQUEST_SUCCESS) {
+        LCEC_PIN_U32_SET(hal_data->alarm_code, EC_READ_U16(ecrt_sdo_request_data(hal_data->alarm_code_sdo)));
+      }
+    }
+  }
+
+  if (!active) {
+    LCEC_PIN_U32_SET(hal_data->error_code, 0);
+    LCEC_PIN_U32_SET(hal_data->alarm_code, 0);
+    // read at once when the next alarm shows up
+    hal_data->alarm_refresh_time = 0;
+    return;
+  }
+
+  // read at the start of an alarm, and again from time to time, as the alarm can change
+  hal_data->alarm_refresh_time -= period;
+  if (hal_data->alarm_refresh_time > 0) return;
+  hal_data->alarm_refresh_time = DEASDA_ALARM_REFRESH_NS;
+
+  ecrt_sdo_request_read(hal_data->error_code_sdo);
+  ecrt_sdo_request_read(hal_data->alarm_code_sdo);
+  hal_data->alarm_read_pending = 1;
+}
+
 static void lcec_deasda_read(lcec_slave_t *slave, long period) {
   lcec_deasda_data_t *hal_data = (lcec_deasda_data_t *)slave->hal_data;
   uint8_t *pd = lcec_slave_pd(slave);
@@ -796,6 +862,9 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
   }
 
   if (hal_data->hm_enabled) lcec_deasda_read_homing(hal_data, pd, status, period);
+
+  // read the alarm codes while the drive reports a fault or a warning
+  lcec_deasda_read_alarm(hal_data, (status & ((1 << 3) | (1 << 7))) != 0, period);
 
   // clear pending fault reset if no fault
   if (!hal_data->internal_fault) hal_data->fault_reset_retry = 0;
