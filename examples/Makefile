@@ -1,6 +1,6 @@
 include ../config.mk
 
-SUBDIRS = generic-complex swm-fm45a sync-units
+SUBDIRS = deasdb3-homing-csp deasdb3-homing-csv generic-complex swm-fm45a sync-units
 
 install-examples:
 	mkdir -p $(DESTDIR)$(EMC2_HOME)/share/linuxcnc-ethercat/examples

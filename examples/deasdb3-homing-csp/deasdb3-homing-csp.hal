@@ -1,0 +1,63 @@
+# Example: two Delta ASDA-B3-E drives in CSP mode, homed by the drives.
+#   slave "x" = first drive on the bus  -> joint 0
+#   slave "y" = second drive on the bus -> joint 1
+
+loadusr -W lcec_conf ethercat-conf.xml
+loadrt lcec
+loadrt [KINS]KINEMATICS
+loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=[KINS]JOINTS
+
+# Bus read first, motion in the middle, bus write last.
+addf lcec.read-all            servo-thread
+addf motion-command-handler   servo-thread
+addf motion-controller        servo-thread
+addf lcec.write-all           servo-thread
+
+#=======================================================================
+#  X  -  joint 0
+#=======================================================================
+# srv-pulses-per-rev is set to 500000 by the driver (from eGearRatio).
+setp lcec.0.x.pos-scale [DRIVE_X]UNITS_PER_REV
+
+# Homing speeds [0.1 rpm] and acceleration [ms from 0 to 3000 rpm]
+setp lcec.0.x.srv-home-velocity-fast [DRIVE_X]HOME_SPEED_FAST
+setp lcec.0.x.srv-home-velocity-slow [DRIVE_X]HOME_SPEED_SLOW
+setp lcec.0.x.srv-home-accel         [DRIVE_X]HOME_ACCEL
+
+setp lcec.0.x.srv-enable-volt 1
+net x-enable   joint.0.amp-enable-out => lcec.0.x.srv-switch-on lcec.0.x.srv-enable
+net x-fault    lcec.0.x.srv-fault     => joint.0.amp-fault-in
+
+net x-pos-cmd  joint.0.motor-pos-cmd  => lcec.0.x.srv-pos-cmd
+net x-pos-fb   lcec.0.x.srv-pos-fb    => joint.0.motor-pos-fb
+
+# Homing: LinuxCNC sets index-enable, the drive homes itself, the driver
+# clears index-enable when the drive is done.
+net x-home     joint.0.index-enable  <=> lcec.0.x.srv-home
+
+#=======================================================================
+#  Y  -  joint 1
+#=======================================================================
+setp lcec.0.y.pos-scale [DRIVE_Y]UNITS_PER_REV
+
+setp lcec.0.y.srv-home-velocity-fast [DRIVE_Y]HOME_SPEED_FAST
+setp lcec.0.y.srv-home-velocity-slow [DRIVE_Y]HOME_SPEED_SLOW
+setp lcec.0.y.srv-home-accel         [DRIVE_Y]HOME_ACCEL
+
+setp lcec.0.y.srv-enable-volt 1
+net y-enable   joint.1.amp-enable-out => lcec.0.y.srv-switch-on lcec.0.y.srv-enable
+net y-fault    lcec.0.y.srv-fault     => joint.1.amp-fault-in
+
+net y-pos-cmd  joint.1.motor-pos-cmd  => lcec.0.y.srv-pos-cmd
+net y-pos-fb   lcec.0.y.srv-pos-fb    => joint.1.motor-pos-fb
+
+net y-home     joint.1.index-enable  <=> lcec.0.y.srv-home
+
+#=======================================================================
+#  E-stop (software loopback only - add a real E-stop chain)
+#=======================================================================
+net estop-loop  iocontrol.0.user-enable-out => iocontrol.0.emc-enable-in
+
+# No tool changer: acknowledge tool changes right away.
+net tool-prepare-loopback  iocontrol.0.tool-prepare => iocontrol.0.tool-prepared
+net tool-change-loopback   iocontrol.0.tool-change  => iocontrol.0.tool-changed
