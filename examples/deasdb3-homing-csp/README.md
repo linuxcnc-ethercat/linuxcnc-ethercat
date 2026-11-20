@@ -1,4 +1,4 @@
-# Delta ASDA-B3-E: two axes, homing by the drive
+# Delta ASDA-B3-E: two axes in CSP mode, homing by the drive
 
 LinuxCNC 2.9 configuration for two Delta ASDA-B3-E drives in CSP mode with the
 [`DeASDB3`](../../documentation/deasda.md) driver. Each drive homes itself
@@ -11,8 +11,8 @@ for how this works.
 | File | Content |
 |---|---|
 | `ethercat-conf.xml` | Bus cycle, distributed clocks, E-Gear ratio, homing method, hard stop torque level |
-| `deasdb3-homing.hal` | Drive enable, position command/feedback, homing speeds, homing handshake |
-| `deasdb3-homing.ini` | Scaling, homing speeds, joint limits, following error, homing sequence |
+| `deasdb3-homing-csp.hal` | Drive enable, position command/feedback, homing speeds, homing handshake |
+| `deasdb3-homing-csp.ini` | Scaling, homing speeds, joint limits, following error, homing sequence |
 
 ## Before the first run
 
@@ -34,7 +34,7 @@ for how this works.
 ## Run
 
 ```sh
-linuxcnc deasdb3-homing.ini
+linuxcnc deasdb3-homing-csp.ini
 ```
 
 Release E-stop, switch the machine on, then "Home All". X homes first, then

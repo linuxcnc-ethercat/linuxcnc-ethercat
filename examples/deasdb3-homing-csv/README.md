@@ -1,6 +1,6 @@
 # Delta ASDA-B3-E: two axes in CSV mode, homing by the drive
 
-The same machine as [deasdb3-homing](../deasdb3-homing), but with the drives
+The same machine as [deasdb3-homing-csp](../deasdb3-homing-csp), but with the drives
 in CSV mode: the position loop is closed in HAL with a `pid` component per
 axis and the drives get a velocity. See that example for the homing settings
 and what to check before the first run, and "Homing Mode" in the

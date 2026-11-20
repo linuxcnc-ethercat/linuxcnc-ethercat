@@ -251,7 +251,7 @@ them with `homeTorqueLevel_pct` and `homeTorqueTime_ms`:
 A level that is too low makes the drive take friction for the stop; start low and raise it until
 the axis reliably reaches the stop.
 
-See [examples/deasdb3-homing](../examples/deasdb3-homing) for a complete configuration with two
+See [examples/deasdb3-homing-csp](../examples/deasdb3-homing-csp) for a complete configuration with two
 B3 drives in CSP mode, and [examples/deasdb3-homing-csv](../examples/deasdb3-homing-csv) for the
 same machine in CSV mode.
 
