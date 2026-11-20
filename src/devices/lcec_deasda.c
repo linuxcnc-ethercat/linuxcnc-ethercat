@@ -178,6 +178,7 @@ typedef struct {
   hal_bit_t *homing_error;
   hal_s32_t *opmode_display;
   hal_float_t *pos_fb;
+  hal_bit_t *sw_limit_armed;
   hal_float_t *pos_cmd;  // CSV only, in CSP the position command is cmd_value
   hal_s32_t *home_method;
   hal_u32_t *home_velocity_fast;
@@ -189,6 +190,12 @@ typedef struct {
   lcec_param_u32_t pprev;
   lcec_param_u32_t fault_autoreset_cycles;
   lcec_param_u32_t fault_autoreset_retries;
+
+  // software limits of the drive, in joint coordinates (only exported with enableHM)
+  lcec_param_float_t sw_limit_min;
+  lcec_param_float_t sw_limit_max;
+  lcec_param_float_t sw_limit_offset;
+  lcec_param_float_t sw_limit_margin;
 
   hal_float_t *torque;
   hal_bit_t *neg_lim_switch;
@@ -232,6 +239,7 @@ typedef struct {
   int8_t opmode_cyclic;   // configured cyclic mode (CSP or CSV)
   int8_t opmode_current;  // last value of 0x6061
   int home_start_sent;    // homing start bit was set in the last write cycle
+  int referenced;         // the drive has been homed since it came up, so its position can be trusted
   int home_seen_unhomed;  // drive reported "not complete" since the start bit was set
   int home_aborted;       // a fault ended the homing run; srv-home has to go off before the next one
   long long home_done_time;
@@ -240,6 +248,9 @@ typedef struct {
   lcec_deasda_sdo_setting_t home_velocity_fast_set;
   lcec_deasda_sdo_setting_t home_velocity_slow_set;
   lcec_deasda_sdo_setting_t home_accel_set;
+  lcec_deasda_sdo_setting_t sw_limit_min_set;  // 0x607D:01
+  lcec_deasda_sdo_setting_t sw_limit_max_set;  // 0x607D:02
+  int sw_limits_available;
 
   hal_bit_t last_switch_on;
   hal_bit_t internal_fault;
@@ -309,6 +320,7 @@ static const lcec_pindesc_t slave_pins_hm[] = {
     {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, homing), "%s.%s.%s.srv-homing"},
     {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, homing_error), "%s.%s.%s.srv-homing-error"},
     {HAL_S32, HAL_OUT, offsetof(lcec_deasda_data_t, opmode_display), "%s.%s.%s.srv-opmode-display"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, sw_limit_armed), "%s.%s.%s.srv-sw-limit-armed"},
     {HAL_S32, HAL_IN, offsetof(lcec_deasda_data_t, home_method), "%s.%s.%s.srv-home-method"},
     {HAL_U32, HAL_IN, offsetof(lcec_deasda_data_t, home_velocity_fast), "%s.%s.%s.srv-home-velocity-fast"},
     {HAL_U32, HAL_IN, offsetof(lcec_deasda_data_t, home_velocity_slow), "%s.%s.%s.srv-home-velocity-slow"},
@@ -337,6 +349,16 @@ static const lcec_paramdesc_t slave_params[] = {
     {HAL_U32, HAL_RW, offsetof(lcec_deasda_data_t, pprev), "%s.%s.%s.srv-pulses-per-rev"},
     {HAL_U32, HAL_RW, offsetof(lcec_deasda_data_t, fault_autoreset_cycles), "%s.%s.%s.srv-fault-autoreset-cycles"},
     {HAL_U32, HAL_RW, offsetof(lcec_deasda_data_t, fault_autoreset_retries), "%s.%s.%s.srv-fault-autoreset-retries"},
+    {HAL_TYPE_UNSPECIFIED},
+};
+
+// Software limits of the drive.  They are in joint coordinates, like [JOINT_n]MIN_LIMIT / MAX_LIMIT in the
+// INI file, and only make sense with drive-internal homing.
+static const lcec_paramdesc_t slave_params_hm[] = {
+    {HAL_FLOAT, HAL_RW, offsetof(lcec_deasda_data_t, sw_limit_min), "%s.%s.%s.srv-sw-limit-min"},
+    {HAL_FLOAT, HAL_RW, offsetof(lcec_deasda_data_t, sw_limit_max), "%s.%s.%s.srv-sw-limit-max"},
+    {HAL_FLOAT, HAL_RW, offsetof(lcec_deasda_data_t, sw_limit_offset), "%s.%s.%s.srv-sw-limit-offset"},
+    {HAL_FLOAT, HAL_RW, offsetof(lcec_deasda_data_t, sw_limit_margin), "%s.%s.%s.srv-sw-limit-margin"},
     {HAL_TYPE_UNSPECIFIED},
 };
 
@@ -650,6 +672,18 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
     }
 
     LCEC_PIN_S32_SET(hal_data->opmode_display, operationmode);
+
+    // Software limits (0x607D).  The drive keeps them until it is power cycled, and they are only valid for
+    // the position system of the last homing run, so start out with the full range.
+    if ((err = lcec_param_newf_list(hal_data, slave_params_hm, LCEC_MODULE_NAME, master->name, slave->name)) != 0) return err;
+    if (lcec_write_sdo32(slave, 0x607d, 0x01, (uint32_t)INT32_MIN) == 0 && lcec_write_sdo32(slave, 0x607d, 0x02, INT32_MAX) == 0 &&
+        lcec_deasda_sdo_setting_init(slave, &hal_data->sw_limit_min_set, 0x607d, 0x01, 4, INT32_MIN) == 0 &&
+        lcec_deasda_sdo_setting_init(slave, &hal_data->sw_limit_max_set, 0x607d, 0x02, 4, INT32_MAX) == 0) {
+      hal_data->sw_limits_available = 1;
+    } else {
+      rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "slave %s.%s: could not reset the software limits, srv-sw-limit-* is disabled\n",
+          master->name, slave->name);
+    }
   }
 
   LCEC_PIN_U32_SET(hal_data->operation_mode, operationmode);
@@ -765,6 +799,7 @@ static void lcec_deasda_read_homing(lcec_deasda_data_t *hal_data, uint8_t *pd, u
   }
 
   // done, release the request
+  hal_data->referenced = 1;
   LCEC_PIN_BIT_SET(hal_data->home, 0);
   hal_data->home_seen_unhomed = 0;
   hal_data->home_done_time = 0;
@@ -846,6 +881,9 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
     if (hal_data->hm_enabled) {
       LCEC_PIN_BIT_SET(hal_data->homing, 0);
       LCEC_PIN_BIT_SET(hal_data->homing_error, 0);
+      // the drive may have been power cycled, so it has to be homed again before the limits are armed
+      hal_data->referenced = 0;
+      LCEC_PIN_BIT_SET(hal_data->sw_limit_armed, 0);
     }
     return;
   }
@@ -983,6 +1021,52 @@ static int lcec_deasda_sdo_update(lcec_deasda_sdo_setting_t *setting, int32_t va
   return 0;
 }
 
+/// @brief Convert a joint position to the position of the drive in PUU, limited to its 32 bit range.
+static int32_t lcec_deasda_joint_to_puu(lcec_deasda_data_t *hal_data, double pos) {
+  double puu = (pos - LCEC_PARAM_FLOAT_GET(hal_data->sw_limit_offset)) * LCEC_PARAM_U32_GET(hal_data->pprev) /
+               LCEC_PARAM_FLOAT_GET(hal_data->pos_scale);
+
+  if (puu >= (double)INT32_MAX) return INT32_MAX;
+  if (puu <= (double)INT32_MIN) return INT32_MIN;
+  return (int32_t)puu;
+}
+
+/// @brief Keep the software limits of the drive (0x607D) in line with srv-sw-limit-min / srv-sw-limit-max.
+///
+/// The limits are only armed while the drive is homed: before that its position has no relation to the
+/// machine.  In any other case the drive gets its full range, which turns the limits off.
+///
+/// @return true if the limits are off in the drive, so it is safe to start homing.
+static int lcec_deasda_write_sw_limits(lcec_deasda_data_t *hal_data) {
+  double min = LCEC_PARAM_FLOAT_GET(hal_data->sw_limit_min);
+  double max = LCEC_PARAM_FLOAT_GET(hal_data->sw_limit_max);
+  double margin = LCEC_PARAM_FLOAT_GET(hal_data->sw_limit_margin);
+  int32_t lo = INT32_MIN, hi = INT32_MAX;
+  int arm, ok;
+
+  if (!hal_data->sw_limits_available) return 1;
+
+  // min == max (the default, both 0) means that no limits are configured
+  arm = hal_data->referenced && max > min;
+  if (arm) {
+    if (margin < 0.0) margin = 0.0;
+    lo = lcec_deasda_joint_to_puu(hal_data, min - margin);
+    hi = lcec_deasda_joint_to_puu(hal_data, max + margin);
+    // a negative scale reverses the direction
+    if (lo > hi) {
+      int32_t tmp = lo;
+      lo = hi;
+      hi = tmp;
+    }
+  }
+
+  ok = lcec_deasda_sdo_update(&hal_data->sw_limit_min_set, lo);
+  ok &= lcec_deasda_sdo_update(&hal_data->sw_limit_max_set, hi);
+
+  LCEC_PIN_BIT_SET(hal_data->sw_limit_armed, arm && ok);
+  return !arm && ok;
+}
+
 /// @brief Write everything that is common to CSV and CSP: digital outputs, controlword and (with homing
 /// enabled) the mode of operation.
 ///
@@ -1030,6 +1114,7 @@ static int lcec_deasda_write_control(lcec_slave_t *slave, lcec_deasda_data_t *ha
     int8_t opmode = hal_data->opmode_cyclic;
     int32_t method = LCEC_PIN_S32_GET(hal_data->home_method);
     int settings_ok;
+    int limits_cleared;
 
     // Bring the drive in line with the homing setting pins.  0x6098 is an INTEGER8: a method that doesn't
     // fit is not sent, as the drive would get a different method than the pin shows.  Homing only starts
@@ -1049,12 +1134,17 @@ static int lcec_deasda_write_control(lcec_slave_t *slave, lcec_deasda_data_t *ha
       hal_data->home_aborted = 1;
     }
 
+    // Homing defines a new position system, and it may have to move beyond the limits (i.e. onto a hard
+    // stop), so the software limits are taken out before homing starts and put back when it is done.
+    if (home) hal_data->referenced = 0;
+    limits_cleared = lcec_deasda_write_sw_limits(hal_data);
+
     // Request homing mode first, and only set the (rising-edge triggered) start bit once the drive reports
     // homing mode with the servo on; an edge that arrives together with the mode change could get lost.
     hal_data->home_start_sent = 0;
     if (home && !hal_data->home_aborted) {
       opmode = DEASDA_OPMODE_HM;
-      if (settings_ok && hal_data->opmode_current == DEASDA_OPMODE_HM && LCEC_PIN_BIT_GET(hal_data->oper_enabled) &&
+      if (settings_ok && limits_cleared && hal_data->opmode_current == DEASDA_OPMODE_HM && LCEC_PIN_BIT_GET(hal_data->oper_enabled) &&
           (control & (1 << 3))) {
         control |= DEASDA_CONTROL_HOMING_START;
         hal_data->home_start_sent = 1;

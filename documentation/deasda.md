@@ -172,6 +172,7 @@ bit   I/O lcec.0.A3.srv-home               | Start homing. The driver clears it 
 bit   OUT lcec.0.A3.srv-homed              | Drive reports "homing is complete" (statusword bit 12 in homing mode)
 bit   OUT lcec.0.A3.srv-homing             | Homing is running
 bit   OUT lcec.0.A3.srv-homing-error       | Drive reports a homing error (statusword bit 13 in homing mode)
+bit   OUT lcec.0.A3.srv-sw-limit-armed     | The software limits of the drive are active, see below
 s32   OUT lcec.0.A3.srv-opmode-display     | Active mode of the drive (6061h): 6 = homing, 8 = CSP, 9 = CSV
 float OUT lcec.0.A3.srv-pos-fb             | Position feedback for joint.N.motor-pos-fb, see below
 float IN  lcec.0.A3.srv-pos-cmd            | CSV only: position command of the joint, see below
@@ -262,6 +263,50 @@ is back in CSV mode. In CSV mode `srv-pos-cmd` is not sent to the drive, it is o
 `srv-pos-fb`.
 
 After homing, the joint position is the position of the drive plus `HOME_OFFSET`.
+
+### Software limits of the drive
+
+The drive has its own software position limits (Object 607Dh). With drive-internal homing the
+driver can set them from the limits of the machine, as a backstop behind LinuxCNC's own limits: the
+drive then stops the axis by itself if anything on the controller side (HAL wiring, scaling, a
+position loop in CSV mode) sends it out of its travel.
+
+`enableHM` adds four parameters for this, in joint coordinates. Set them from the INI file:
+
+```
+setp lcec.0.A3.srv-sw-limit-min    [JOINT_0]MIN_LIMIT
+setp lcec.0.A3.srv-sw-limit-max    [JOINT_0]MAX_LIMIT
+setp lcec.0.A3.srv-sw-limit-offset [JOINT_0]HOME_OFFSET
+setp lcec.0.A3.srv-sw-limit-margin 1
+```
+
+- `srv-sw-limit-min` / `srv-sw-limit-max`: the limits of the joint. The feature is off while both
+  are equal (the default, 0).
+- `srv-sw-limit-offset`: the joint position of the drive's zero, which is `HOME_OFFSET` of the joint.
+- `srv-sw-limit-margin`: how far the limits of the drive are outside of the limits of the joint.
+  It has to be greater than 0: LinuxCNC should stop at its own limits first, and with the same
+  values the drive could stop a normal move to the end of the travel.
+
+The driver converts these to PUU with `pos-scale` and `srv-pulses-per-rev` and writes them to the
+drive. `srv-sw-limit-armed` shows that the drive has them.
+
+The limits are only armed while the drive is homed, because the position of the drive has no
+relation to the machine before that:
+- After startup, and after the drive has dropped off the bus, the limits are off until homing is
+  done.
+- When homing starts, the driver takes the limits out first, as homing may have to move beyond
+  them (i.e. onto a hard stop), and arms them again when homing is complete.
+
+An axis that is not homed is not protected, and neither is one that was homed to the wrong
+position.
+
+At a limit the drive stops the axis and shows AL283 (positive) or AL285 (negative). This is a
+warning, not a fault: the servo stays on, `srv-warning` is set and `srv-alarm-code` reads 0x0283 or
+0x0285. LinuxCNC keeps commanding, so it stops with a following error and switches the machine off.
+To recover, switch the machine on and home the axis again; homing takes the limits out, so the axis
+can move.
+
+The home position has to be inside the limits, or the drive stops as soon as homing is done.
 
 Homing on a hard stop (methods -1 to -4, A3 and B3) also needs the drive parameters P1.087 and
 P1.088. The drive takes the stop as reached when the motor torque has been above the level of

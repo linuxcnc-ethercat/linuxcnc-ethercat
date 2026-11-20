@@ -24,6 +24,13 @@ setp lcec.0.x.srv-home-velocity-fast [DRIVE_X]HOME_SPEED_FAST
 setp lcec.0.x.srv-home-velocity-slow [DRIVE_X]HOME_SPEED_SLOW
 setp lcec.0.x.srv-home-accel         [DRIVE_X]HOME_ACCEL
 
+# Software limits of the drive: a backstop behind LinuxCNC's own limits.
+# The driver arms them once the drive is homed.
+setp lcec.0.x.srv-sw-limit-min    [JOINT_0]MIN_LIMIT
+setp lcec.0.x.srv-sw-limit-max    [JOINT_0]MAX_LIMIT
+setp lcec.0.x.srv-sw-limit-offset [JOINT_0]HOME_OFFSET
+setp lcec.0.x.srv-sw-limit-margin [DRIVE_X]SW_LIMIT_MARGIN
+
 setp lcec.0.x.srv-enable-volt 1
 net x-enable   joint.0.amp-enable-out => lcec.0.x.srv-switch-on lcec.0.x.srv-enable
 net x-fault    lcec.0.x.srv-fault     => joint.0.amp-fault-in
@@ -43,6 +50,13 @@ setp lcec.0.y.pos-scale [DRIVE_Y]UNITS_PER_REV
 setp lcec.0.y.srv-home-velocity-fast [DRIVE_Y]HOME_SPEED_FAST
 setp lcec.0.y.srv-home-velocity-slow [DRIVE_Y]HOME_SPEED_SLOW
 setp lcec.0.y.srv-home-accel         [DRIVE_Y]HOME_ACCEL
+
+# Software limits of the drive: a backstop behind LinuxCNC's own limits.
+# The driver arms them once the drive is homed.
+setp lcec.0.y.srv-sw-limit-min    [JOINT_1]MIN_LIMIT
+setp lcec.0.y.srv-sw-limit-max    [JOINT_1]MAX_LIMIT
+setp lcec.0.y.srv-sw-limit-offset [JOINT_1]HOME_OFFSET
+setp lcec.0.y.srv-sw-limit-margin [DRIVE_Y]SW_LIMIT_MARGIN
 
 setp lcec.0.y.srv-enable-volt 1
 net y-enable   joint.1.amp-enable-out => lcec.0.y.srv-switch-on lcec.0.y.srv-enable

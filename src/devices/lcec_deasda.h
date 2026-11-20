@@ -174,6 +174,23 @@ Pins with <modParam name="enableHM" value="true"/>:
   U32 IN srv-home-accel
     Homing acceleration (0x609A).
 
+  BIT OUT srv-sw-limit-armed
+    The software limits of the drive (0x607D) are set from
+    srv-sw-limit-min / srv-sw-limit-max. Only while the drive is homed.
+
+Parameters with <modParam name="enableHM" value="true"/>:
+  RW FLOAT srv-sw-limit-min
+  RW FLOAT srv-sw-limit-max
+    Limits of the joint, in joint coordinates ([JOINT_n]MIN_LIMIT /
+    MAX_LIMIT). The software limits of the drive are not used while both
+    are equal.
+
+  RW FLOAT srv-sw-limit-offset
+    Joint position of the zero of the drive ([JOINT_n]HOME_OFFSET).
+
+  RW FLOAT srv-sw-limit-margin
+    How far the limits of the drive are outside of the limits of the joint.
+
 Parameters:
   RW FLOAT srv-pos-scale
     Scale for position/velocity values (1.0 -> 1 revolution per second)
