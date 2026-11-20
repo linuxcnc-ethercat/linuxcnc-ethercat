@@ -1,8 +1,8 @@
-# Driver for Delta ASDA-Ax-E Series Servos (A2 and A3-E)
+# Driver for Delta ASDA-Ax-E Series Servos (A2-E, A3-E and B3-E)
 
 The [`lcec_deasda`](../src/devices/lcec_deasda.c) driver supports Delta Automation ASDA-Ax-E series drives. 
 
-It currently supports 2 basic families of devices:
+It currently supports 3 families of devices:
 
 - ASDA-A2-E series drives (type "DeASDA")
 - ASDA-A3-E series of drives (type "DeASDA3")
@@ -61,13 +61,13 @@ The `opmode` values are case insensitive.
 
 ### Motor Encoder resolution - Different between ASDA-A2 and ASDA-A3/B3 series - 
 
-The standard motors that come with either series of drives differ slightly. A2 drives will have a default encoder resolution of 1,280,000, whereas A3 and B3 series (henceforth X3) motors have a resolution of 16,777,216. Note that X3 drives support both x2 and x3 series motors. The default value in this deasda driver is that of ASDA A2 series motors.
+The standard motors that come with either series of drives differ slightly. A2 drives will have a default encoder resolution of 1,280,000, whereas A3 and B3 series (henceforth X3) motors have a resolution of 16,777,216. Note that X3 drives support both x2 and x3 series motors.
 
-To set the encoder resolution use hal pin: %s.%s.%s.srv-pulses-per-rev (also know as pprev).
-Example for A3:
+The driver sets the default of the HAL parameter %s.%s.%s.srv-pulses-per-rev (also known as pprev) to match the drive type: 1,280,000 for `DeASDA` and 16,777,216 for `DeASDA3` and `DeASDB3`. It only needs to be set if the motor has a different resolution than the default for its drive series, for example an x2 series motor on an X3 drive:
 ```
-lcec.0.A3.srv-pulses-per-rev 16777216
+setp lcec.0.A3.srv-pulses-per-rev 1280000
 ```
+If the `eGearRatio` modParam is used, the driver scales this default accordingly, see below.
 
 ### Setting Pulses per Revolution with Scale
 
