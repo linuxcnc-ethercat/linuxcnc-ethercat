@@ -31,6 +31,16 @@ Example for A3 series:
     <slave idx="1" type="DeASDA3" name="A3"/>
 ```
 
+The drives run synchronized to the distributed clock of the EtherCAT bus. The driver sets this up
+with the values from the ESI file of the drives (assignActivate 0x300, SYNC0 once per bus cycle),
+so no `<dcConf>` is needed. Add one to the slave to use other values, for example a SYNC0 shift:
+
+```xml
+    <slave idx="1" type="DeASDA3" name="A3">
+      <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="-25000"/>
+    </slave>
+```
+
 To ensure that a change in operational mode does not occur during the linuxcnc runtime, mode setting is done using modParam in the configuration file. This setting is optional. The default mode is CSV (Cyclic Synchronous Velocity).
 
 ```xml

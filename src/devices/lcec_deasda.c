@@ -54,6 +54,9 @@
 // How often the alarm codes are read again while the drive reports a fault or a warning.
 #define DEASDA_ALARM_REFRESH_NS 500000000LL
 
+// AssignActivate of the "DC" operation mode in the ESI files of all supported drives.
+#define DEASDA_DC_ASSIGN_ACTIVATE 0x300
+
 #define DEASDA_FAULT_AUTORESET_CYCLES  100
 #define DEASDA_FAULT_AUTORESET_RETRIES 3
 
@@ -406,6 +409,15 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
   pval = lcec_modparam_get(slave, M_ENABLEHM);
   if (pval) {
     enable_hm = pval->bit;
+  }
+
+  // These drives are meant to run synchronized to the distributed clock.  Use the settings of the "DC"
+  // operation mode from the ESI file, unless the XML config has its own <dcConf>.
+  if (slave->dc_conf == NULL) {
+    lcec_slave_dc_t *dc = LCEC_HAL_ALLOCATE(lcec_slave_dc_t);
+    dc->assignActivate = DEASDA_DC_ASSIGN_ACTIVATE;
+    dc->sync0Cycle = master->app_time_period;
+    slave->dc_conf = dc;
   }
 
   // Set up PDO sync configuration
