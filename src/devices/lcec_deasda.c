@@ -788,9 +788,10 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
   if (hal_data->pos_fb != NULL) {
     if (LCEC_PIN_BIT_GET(hal_data->home)) {
       LCEC_PIN_FLOAT_SET(hal_data->pos_fb, LCEC_PIN_FLOAT_GET(hal_data->pos_cmd != NULL ? hal_data->pos_cmd : hal_data->cmd_value));
-    } else if (LCEC_PARAM_U32_GET(hal_data->pprev) > 0) {
-      LCEC_PIN_FLOAT_SET(hal_data->pos_fb,
-          (double)(int32_t)pos_cnt * LCEC_PARAM_FLOAT_GET(hal_data->pos_scale) / (double)LCEC_PARAM_U32_GET(hal_data->pprev));
+    } else {
+      // the position of the encoder class: same scaling, and extended to 64 bit, so it stays continuous
+      // when 0x6064 rolls over
+      LCEC_PIN_FLOAT_SET(hal_data->pos_fb, LCEC_PIN_FLOAT_GET(hal_data->enc.pos_enc));
     }
   }
 
