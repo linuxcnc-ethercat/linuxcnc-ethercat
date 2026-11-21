@@ -194,8 +194,14 @@ Units and values, see the description of the objects in the EtherCAT chapter of 
 4. When the drive reports that homing is complete, the driver sets `srv-homed`, clears `srv-home`
    and switches back to CSP/CSV.
 
-`srv-home` is also cleared if the drive reports a fault. On a homing error `srv-homing-error`
-is set and `srv-home` stays on; clear it to leave homing mode.
+The driver only clears `srv-home` when homing is complete. If the drive reports a fault during
+homing, the run is aborted and `srv-home` stays on; the driver does not start another run until
+`srv-home` has been off. On a homing error `srv-homing-error` is set and `srv-home` stays on as
+well; clear it to leave homing mode.
+
+LinuxCNC takes a falling edge of `joint.N.index-enable` as "homing is done", so it is up to
+LinuxCNC to end a failed run. Connect `srv-fault` to `joint.N.amp-fault-in`: LinuxCNC then aborts
+homing on a drive fault and clears `joint.N.index-enable` itself, with the joint not homed.
 
 Homing changes the actual position of the drive (Object 6064h), so the position feedback jumps
 when homing completes. The commanded position has to follow that jump, which is what LinuxCNC does

@@ -202,6 +202,7 @@ typedef struct {
   int8_t opmode_current;  // last value of 0x6061
   int home_start_sent;    // homing start bit was set in the last write cycle
   int home_seen_unhomed;  // drive reported "not complete" since the start bit was set
+  int home_aborted;       // a fault ended the homing run; srv-home has to go off before the next one
   long long home_done_time;
 
   ec_sdo_request_t *home_method_sdo;
@@ -881,16 +882,20 @@ static int lcec_deasda_write_control(lcec_slave_t *slave, lcec_deasda_data_t *ha
     int home = LCEC_PIN_BIT_GET(hal_data->home);
     int8_t opmode = hal_data->opmode_cyclic;
 
-    // a fault aborts homing
-    if (home && hal_data->internal_fault) {
-      home = 0;
-      LCEC_PIN_BIT_SET(hal_data->home, 0);
+    // A fault aborts the homing run.  srv-home is not touched: LinuxCNC takes a falling edge of
+    // joint.N.index-enable as "homing is done", so clearing it here would make an axis homed at whatever
+    // position the fault left it in.  Whoever set srv-home has to take it back (LinuxCNC does when it
+    // aborts homing, i.e. on joint.N.amp-fault-in), and until then no new run is started.
+    if (!home) {
+      hal_data->home_aborted = 0;
+    } else if (hal_data->internal_fault) {
+      hal_data->home_aborted = 1;
     }
 
     // Request homing mode first, and only set the (rising-edge triggered) start bit once the drive reports
     // homing mode with the servo on; an edge that arrives together with the mode change could get lost.
     hal_data->home_start_sent = 0;
-    if (home) {
+    if (home && !hal_data->home_aborted) {
       opmode = DEASDA_OPMODE_HM;
       if (hal_data->opmode_current == DEASDA_OPMODE_HM && LCEC_PIN_BIT_GET(hal_data->oper_enabled) && (control & (1 << 3))) {
         control |= DEASDA_CONTROL_HOMING_START;

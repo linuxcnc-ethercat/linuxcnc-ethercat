@@ -128,7 +128,8 @@ Pins:
 Pins with <modParam name="enableHM" value="true"/>:
   BIT IO srv-home
     Start drive internal homing. Gets reset by the driver as soon as
-    homing is complete. Could be connected to joint.N.index-enable.
+    homing is complete, and only then: a fault aborts the run but leaves
+    the pin on. Could be connected to joint.N.index-enable.
 
   BIT OUT srv-homed
     Drive reports that homing is complete.
