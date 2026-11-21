@@ -123,6 +123,15 @@ static lcec_typelist_t types[] = {
 
 ADD_TYPES(types);
 
+/// @brief A setting of the drive that is not mapped: it is written through an SDO request when its pin changes.
+typedef struct {
+  ec_sdo_request_t *request;
+  int bytes;
+  int32_t confirmed;  ///< The value that the drive is known to hold.
+  int32_t in_flight;  ///< The value of the write that is under way.
+  int pending;        ///< A write is under way.
+} lcec_deasda_sdo_setting_t;
+
 typedef struct {
   hal_float_t *vel_fb;
   hal_float_t *vel_fb_rpm;
@@ -205,14 +214,10 @@ typedef struct {
   int home_aborted;       // a fault ended the homing run; srv-home has to go off before the next one
   long long home_done_time;
 
-  ec_sdo_request_t *home_method_sdo;
-  ec_sdo_request_t *home_velocity_fast_sdo;
-  ec_sdo_request_t *home_velocity_slow_sdo;
-  ec_sdo_request_t *home_accel_sdo;
-  int32_t home_method_old;
-  int32_t home_velocity_fast_old;
-  int32_t home_velocity_slow_old;
-  int32_t home_accel_old;
+  lcec_deasda_sdo_setting_t home_method_set;
+  lcec_deasda_sdo_setting_t home_velocity_fast_set;
+  lcec_deasda_sdo_setting_t home_velocity_slow_set;
+  lcec_deasda_sdo_setting_t home_accel_set;
 
   hal_bit_t last_switch_on;
   hal_bit_t internal_fault;
@@ -318,6 +323,20 @@ static void lcec_deasda_write_csv(lcec_slave_t *slave, long period);
 static void lcec_deasda_write_csp(lcec_slave_t *slave, long period);
 
 static const drive_operationmodes_t *drive_opmode(char *drivemode);
+
+/// @brief Set up a `lcec_deasda_sdo_setting_t`.
+///
+/// @param value The value that the drive holds right now.
+static int lcec_deasda_sdo_setting_init(
+    lcec_slave_t *slave, lcec_deasda_sdo_setting_t *setting, uint16_t index, uint8_t subindex, int bytes, int32_t value) {
+  setting->request = ecrt_slave_config_create_sdo_request(slave->config, index, subindex, bytes);
+  if (setting->request == NULL) return -1;
+
+  setting->bytes = bytes;
+  setting->confirmed = value;
+  setting->pending = 0;
+  return 0;
+}
 
 static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
@@ -564,23 +583,29 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
       if ((err = lcec_pin_newf_list(hal_data, slave_pins_hm_csv, LCEC_MODULE_NAME, master->name, slave->name)) != 0) return err;
     }
 
-    // The homing settings are not mapped; they are written through SDO requests whenever a pin changes.
-    hal_data->home_method_sdo = ecrt_slave_config_create_sdo_request(slave->config, 0x6098, 0x00, 1);
-    hal_data->home_velocity_fast_sdo = ecrt_slave_config_create_sdo_request(slave->config, 0x6099, 0x01, 4);
-    hal_data->home_velocity_slow_sdo = ecrt_slave_config_create_sdo_request(slave->config, 0x6099, 0x02, 4);
-    hal_data->home_accel_sdo = ecrt_slave_config_create_sdo_request(slave->config, 0x609a, 0x00, 4);
-
-    // Start out with whatever the drive is using right now, so we don't overwrite valid settings.
-    lcec_read_sdo8_pin_S32(slave, 0x6098, 0x00, hal_data->home_method);
-    lcec_read_sdo32_pin_U32(slave, 0x6099, 0x01, hal_data->home_velocity_fast);
-    lcec_read_sdo32_pin_U32(slave, 0x6099, 0x02, hal_data->home_velocity_slow);
-    lcec_read_sdo32_pin_U32(slave, 0x609a, 0x00, hal_data->home_accel);
+    // Start out with whatever the drive is using right now, so we don't overwrite valid settings.  The
+    // pins have to show what the drive really holds, so a read that fails is an error.
+    if (lcec_read_sdo8_pin_S32(slave, 0x6098, 0x00, hal_data->home_method) != 0 ||
+        lcec_read_sdo32_pin_U32(slave, 0x6099, 0x01, hal_data->home_velocity_fast) != 0 ||
+        lcec_read_sdo32_pin_U32(slave, 0x6099, 0x02, hal_data->home_velocity_slow) != 0 ||
+        lcec_read_sdo32_pin_U32(slave, 0x609a, 0x00, hal_data->home_accel) != 0) {
+      rtapi_print_msg(RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to read the homing settings of slave %s.%s\n", master->name, slave->name);
+      return -EIO;
+    }
     // 0x6098 is an INTEGER8 (Delta uses -1 to -4 for the hard stop methods), but the helper doesn't sign-extend.
     LCEC_PIN_S32_SET(hal_data->home_method, (int8_t)LCEC_PIN_S32_GET(hal_data->home_method));
-    hal_data->home_method_old = LCEC_PIN_S32_GET(hal_data->home_method);
-    hal_data->home_velocity_fast_old = (int32_t)LCEC_PIN_U32_GET(hal_data->home_velocity_fast);
-    hal_data->home_velocity_slow_old = (int32_t)LCEC_PIN_U32_GET(hal_data->home_velocity_slow);
-    hal_data->home_accel_old = (int32_t)LCEC_PIN_U32_GET(hal_data->home_accel);
+
+    // The homing settings are not mapped; they are written through SDO requests whenever a pin changes.
+    if (lcec_deasda_sdo_setting_init(slave, &hal_data->home_method_set, 0x6098, 0x00, 1, LCEC_PIN_S32_GET(hal_data->home_method)) != 0 ||
+        lcec_deasda_sdo_setting_init(
+            slave, &hal_data->home_velocity_fast_set, 0x6099, 0x01, 4, (int32_t)LCEC_PIN_U32_GET(hal_data->home_velocity_fast)) != 0 ||
+        lcec_deasda_sdo_setting_init(
+            slave, &hal_data->home_velocity_slow_set, 0x6099, 0x02, 4, (int32_t)LCEC_PIN_U32_GET(hal_data->home_velocity_slow)) != 0 ||
+        lcec_deasda_sdo_setting_init(slave, &hal_data->home_accel_set, 0x609a, 0x00, 4, (int32_t)LCEC_PIN_U32_GET(hal_data->home_accel)) != 0) {
+      rtapi_print_msg(
+          RTAPI_MSG_ERR, LCEC_MSG_PFX "failed to create the SDO requests for the homing settings of slave %s.%s\n", master->name, slave->name);
+      return -EIO;
+    }
 
     LCEC_PIN_S32_SET(hal_data->opmode_display, operationmode);
   }
@@ -819,21 +844,39 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
 }
 
 /// @brief Write a non-mapped setting to the drive through an SDO request if its pin has changed.
-static void lcec_deasda_sdo_update(ec_sdo_request_t *request, int bytes, int32_t value, int32_t *old) {
+///
+/// The value only counts as written once the request has succeeded.  A write that fails leaves
+/// `confirmed` as it is, so it is tried again.
+///
+/// @return true if the drive holds `value`.
+static int lcec_deasda_sdo_update(lcec_deasda_sdo_setting_t *setting, int32_t value) {
   uint8_t *data;
 
-  if (request == NULL || value == *old) return;
-  // try again in the next cycle if the previous write is still in flight
-  if (ecrt_sdo_request_state(request) == EC_REQUEST_BUSY) return;
+  if (setting->pending) {
+    switch (ecrt_sdo_request_state(setting->request)) {
+      case EC_REQUEST_BUSY:
+        return 0;
+      case EC_REQUEST_SUCCESS:
+        setting->confirmed = setting->in_flight;
+        break;
+      default:
+        break;
+    }
+    setting->pending = 0;
+  }
 
-  *old = value;
-  data = ecrt_sdo_request_data(request);
-  if (bytes == 1) {
+  if (value == setting->confirmed) return 1;
+
+  setting->in_flight = value;
+  setting->pending = 1;
+  data = ecrt_sdo_request_data(setting->request);
+  if (setting->bytes == 1) {
     EC_WRITE_S8(data, value);
   } else {
     EC_WRITE_S32(data, value);
   }
-  ecrt_sdo_request_write(request);
+  ecrt_sdo_request_write(setting->request);
+  return 0;
 }
 
 /// @brief Write everything that is common to CSV and CSP: digital outputs, controlword and (with homing
@@ -881,6 +924,16 @@ static int lcec_deasda_write_control(lcec_slave_t *slave, lcec_deasda_data_t *ha
   if (hal_data->hm_enabled) {
     int home = LCEC_PIN_BIT_GET(hal_data->home);
     int8_t opmode = hal_data->opmode_cyclic;
+    int32_t method = LCEC_PIN_S32_GET(hal_data->home_method);
+    int settings_ok;
+
+    // Bring the drive in line with the homing setting pins.  0x6098 is an INTEGER8: a method that doesn't
+    // fit is not sent, as the drive would get a different method than the pin shows.  Homing only starts
+    // once the drive holds all four values of the pins.
+    settings_ok = method >= INT8_MIN && method <= INT8_MAX && lcec_deasda_sdo_update(&hal_data->home_method_set, method);
+    settings_ok &= lcec_deasda_sdo_update(&hal_data->home_velocity_fast_set, (int32_t)LCEC_PIN_U32_GET(hal_data->home_velocity_fast));
+    settings_ok &= lcec_deasda_sdo_update(&hal_data->home_velocity_slow_set, (int32_t)LCEC_PIN_U32_GET(hal_data->home_velocity_slow));
+    settings_ok &= lcec_deasda_sdo_update(&hal_data->home_accel_set, (int32_t)LCEC_PIN_U32_GET(hal_data->home_accel));
 
     // A fault aborts the homing run.  srv-home is not touched: LinuxCNC takes a falling edge of
     // joint.N.index-enable as "homing is done", so clearing it here would make an axis homed at whatever
@@ -897,7 +950,8 @@ static int lcec_deasda_write_control(lcec_slave_t *slave, lcec_deasda_data_t *ha
     hal_data->home_start_sent = 0;
     if (home && !hal_data->home_aborted) {
       opmode = DEASDA_OPMODE_HM;
-      if (hal_data->opmode_current == DEASDA_OPMODE_HM && LCEC_PIN_BIT_GET(hal_data->oper_enabled) && (control & (1 << 3))) {
+      if (settings_ok && hal_data->opmode_current == DEASDA_OPMODE_HM && LCEC_PIN_BIT_GET(hal_data->oper_enabled) &&
+          (control & (1 << 3))) {
         control |= DEASDA_CONTROL_HOMING_START;
         hal_data->home_start_sent = 1;
       }
@@ -905,13 +959,6 @@ static int lcec_deasda_write_control(lcec_slave_t *slave, lcec_deasda_data_t *ha
       hal_data->home_seen_unhomed = 0;
     }
     EC_WRITE_S8(&pd[hal_data->opmode_pdo_os], opmode);
-
-    lcec_deasda_sdo_update(hal_data->home_method_sdo, 1, LCEC_PIN_S32_GET(hal_data->home_method), &hal_data->home_method_old);
-    lcec_deasda_sdo_update(
-        hal_data->home_velocity_fast_sdo, 4, (int32_t)LCEC_PIN_U32_GET(hal_data->home_velocity_fast), &hal_data->home_velocity_fast_old);
-    lcec_deasda_sdo_update(
-        hal_data->home_velocity_slow_sdo, 4, (int32_t)LCEC_PIN_U32_GET(hal_data->home_velocity_slow), &hal_data->home_velocity_slow_old);
-    lcec_deasda_sdo_update(hal_data->home_accel_sdo, 4, (int32_t)LCEC_PIN_U32_GET(hal_data->home_accel), &hal_data->home_accel_old);
 
     hold = home || hal_data->opmode_current != hal_data->opmode_cyclic;
   }

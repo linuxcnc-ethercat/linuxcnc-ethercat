@@ -175,6 +175,10 @@ The four `srv-home-*` setting pins start out with the values that are set in the
 `homeMethod` has been applied). Changing a pin writes the new value to the drive. Don't change
 them while homing is running.
 
+Homing only starts once the drive has all four values of the pins. If the drive does not accept a
+value, the driver keeps trying and homing does not start. `srv-home-method` has to be between -128
+and 127; other values are not sent to the drive, and homing does not start with them either.
+
 Units and values, see the description of the objects in the EtherCAT chapter of the drive manual:
 - `homeMethod` / `srv-home-method`: 1 to 35 are the CiA 402 methods (15, 16, 31 and 32 are
   reserved), 35 defines the current position as the origin. A3 and B3 also accept -1 to -4 for
