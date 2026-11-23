@@ -207,6 +207,11 @@ LinuxCNC takes a falling edge of `joint.N.index-enable` as "homing is done", so 
 LinuxCNC to end a failed run. Connect `srv-fault` to `joint.N.amp-fault-in`: LinuxCNC then aborts
 homing on a drive fault and clears `joint.N.index-enable` itself, with the joint not homed.
 
+Ending a homing run before it is complete, by a fault or by switching the machine off, makes
+LinuxCNC report a following error for the joint: `srv-pos-fb` goes back to the actual position of
+the drive, which has moved since homing started. The joint is not homed after that and has to be
+homed again.
+
 Homing changes the actual position of the drive (Object 6064h), so the position feedback jumps
 when homing completes. The commanded position has to follow that jump, which is what LinuxCNC does
 when it homes on an encoder index. So connect `srv-home` like an index-enable pin and use
