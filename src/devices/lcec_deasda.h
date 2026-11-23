@@ -125,6 +125,46 @@ Pins:
   FLOAT IN srv-vel-cmd
     Velocity command input in scale units per second.
 
+Pins with <modParam name="enableHM" value="true"/>:
+  BIT IO srv-home
+    Start drive internal homing. Gets reset by the driver as soon as
+    homing is complete, and only then: a fault aborts the run but leaves
+    the pin on. Could be connected to joint.N.index-enable.
+
+  BIT OUT srv-homed
+    Drive reports that homing is complete.
+
+  BIT OUT srv-homing
+    Homing is running.
+
+  BIT OUT srv-homing-error
+    Drive reports a homing error.
+
+  S32 OUT srv-opmode-display
+    Active mode of operation of the drive (6 = homing, 8 = CSP, 9 = CSV).
+
+  FLOAT OUT srv-pos-fb
+    Actual position of the drive in units of srv-pos-cmd.
+    Follows srv-pos-cmd while srv-home is set, to prevent a following
+    error while the drive is homing. Connect to joint.N.motor-pos-fb.
+
+  FLOAT IN srv-pos-cmd
+    CSV mode only (in CSP mode this is the regular command pin).
+    Position command of the joint. It is not sent to the drive, it is
+    only used for srv-pos-fb while the drive is homing.
+
+  S32 IN srv-home-method
+    Homing method (0x6098).
+
+  U32 IN srv-home-velocity-fast
+    Speed during search for switch (0x6099:01).
+
+  U32 IN srv-home-velocity-slow
+    Speed during search for zero (0x6099:02).
+
+  U32 IN srv-home-accel
+    Homing acceleration (0x609A).
+
 Parameters:
   RW FLOAT srv-pos-scale
     Scale for position/velocity values (1.0 -> 1 revolution per second)
