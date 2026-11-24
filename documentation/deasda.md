@@ -55,6 +55,10 @@ The following `<modParam>` settings are available:
   Supported modes are:
   - `CSV`: Cyclic Synchronous Velocity mode (Value for 0x6060: 9) DEFAULT when modParam not used.
   - `CSP`: Cyclic Synchronous Position mode (Value for 0x6060: 8)
+
+  `lcec_configgen` writes `<modParam name="opmode" value="CSP"/>` into the configurations it generates, so new
+  configurations run in CSP. CSV is only what the driver falls back to when a configuration has no `opmode`
+  modParam, which keeps older handwritten configurations working.
 - `enableDigitalOutput`: `true`/`false`, maps the digital outputs (A2 and A3 only, default `true`).
 - `enableHM`: `true`/`false`, enables drive-internal homing (default `false`). See [Homing Mode](#homing-mode).
 - `homeMethod`: homing method, written to Object 6098h at startup. See [Homing Mode](#homing-mode).
