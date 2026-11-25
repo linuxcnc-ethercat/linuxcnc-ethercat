@@ -176,7 +176,8 @@ Pins with <modParam name="enableHM" value="true"/>:
 
   BIT OUT srv-sw-limit-armed
     The software limits of the drive (0x607D) are set from
-    srv-sw-limit-min / srv-sw-limit-max. Only while the drive is homed.
+    srv-sw-limit-min / srv-sw-limit-max. Only while the drive is homed,
+    and only if the limits fit into its 32 bit position range.
 
 Parameters with <modParam name="enableHM" value="true"/>:
   RW FLOAT srv-sw-limit-min

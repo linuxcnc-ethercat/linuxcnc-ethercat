@@ -295,6 +295,14 @@ setp lcec.0.A3.srv-sw-limit-margin 1
 The driver converts these to PUU with `pos-scale` and `srv-pulses-per-rev` and writes them to the
 drive. `srv-sw-limit-armed` shows that the drive has them.
 
+The limits have to be inside of the 32 bit position range of the drive (-2147483648 to 2147483647
+PUU). The position of the drive wraps at the ends of that range, so a limit that is further out
+could never stop the axis. With the full resolution of a 24 bit encoder the range is only +/-128
+motor revolutions, which is +/-640 mm with 5 mm per revolution. If the limits don't fit, the driver
+reports an error, does not arm them and `srv-sw-limit-armed` stays off. Use an
+[E-Gear ratio](#setting-pulses-per-rev-with-egear) with less pulses per revolution then: 500000 pulses per revolution give
++/-4294 revolutions.
+
 The limits are only armed while the drive is homed, because the position of the drive has no
 relation to the machine before that:
 - After startup, and after the drive has dropped off the bus, the limits are off until homing is

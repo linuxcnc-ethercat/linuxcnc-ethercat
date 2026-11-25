@@ -252,6 +252,7 @@ typedef struct {
   lcec_deasda_sdo_setting_t sw_limit_min_set;  // 0x607D:01
   lcec_deasda_sdo_setting_t sw_limit_max_set;  // 0x607D:02
   int sw_limits_available;
+  int sw_limit_range_error;  // the configured limits don't fit into the position range of the drive
 
   hal_bit_t last_switch_on;
   hal_bit_t internal_fault;
@@ -1029,14 +1030,12 @@ static int lcec_deasda_sdo_update(lcec_deasda_sdo_setting_t *setting, int32_t va
   return 0;
 }
 
-/// @brief Convert a joint position to the position of the drive in PUU, limited to its 32 bit range.
-static int32_t lcec_deasda_joint_to_puu(lcec_deasda_data_t *hal_data, double pos) {
-  double puu = (pos - LCEC_PARAM_FLOAT_GET(hal_data->sw_limit_offset)) * LCEC_PARAM_U32_GET(hal_data->pprev) /
-               LCEC_PARAM_FLOAT_GET(hal_data->pos_scale);
-
-  if (puu >= (double)INT32_MAX) return INT32_MAX;
-  if (puu <= (double)INT32_MIN) return INT32_MIN;
-  return (int32_t)puu;
+/// @brief Convert a joint position to the position of the drive in PUU.
+///
+/// The result is not limited to the 32 bit range of the drive, that is up to the caller.
+static double lcec_deasda_joint_to_puu(lcec_deasda_data_t *hal_data, double pos) {
+  return (pos - LCEC_PARAM_FLOAT_GET(hal_data->sw_limit_offset)) * LCEC_PARAM_U32_GET(hal_data->pprev) /
+         LCEC_PARAM_FLOAT_GET(hal_data->pos_scale);
 }
 
 /// @brief Keep the software limits of the drive (0x607D) in line with srv-sw-limit-min / srv-sw-limit-max.
@@ -1044,28 +1043,61 @@ static int32_t lcec_deasda_joint_to_puu(lcec_deasda_data_t *hal_data, double pos
 /// The limits are only armed while the drive is homed: before that its position has no relation to the
 /// machine.  In any other case the drive gets its full range, which turns the limits off.
 ///
+/// Limits that are not inside of the 32 bit position range of the drive are never armed.  The position
+/// of the drive wraps at the ends of that range, so it can't get beyond a limit that sits there or
+/// further out: such a limit would look armed without ever stopping the axis.
+///
 /// @return true if the limits are off in the drive, so it is safe to start homing.
-static int lcec_deasda_write_sw_limits(lcec_deasda_data_t *hal_data) {
+static int lcec_deasda_write_sw_limits(lcec_slave_t *slave, lcec_deasda_data_t *hal_data) {
   double min = LCEC_PARAM_FLOAT_GET(hal_data->sw_limit_min);
   double max = LCEC_PARAM_FLOAT_GET(hal_data->sw_limit_max);
   double margin = LCEC_PARAM_FLOAT_GET(hal_data->sw_limit_margin);
   int32_t lo = INT32_MIN, hi = INT32_MAX;
-  int arm, ok;
+  int configured, in_range = 0, arm, ok;
 
   if (!hal_data->sw_limits_available) return 1;
 
   // min == max (the default, both 0) means that no limits are configured
-  arm = hal_data->referenced && max > min;
-  if (arm) {
+  configured = max > min;
+  if (configured) {
+    double lo_puu, hi_puu;
+
     if (margin < 0.0) margin = 0.0;
-    lo = lcec_deasda_joint_to_puu(hal_data, min - margin);
-    hi = lcec_deasda_joint_to_puu(hal_data, max + margin);
+    lo_puu = lcec_deasda_joint_to_puu(hal_data, min - margin);
+    hi_puu = lcec_deasda_joint_to_puu(hal_data, max + margin);
     // a negative scale reverses the direction
-    if (lo > hi) {
-      int32_t tmp = lo;
-      lo = hi;
-      hi = tmp;
+    if (lo_puu > hi_puu) {
+      double tmp = lo_puu;
+      lo_puu = hi_puu;
+      hi_puu = tmp;
     }
+
+    // written like this, the check also fails for a result that is not a number (scale of 0)
+    in_range = lo_puu > (double)INT32_MIN && hi_puu < (double)INT32_MAX;
+    if (in_range) {
+      lo = (int32_t)lo_puu;
+      hi = (int32_t)hi_puu;
+    }
+  }
+
+  // report it once, also before the drive is homed, and again after the limits have been valid in between
+  if (configured && !in_range) {
+    if (!hal_data->sw_limit_range_error) {
+      rtapi_print_msg(RTAPI_MSG_ERR,
+          LCEC_MSG_PFX "slave %s.%s: the software limits don't fit into the 32 bit position range of the drive and are NOT armed; "
+                       "shorten srv-sw-limit-min/-max or use an E-Gear ratio with less pulses per revolution\n",
+          slave->master->name, slave->name);
+    }
+    hal_data->sw_limit_range_error = 1;
+  } else {
+    hal_data->sw_limit_range_error = 0;
+  }
+
+  // without valid limits lo and hi are still the full range, which turns the limits off
+  arm = hal_data->referenced && configured && in_range;
+  if (!arm) {
+    lo = INT32_MIN;
+    hi = INT32_MAX;
   }
 
   ok = lcec_deasda_sdo_update(&hal_data->sw_limit_min_set, lo);
@@ -1145,7 +1177,7 @@ static int lcec_deasda_write_control(lcec_slave_t *slave, lcec_deasda_data_t *ha
     // Homing defines a new position system, and it may have to move beyond the limits (i.e. onto a hard
     // stop), so the software limits are taken out before homing starts and put back when it is done.
     if (home) hal_data->referenced = 0;
-    limits_cleared = lcec_deasda_write_sw_limits(hal_data);
+    limits_cleared = lcec_deasda_write_sw_limits(slave, hal_data);
 
     // Request homing mode first, and only set the (rising-edge triggered) start bit once the drive reports
     // homing mode with the servo on; an edge that arrives together with the mode change could get lost.
