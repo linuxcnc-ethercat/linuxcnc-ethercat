@@ -409,7 +409,7 @@ Notes:
   drive (drive parameter P0-01): 0x0009 is AL009, 0x0180 is AL180. `srv-error-code` is the CiA 402
   error code (Object 603Fh); the alarm list in the EtherCAT chapter of the drive manual has both.
   The codes are read from the drive when the alarm shows up and every 0.5 s after that, so they
-  lag `srv-fault` by a few cycles.
+  lag `srv-fault` by a few cycles. They are also 0 while the drive is not operational on the bus.
 - `srv-zero-speed` is true while the actual speed is below the zero speed detection level of the
   drive (Object 606Fh, drive parameter P1.038, default 10 rpm). The level is read from the drive at
   startup.

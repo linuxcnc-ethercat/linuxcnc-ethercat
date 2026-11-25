@@ -55,7 +55,7 @@ Pins:
 
   U32 OUT srv-alarm-code
     alarm code as shown on the display of the drive (P0-01), 0 without
-    alarm
+    alarm and while the drive is not operational
 
   BIT OUT srv-volt-enabled
     voltage-enabled status flag from motor driver

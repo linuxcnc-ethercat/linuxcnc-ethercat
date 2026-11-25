@@ -232,7 +232,8 @@ typedef struct {
   // The alarm codes are not mapped, to leave the PDO mapping alone; they are read while there is an alarm.
   ec_sdo_request_t *error_code_sdo;  // 0x603F, CiA 402 error code
   ec_sdo_request_t *alarm_code_sdo;  // 0x2001, drive parameter P0-01: alarm code as shown on the drive
-  int alarm_read_pending;
+  int alarm_read_pending;  // the requests are on their way
+  int alarm_read_stale;    // ...but the alarm they were sent for is gone, so their results are dropped
   long long alarm_refresh_time;
 
   int hm_enabled;         // homing mode support is mapped and exported
@@ -807,6 +808,18 @@ static void lcec_deasda_read_homing(lcec_deasda_data_t *hal_data, uint8_t *pd, u
   hal_data->home_done_time = 0;
 }
 
+/// @brief There is no alarm to show: clear the alarm code pins.
+///
+/// Requests that are still on their way belong to an alarm that is gone.  They can't be taken back, so
+/// they are marked as stale; their results are dropped, also when another alarm has come up by then.
+static void lcec_deasda_clear_alarm(lcec_deasda_data_t *hal_data) {
+  LCEC_PIN_U32_SET(hal_data->error_code, 0);
+  LCEC_PIN_U32_SET(hal_data->alarm_code, 0);
+  if (hal_data->alarm_read_pending) hal_data->alarm_read_stale = 1;
+  // read at once when the next alarm shows up
+  hal_data->alarm_refresh_time = 0;
+}
+
 /// @brief Read the alarm codes of the drive through SDO requests.
 ///
 /// @param active The drive reports a fault or a warning.
@@ -815,22 +828,19 @@ static void lcec_deasda_read_alarm(lcec_deasda_data_t *hal_data, int active, lon
 
   if (hal_data->error_code_sdo == NULL || hal_data->alarm_code_sdo == NULL) return;
 
-  error_state = ecrt_sdo_request_state(hal_data->error_code_sdo);
-  alarm_state = ecrt_sdo_request_state(hal_data->alarm_code_sdo);
+  if (!active) lcec_deasda_clear_alarm(hal_data);
 
   if (hal_data->alarm_read_pending) {
-    // wait for both reads to finish
-    if (error_state == EC_REQUEST_BUSY || alarm_state == EC_REQUEST_BUSY) {
-      if (!active) {
-        LCEC_PIN_U32_SET(hal_data->error_code, 0);
-        LCEC_PIN_U32_SET(hal_data->alarm_code, 0);
-      }
-      return;
-    }
+    // wait for both reads to finish, the requests can't be used again before that
+    error_state = ecrt_sdo_request_state(hal_data->error_code_sdo);
+    alarm_state = ecrt_sdo_request_state(hal_data->alarm_code_sdo);
+    if (error_state == EC_REQUEST_BUSY || alarm_state == EC_REQUEST_BUSY) return;
     hal_data->alarm_read_pending = 0;
 
-    // a result that arrives after the alarm is gone is dropped
-    if (active) {
+    if (hal_data->alarm_read_stale) {
+      // sent for an alarm that is gone: drop the results, and read again below if there is a new alarm
+      hal_data->alarm_read_stale = 0;
+    } else {
       if (error_state == EC_REQUEST_SUCCESS) {
         LCEC_PIN_U32_SET(hal_data->error_code, EC_READ_U16(ecrt_sdo_request_data(hal_data->error_code_sdo)));
       }
@@ -840,13 +850,7 @@ static void lcec_deasda_read_alarm(lcec_deasda_data_t *hal_data, int active, lon
     }
   }
 
-  if (!active) {
-    LCEC_PIN_U32_SET(hal_data->error_code, 0);
-    LCEC_PIN_U32_SET(hal_data->alarm_code, 0);
-    // read at once when the next alarm shows up
-    hal_data->alarm_refresh_time = 0;
-    return;
-  }
+  if (!active) return;
 
   // read at the start of an alarm, and again from time to time, as the alarm can change
   hal_data->alarm_refresh_time -= period;
@@ -880,6 +884,8 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
     LCEC_PIN_BIT_SET(hal_data->at_speed, 0);
     LCEC_PIN_BIT_SET(hal_data->limit_active, 0);
     LCEC_PIN_BIT_SET(hal_data->zero_speed, 0);
+    // the alarm codes can't be read now, and the last ones say nothing about a drive that is gone
+    lcec_deasda_clear_alarm(hal_data);
     if (hal_data->hm_enabled) {
       LCEC_PIN_BIT_SET(hal_data->homing, 0);
       LCEC_PIN_BIT_SET(hal_data->homing_error, 0);
