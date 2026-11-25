@@ -434,11 +434,13 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
   }
 
   // These drives are meant to run synchronized to the distributed clock.  Use the settings of the "DC"
-  // operation mode from the ESI file, unless the XML config has its own <dcConf>.
+  // operation mode from the ESI file, unless the XML config has its own <dcConf>.  SYNC0 runs at the cycle
+  // of the Sync Unit of the slave, which is the rate at which the drive gets new setpoints; that is the
+  // cycle of the master unless the slave is in a slower Sync Unit.
   if (slave->dc_conf == NULL) {
     lcec_slave_dc_t *dc = LCEC_HAL_ALLOCATE(lcec_slave_dc_t);
     dc->assignActivate = DEASDA_DC_ASSIGN_ACTIVATE;
-    dc->sync0Cycle = master->app_time_period;
+    dc->sync0Cycle = slave->sync_unit->cycle_time;
     slave->dc_conf = dc;
   }
 
@@ -585,8 +587,8 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
     if (lcec_write_sdo16_modparam(slave, 0x2158, 0x00, pval->u32, "homeTorqueTime_ms") != 0) return -1;
   }
 
-  // set interpolation time period
-  tu = master->app_time_period;
+  // set interpolation time period: the time between two setpoints, which is the cycle of the Sync Unit
+  tu = slave->sync_unit->cycle_time;
   ti = -9;
 
   while ((tu % 10) == 0 || tu > 255) {

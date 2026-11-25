@@ -32,8 +32,9 @@ Example for A3 series:
 ```
 
 The drives run synchronized to the distributed clock of the EtherCAT bus. The driver sets this up
-with the values from the ESI file of the drives (assignActivate 0x300, SYNC0 once per bus cycle),
-so no `<dcConf>` is needed. Add one to the slave to use other values, for example a SYNC0 shift:
+with the values from the ESI file of the drives (assignActivate 0x300, SYNC0 once per cycle of the Sync Unit
+of the slave, which is the bus cycle unless the slave is in a slower Sync Unit), so no `<dcConf>` is
+needed. Add one to the slave to use other values, for example a SYNC0 shift:
 
 ```xml
     <slave idx="1" type="DeASDA3" name="A3">
