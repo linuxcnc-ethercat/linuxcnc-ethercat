@@ -18,6 +18,19 @@ This list should only include deliberate breakage, not typical bugs.
 
 ## Pending
 
+- Delta ASDA drives (`DeASDA`, `DeASDA3`, `DeASDB3`) now run
+  synchronized to the distributed clock when their `<slave>` has no
+  `<dcConf>`: assignActivate 0x300, SYNC0 at the cycle of the Sync
+  Unit of the slave.  They ran without DC in that case before.  A
+  `<dcConf>` in the config is used as it is.  See
+  [#548](https://github.com/linuxcnc-ethercat/linuxcnc-ethercat/pull/548).
+- Delta ASDA drives: `srv-zero-speed` now compares the actual speed
+  with the zero speed detection level of the drive (0x606F).  It used
+  to be statusword bit 12, which is on whenever the drive follows
+  setpoints in CSP or CSV.  `srv-limit-active` now also includes the
+  positive and negative limit bits (14 and 15) on the A3 and B3.  HAL
+  configs that use these pins see different values than before.  See
+  [#548](https://github.com/linuxcnc-ethercat/linuxcnc-ethercat/pull/548).
 - Sync Units slower than the master cycle are now exchanged on fixed
   cycles of the DC grid (see `syncUnitPhase`) instead of counting from
   the cycle the bus first reached OP, so their position relative to
