@@ -890,7 +890,9 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
     if (hal_data->hm_enabled) {
       LCEC_PIN_BIT_SET(hal_data->homing, 0);
       LCEC_PIN_BIT_SET(hal_data->homing_error, 0);
-      // the drive may have been power cycled, so it has to be homed again before the limits are armed
+      // the drive may have been power cycled, so it has to be homed again: srv-homed would keep its last
+      // value otherwise, and the limits are only armed again after the next homing run
+      LCEC_PIN_BIT_SET(hal_data->homed, 0);
       hal_data->referenced = 0;
       LCEC_PIN_BIT_SET(hal_data->sw_limit_armed, 0);
     }

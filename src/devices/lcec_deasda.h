@@ -141,7 +141,8 @@ Pins with <modParam name="enableHM" value="true"/>:
     the pin on. Could be connected to joint.N.index-enable.
 
   BIT OUT srv-homed
-    Drive reports that homing is complete.
+    Drive reports that homing is complete. Off again once the drive has
+    dropped off the bus, as it may have lost its position.
 
   BIT OUT srv-homing
     Homing is running.

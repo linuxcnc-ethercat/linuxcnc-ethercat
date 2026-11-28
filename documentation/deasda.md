@@ -215,6 +215,9 @@ Units and values, see the description of the objects in the EtherCAT chapter of 
 4. When the drive reports that homing is complete, the driver sets `srv-homed`, clears `srv-home`
    and switches back to CSP/CSV.
 
+`srv-homed` stays on after that, until the next homing run starts or the drive drops off the bus
+(it may have been power cycled and lost its position then).
+
 The driver only clears `srv-home` when homing is complete. If the drive reports a fault during
 homing, the run is aborted and `srv-home` stays on; the driver does not start another run until
 `srv-home` has been off. On a homing error `srv-homing-error` is set and `srv-home` stays on as
