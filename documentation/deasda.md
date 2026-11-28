@@ -64,6 +64,9 @@ The following `<modParam>` settings are available:
 - `enableHM`: `true`/`false`, enables drive-internal homing (default `false`). See [Homing Mode](#homing-mode).
 - `homeMethod`: homing method, written to Object 6098h at startup. See [Homing Mode](#homing-mode).
 - `homeOffset`: home offset in PUU, written to Object 607Ch at startup. See [Homing Mode](#homing-mode).
+- `homeVelocityFast`, `homeVelocitySlow`: homing speeds in 0.1 rpm, written to Object 6099h sub 1 and 2 at
+  startup. See [Homing Mode](#homing-mode).
+- `homeAccel`: homing acceleration, written to Object 609Ah at startup. See [Homing Mode](#homing-mode).
 - `homeTorqueLevel_pct`: A3 and B3 only. Torque level in % for homing on a hard stop (1 to 300), written to
   drive parameter P1.087 at startup. See [Homing Mode](#homing-mode).
 - `homeTorqueTime_ms`: A3 and B3 only. Time in ms the torque has to stay above the level (2 to 2000), written
@@ -165,6 +168,9 @@ limit switches, the encoder Z pulse or a hard stop. Add `enableHM` to enable thi
       <modParam name="enableHM" value="true"/>
       <modParam name="homeMethod" value="1"/>
       <modParam name="homeOffset" value="0"/>
+      <modParam name="homeVelocityFast" value="1000"/>
+      <modParam name="homeVelocitySlow" value="200"/>
+      <modParam name="homeAccel" value="100"/>
     </slave>
 ```
 
@@ -188,12 +194,18 @@ u32   IN  lcec.0.A3.srv-home-accel         | Homing acceleration (609Ah)
 ```
 
 The four `srv-home-*` setting pins start out with the values that are set in the drive (after
-`homeMethod` has been applied). Changing a pin writes the new value to the drive. Don't change
+`homeMethod`, `homeVelocityFast`, `homeVelocitySlow` and `homeAccel` have been applied; without
+these modParams the drive keeps the values it has). Changing a pin writes the new value to the drive. Don't change
 them while homing is running.
 
 Homing only starts once the drive has all four values of the pins. If the drive does not accept a
 value, the driver keeps trying and homing does not start. `srv-home-method` has to be between -128
 and 127; other values are not sent to the drive, and homing does not start with them either.
+
+The drive limits the speeds and the acceleration to its range without reporting an error: a
+speed of 6000 on a B3 is used as 5000. A modParam with such a value stops the configuration from
+loading, with a message that tells which value the drive would use. A pin is not checked this way;
+there the drive runs with the limited value.
 
 Units and values, see the description of the objects in the EtherCAT chapter of the drive manual:
 - `homeMethod` / `srv-home-method`: 1 to 35 are the CiA 402 methods (15, 16, 31 and 32 are
@@ -201,9 +213,9 @@ Units and values, see the description of the objects in the EtherCAT chapter of 
   homing on a hard stop; the A2 has no hard stop methods. The drive default is 0, so a method has
   to be set before homing.
 - `homeOffset`: PUU.
-- `srv-home-velocity-fast` / `srv-home-velocity-slow`: 0.1 rpm by default (range 1 to 20000 and 1
-  to 5000 on A3/B3, 1 to 2000 and 1 to 500 on A2).
-- `srv-home-accel`: by default the time in ms to accelerate from 0 to 3000 rpm.
+- `homeVelocityFast` / `srv-home-velocity-fast` and `homeVelocitySlow` / `srv-home-velocity-slow`:
+  0.1 rpm by default (range 1 to 20000 and 1 to 5000 on A3/B3, 1 to 2000 and 1 to 500 on A2).
+- `homeAccel` / `srv-home-accel`: by default the time in ms to accelerate from 0 to 3000 rpm.
 
 ### Homing sequence
 

@@ -39,6 +39,9 @@
 #define M_EGEARRATIO    5
 #define M_HOMETORQUELVL 6
 #define M_HOMETORQUETM  7
+#define M_HOMEVELFAST   8
+#define M_HOMEVELSLOW   9
+#define M_HOMEACCEL     10
 
 #define DEASDA_PULSES_PER_REV_DEFLT_LOWRES  (1280000)   // this is the default value for A2 (default value)
 #define DEASDA_PULSES_PER_REV_DEFLT_HIGHRES (16777216)  // this is the default value for A3
@@ -81,6 +84,9 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave);
   {"enableHM", M_ENABLEHM, MODPARAM_TYPE_BIT, "false", "Enable homing mode (maps 0x6060/0x6061 and adds homing pins)"},             \
       {"homeMethod", M_HOMEMETHOD, MODPARAM_TYPE_S32, NULL, "Homing method (0x6098)"},                                               \
       {"homeOffset", M_HOMEOFFSET, MODPARAM_TYPE_S32, NULL, "Home offset in PUU (0x607C)"},                                          \
+      {"homeVelocityFast", M_HOMEVELFAST, MODPARAM_TYPE_U32, NULL, "Homing speed during search for the switch (0x6099:01)"},         \
+      {"homeVelocitySlow", M_HOMEVELSLOW, MODPARAM_TYPE_U32, NULL, "Homing speed during search for zero (0x6099:02)"},               \
+      {"homeAccel", M_HOMEACCEL, MODPARAM_TYPE_U32, NULL, "Homing acceleration (0x609A)"},                                           \
       {"eGearRatio", M_EGEARRATIO, MODPARAM_TYPE_STRING, NULL, "E-Gear ratio (0x6093), as numerator/denominator"}
 
 // Settings for homing on a hard stop.  The A2 has no hard stop homing methods (0x6098 is 0 to 35 there),
@@ -386,6 +392,28 @@ static int lcec_deasda_sdo_setting_init(
   return 0;
 }
 
+/// @brief Write a 32 bit modparam to the drive and make sure that the drive has taken it over as it is.
+///
+/// The drives limit some settings to their range without reporting an error.  A configuration that asks
+/// for a value the drive does not use should not load, and it should not leave the limited value behind
+/// in the drive either: the drive keeps it until it is power cycled.
+static int lcec_deasda_write_checked_modparam(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint32_t value, const char *mpname) {
+  uint32_t before, actual;
+
+  if (lcec_read_sdo32(slave, index, subindex, &before) != 0) return -1;
+  if (lcec_write_sdo32_modparam(slave, index, subindex, value, mpname) != 0) return -1;
+  if (lcec_read_sdo32(slave, index, subindex, &actual) != 0) return -1;
+  if (actual != value) {
+    rtapi_print_msg(RTAPI_MSG_ERR,
+        LCEC_MSG_PFX "slave %s.%s: <modParam name=\"%s\"> value %u is out of range, the drive would use %u instead (%04x:%02x)\n",
+        slave->master->name, slave->name, mpname, (unsigned)value, (unsigned)actual, index, subindex);
+    // put the old value back; nothing more can be done if that fails
+    lcec_write_sdo32(slave, index, subindex, before);
+    return -1;
+  }
+  return 0;
+}
+
 static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
   lcec_master_t *master = slave->master;
   lcec_deasda_data_t *hal_data;
@@ -566,6 +594,21 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
       return -1;
     }
     if (lcec_write_sdo8_modparam(slave, 0x6098, 0x00, pval->s32, "homeMethod") != 0) return -1;
+  }
+  // The ranges of these differ between the models, so they are left to the drive.  It does not reject a
+  // value that is out of range, it quietly uses the nearest one it supports; that is caught by reading
+  // the value back.
+  pval = lcec_modparam_get(slave, M_HOMEVELFAST);
+  if (pval != NULL) {
+    if (lcec_deasda_write_checked_modparam(slave, 0x6099, 0x01, pval->u32, "homeVelocityFast") != 0) return -1;
+  }
+  pval = lcec_modparam_get(slave, M_HOMEVELSLOW);
+  if (pval != NULL) {
+    if (lcec_deasda_write_checked_modparam(slave, 0x6099, 0x02, pval->u32, "homeVelocitySlow") != 0) return -1;
+  }
+  pval = lcec_modparam_get(slave, M_HOMEACCEL);
+  if (pval != NULL) {
+    if (lcec_deasda_write_checked_modparam(slave, 0x609a, 0x00, pval->u32, "homeAccel") != 0) return -1;
   }
 
   // Hard stop homing (methods -1 to -4): the drive takes the stop as reached once the torque has been above
