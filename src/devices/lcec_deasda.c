@@ -29,6 +29,7 @@
 #define FLAG_LOWRES_ENC  1 << 0  // Device uses low res encoder as default
 #define FLAG_HIGHRES_ENC 1 << 1  // Device uses high res encoder as default x3 series
 #define FLAG_DOUT        1 << 2  // Device has digital outputs
+#define FLAG_LIMIT_BITS  1 << 3  // Device reports the positive/negative limit in statusword bits 14 and 15
 
 #define M_OPERATIONMODE 0
 #define M_DIGITALOUT    1
@@ -38,6 +39,9 @@
 #define M_EGEARRATIO    5
 #define M_HOMETORQUELVL 6
 #define M_HOMETORQUETM  7
+#define M_HOMEVELFAST   8
+#define M_HOMEVELSLOW   9
+#define M_HOMEACCEL     10
 
 #define DEASDA_PULSES_PER_REV_DEFLT_LOWRES  (1280000)   // this is the default value for A2 (default value)
 #define DEASDA_PULSES_PER_REV_DEFLT_HIGHRES (16777216)  // this is the default value for A3
@@ -46,6 +50,15 @@
 #define DEASDA_RPM_RCPT   (1.0 / DEASDA_RPM_FACTOR)
 #define DEASDA_RPM_MUL    (60.0)
 #define DEASDA_RPM_DIV    (1.0 / 60.0)
+
+// Zero speed detection level in 0.1 rpm, if it can't be read from the drive (0x606F, drive default).
+#define DEASDA_ZERO_SPEED_DEFLT 100
+
+// How often the alarm codes are read again while the drive reports a fault or a warning.
+#define DEASDA_ALARM_REFRESH_NS 500000000LL
+
+// AssignActivate of the "DC" operation mode in the ESI files of all supported drives.
+#define DEASDA_DC_ASSIGN_ACTIVATE 0x300
 
 #define DEASDA_FAULT_AUTORESET_CYCLES  100
 #define DEASDA_FAULT_AUTORESET_RETRIES 3
@@ -71,10 +84,13 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave);
   {"enableHM", M_ENABLEHM, MODPARAM_TYPE_BIT, "false", "Enable homing mode (maps 0x6060/0x6061 and adds homing pins)"},             \
       {"homeMethod", M_HOMEMETHOD, MODPARAM_TYPE_S32, NULL, "Homing method (0x6098)"},                                               \
       {"homeOffset", M_HOMEOFFSET, MODPARAM_TYPE_S32, NULL, "Home offset in PUU (0x607C)"},                                          \
+      {"homeVelocityFast", M_HOMEVELFAST, MODPARAM_TYPE_U32, NULL, "Homing speed during search for the switch (0x6099:01)"},         \
+      {"homeVelocitySlow", M_HOMEVELSLOW, MODPARAM_TYPE_U32, NULL, "Homing speed during search for zero (0x6099:02)"},               \
+      {"homeAccel", M_HOMEACCEL, MODPARAM_TYPE_U32, NULL, "Homing acceleration (0x609A)"},                                           \
       {"eGearRatio", M_EGEARRATIO, MODPARAM_TYPE_STRING, NULL, "E-Gear ratio (0x6093), as numerator/denominator"}
 
-// Settings for homing on a hard stop.  The ESI file of the A2 doesn't list these two objects, so they are
-// only offered for the x3 drives.
+// Settings for homing on a hard stop.  The A2 has no hard stop homing methods (0x6098 is 0 to 35 there),
+// so they are only offered for the x3 drives.
 #define DEASDA_MODPARAMS_HARDSTOP                                                                                               \
   {"homeTorqueLevel_pct", M_HOMETORQUELVL, MODPARAM_TYPE_U32, NULL, "Hard stop homing: torque level in % (P1.087, 0x2157)"},       \
       {"homeTorqueTime_ms", M_HOMETORQUETM, MODPARAM_TYPE_U32, NULL, "Hard stop homing: level reached timer in ms (P1.088, 0x2158)"}
@@ -116,8 +132,9 @@ static const drive_operationmodes_t drive_operationmodes[] = {
 // configurations.
 static lcec_typelist_t types[] = {
     {"DeASDA", LCEC_DELTA_VID, 0x10305070, 0, NULL, lcec_deasda_init, lcec_deasda_modparams, FLAG_LOWRES_ENC | FLAG_DOUT},
-    {"DeASDA3", LCEC_DELTA_VID, 0x00006010, 0, NULL, lcec_deasda_init, lcec_deasda_modparams_a3, FLAG_HIGHRES_ENC | FLAG_DOUT},
-    {"DeASDB3", LCEC_DELTA_VID, 0x00006080, 0, NULL, lcec_deasda_init, lcec_deasda_modparams_b3, FLAG_HIGHRES_ENC},
+    {"DeASDA3", LCEC_DELTA_VID, 0x00006010, 0, NULL, lcec_deasda_init, lcec_deasda_modparams_a3,
+        FLAG_HIGHRES_ENC | FLAG_DOUT | FLAG_LIMIT_BITS},
+    {"DeASDB3", LCEC_DELTA_VID, 0x00006080, 0, NULL, lcec_deasda_init, lcec_deasda_modparams_b3, FLAG_HIGHRES_ENC | FLAG_LIMIT_BITS},
     {NULL},
 };
 
@@ -156,6 +173,8 @@ typedef struct {
   hal_bit_t *fault_reset;
   hal_bit_t *halt;
   hal_u32_t *operation_mode;
+  hal_u32_t *error_code;
+  hal_u32_t *alarm_code;
   hal_float_t *cmd_value;
 
   // homing mode (only exported with <modParam name="enableHM" value="true"/>)
@@ -165,6 +184,7 @@ typedef struct {
   hal_bit_t *homing_error;
   hal_s32_t *opmode_display;
   hal_float_t *pos_fb;
+  hal_bit_t *sw_limit_armed;
   hal_float_t *pos_cmd;  // CSV only, in CSP the position command is cmd_value
   hal_s32_t *home_method;
   hal_u32_t *home_velocity_fast;
@@ -176,6 +196,12 @@ typedef struct {
   lcec_param_u32_t pprev;
   lcec_param_u32_t fault_autoreset_cycles;
   lcec_param_u32_t fault_autoreset_retries;
+
+  // software limits of the drive, in joint coordinates (only exported with enableHM)
+  lcec_param_float_t sw_limit_min;
+  lcec_param_float_t sw_limit_max;
+  lcec_param_float_t sw_limit_offset;
+  lcec_param_float_t sw_limit_margin;
 
   hal_float_t *torque;
   hal_bit_t *neg_lim_switch;
@@ -206,10 +232,21 @@ typedef struct {
   unsigned int opmode_pdo_os;
   unsigned int opmode_display_pdo_os;
 
+  int limit_bits;       // statusword bits 14/15 are the positive/negative limit
+  uint16_t zero_speed_level;  // zero speed detection level of the drive [0.1 rpm]
+
+  // The alarm codes are not mapped, to leave the PDO mapping alone; they are read while there is an alarm.
+  ec_sdo_request_t *error_code_sdo;  // 0x603F, CiA 402 error code
+  ec_sdo_request_t *alarm_code_sdo;  // 0x2001, drive parameter P0-01: alarm code as shown on the drive
+  int alarm_read_pending;  // the requests are on their way
+  int alarm_read_stale;    // ...but the alarm they were sent for is gone, so their results are dropped
+  long long alarm_refresh_time;
+
   int hm_enabled;         // homing mode support is mapped and exported
   int8_t opmode_cyclic;   // configured cyclic mode (CSP or CSV)
   int8_t opmode_current;  // last value of 0x6061
   int home_start_sent;    // homing start bit was set in the last write cycle
+  int referenced;         // the drive has been homed since it came up, so its position can be trusted
   int home_seen_unhomed;  // drive reported "not complete" since the start bit was set
   int home_aborted;       // a fault ended the homing run; srv-home has to go off before the next one
   long long home_done_time;
@@ -218,6 +255,10 @@ typedef struct {
   lcec_deasda_sdo_setting_t home_velocity_fast_set;
   lcec_deasda_sdo_setting_t home_velocity_slow_set;
   lcec_deasda_sdo_setting_t home_accel_set;
+  lcec_deasda_sdo_setting_t sw_limit_min_set;  // 0x607D:01
+  lcec_deasda_sdo_setting_t sw_limit_max_set;  // 0x607D:02
+  int sw_limits_available;
+  int sw_limit_range_error;  // the configured limits don't fit into the position range of the drive
 
   hal_bit_t last_switch_on;
   hal_bit_t internal_fault;
@@ -253,6 +294,8 @@ static const lcec_pindesc_t slave_pins[] = {
     {HAL_BIT, HAL_IN, offsetof(lcec_deasda_data_t, fault_reset), "%s.%s.%s.srv-fault-reset"},
     {HAL_BIT, HAL_IN, offsetof(lcec_deasda_data_t, halt), "%s.%s.%s.srv-halt"},
     {HAL_U32, HAL_OUT, offsetof(lcec_deasda_data_t, operation_mode), "%s.%s.%s.srv-operation-mode"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_deasda_data_t, error_code), "%s.%s.%s.srv-error-code"},
+    {HAL_U32, HAL_OUT, offsetof(lcec_deasda_data_t, alarm_code), "%s.%s.%s.srv-alarm-code"},
     {HAL_FLOAT, HAL_OUT, offsetof(lcec_deasda_data_t, torque),
         "%s.%s.%s.srv-torque-rel"},  // relative value (5) - hence current would be redundant
     {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, di_1), "%s.%s.%s.din-1"},
@@ -285,6 +328,7 @@ static const lcec_pindesc_t slave_pins_hm[] = {
     {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, homing), "%s.%s.%s.srv-homing"},
     {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, homing_error), "%s.%s.%s.srv-homing-error"},
     {HAL_S32, HAL_OUT, offsetof(lcec_deasda_data_t, opmode_display), "%s.%s.%s.srv-opmode-display"},
+    {HAL_BIT, HAL_OUT, offsetof(lcec_deasda_data_t, sw_limit_armed), "%s.%s.%s.srv-sw-limit-armed"},
     {HAL_S32, HAL_IN, offsetof(lcec_deasda_data_t, home_method), "%s.%s.%s.srv-home-method"},
     {HAL_U32, HAL_IN, offsetof(lcec_deasda_data_t, home_velocity_fast), "%s.%s.%s.srv-home-velocity-fast"},
     {HAL_U32, HAL_IN, offsetof(lcec_deasda_data_t, home_velocity_slow), "%s.%s.%s.srv-home-velocity-slow"},
@@ -316,6 +360,16 @@ static const lcec_paramdesc_t slave_params[] = {
     {HAL_TYPE_UNSPECIFIED},
 };
 
+// Software limits of the drive.  They are in joint coordinates, like [JOINT_n]MIN_LIMIT / MAX_LIMIT in the
+// INI file, and only make sense with drive-internal homing.
+static const lcec_paramdesc_t slave_params_hm[] = {
+    {HAL_FLOAT, HAL_RW, offsetof(lcec_deasda_data_t, sw_limit_min), "%s.%s.%s.srv-sw-limit-min"},
+    {HAL_FLOAT, HAL_RW, offsetof(lcec_deasda_data_t, sw_limit_max), "%s.%s.%s.srv-sw-limit-max"},
+    {HAL_FLOAT, HAL_RW, offsetof(lcec_deasda_data_t, sw_limit_offset), "%s.%s.%s.srv-sw-limit-offset"},
+    {HAL_FLOAT, HAL_RW, offsetof(lcec_deasda_data_t, sw_limit_margin), "%s.%s.%s.srv-sw-limit-margin"},
+    {HAL_TYPE_UNSPECIFIED},
+};
+
 static void lcec_deasda_check_scales(lcec_deasda_data_t *hal_data);
 
 static void lcec_deasda_read(lcec_slave_t *slave, long period);
@@ -335,6 +389,28 @@ static int lcec_deasda_sdo_setting_init(
   setting->bytes = bytes;
   setting->confirmed = value;
   setting->pending = 0;
+  return 0;
+}
+
+/// @brief Write a 32 bit modparam to the drive and make sure that the drive has taken it over as it is.
+///
+/// The drives limit some settings to their range without reporting an error.  A configuration that asks
+/// for a value the drive does not use should not load, and it should not leave the limited value behind
+/// in the drive either: the drive keeps it until it is power cycled.
+static int lcec_deasda_write_checked_modparam(lcec_slave_t *slave, uint16_t index, uint8_t subindex, uint32_t value, const char *mpname) {
+  uint32_t before, actual;
+
+  if (lcec_read_sdo32(slave, index, subindex, &before) != 0) return -1;
+  if (lcec_write_sdo32_modparam(slave, index, subindex, value, mpname) != 0) return -1;
+  if (lcec_read_sdo32(slave, index, subindex, &actual) != 0) return -1;
+  if (actual != value) {
+    rtapi_print_msg(RTAPI_MSG_ERR,
+        LCEC_MSG_PFX "slave %s.%s: <modParam name=\"%s\"> value %u is out of range, the drive would use %u instead (%04x:%02x)\n",
+        slave->master->name, slave->name, mpname, (unsigned)value, (unsigned)actual, index, subindex);
+    // put the old value back; nothing more can be done if that fails
+    lcec_write_sdo32(slave, index, subindex, before);
+    return -1;
+  }
   return 0;
 }
 
@@ -385,6 +461,17 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
   pval = lcec_modparam_get(slave, M_ENABLEHM);
   if (pval) {
     enable_hm = pval->bit;
+  }
+
+  // These drives are meant to run synchronized to the distributed clock.  Use the settings of the "DC"
+  // operation mode from the ESI file, unless the XML config has its own <dcConf>.  SYNC0 runs at the cycle
+  // of the Sync Unit of the slave, which is the rate at which the drive gets new setpoints; that is the
+  // cycle of the master unless the slave is in a slower Sync Unit.
+  if (slave->dc_conf == NULL) {
+    lcec_slave_dc_t *dc = LCEC_HAL_ALLOCATE(lcec_slave_dc_t);
+    dc->assignActivate = DEASDA_DC_ASSIGN_ACTIVATE;
+    dc->sync0Cycle = slave->sync_unit->cycle_time;
+    slave->dc_conf = dc;
   }
 
   // Set up PDO sync configuration
@@ -442,6 +529,15 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
   hal_data = LCEC_HAL_ALLOCATE(lcec_deasda_data_t);
   slave->hal_data = hal_data;
   hal_data->hm_enabled = enable_hm;
+  hal_data->error_code_sdo = ecrt_slave_config_create_sdo_request(slave->config, 0x603f, 0x00, 2);
+  hal_data->alarm_code_sdo = ecrt_slave_config_create_sdo_request(slave->config, 0x2001, 0x00, 2);
+  hal_data->limit_bits = (flags & FLAG_LIMIT_BITS) != 0;
+
+  // Zero speed detection level of the drive (0x606F, drive parameter P1.038), for srv-zero-speed.
+  hal_data->zero_speed_level = DEASDA_ZERO_SPEED_DEFLT;
+  if (lcec_read_sdo16(slave, 0x606f, 0x00, &hal_data->zero_speed_level) != 0) {
+    hal_data->zero_speed_level = DEASDA_ZERO_SPEED_DEFLT;
+  }
   hal_data->opmode_cyclic = operationmode;
   hal_data->opmode_current = operationmode;
 
@@ -499,6 +595,21 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
     }
     if (lcec_write_sdo8_modparam(slave, 0x6098, 0x00, pval->s32, "homeMethod") != 0) return -1;
   }
+  // The ranges of these differ between the models, so they are left to the drive.  It does not reject a
+  // value that is out of range, it quietly uses the nearest one it supports; that is caught by reading
+  // the value back.
+  pval = lcec_modparam_get(slave, M_HOMEVELFAST);
+  if (pval != NULL) {
+    if (lcec_deasda_write_checked_modparam(slave, 0x6099, 0x01, pval->u32, "homeVelocityFast") != 0) return -1;
+  }
+  pval = lcec_modparam_get(slave, M_HOMEVELSLOW);
+  if (pval != NULL) {
+    if (lcec_deasda_write_checked_modparam(slave, 0x6099, 0x02, pval->u32, "homeVelocitySlow") != 0) return -1;
+  }
+  pval = lcec_modparam_get(slave, M_HOMEACCEL);
+  if (pval != NULL) {
+    if (lcec_deasda_write_checked_modparam(slave, 0x609a, 0x00, pval->u32, "homeAccel") != 0) return -1;
+  }
 
   // Hard stop homing (methods -1 to -4): the drive takes the stop as reached once the torque has been above
   // the level (P1.087, 0x2157) for the time of the level reached timer (P1.088, 0x2158).
@@ -521,8 +632,8 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
     if (lcec_write_sdo16_modparam(slave, 0x2158, 0x00, pval->u32, "homeTorqueTime_ms") != 0) return -1;
   }
 
-  // set interpolation time period
-  tu = master->app_time_period;
+  // set interpolation time period: the time between two setpoints, which is the cycle of the Sync Unit
+  tu = slave->sync_unit->cycle_time;
   ti = -9;
 
   while ((tu % 10) == 0 || tu > 255) {
@@ -608,6 +719,18 @@ static int lcec_deasda_init(int comp_id, lcec_slave_t *slave) {
     }
 
     LCEC_PIN_S32_SET(hal_data->opmode_display, operationmode);
+
+    // Software limits (0x607D).  The drive keeps them until it is power cycled, and they are only valid for
+    // the position system of the last homing run, so start out with the full range.
+    if ((err = lcec_param_newf_list(hal_data, slave_params_hm, LCEC_MODULE_NAME, master->name, slave->name)) != 0) return err;
+    if (lcec_write_sdo32(slave, 0x607d, 0x01, (uint32_t)INT32_MIN) == 0 && lcec_write_sdo32(slave, 0x607d, 0x02, INT32_MAX) == 0 &&
+        lcec_deasda_sdo_setting_init(slave, &hal_data->sw_limit_min_set, 0x607d, 0x01, 4, INT32_MIN) == 0 &&
+        lcec_deasda_sdo_setting_init(slave, &hal_data->sw_limit_max_set, 0x607d, 0x02, 4, INT32_MAX) == 0) {
+      hal_data->sw_limits_available = 1;
+    } else {
+      rtapi_print_msg(RTAPI_MSG_WARN, LCEC_MSG_PFX "slave %s.%s: could not reset the software limits, srv-sw-limit-* is disabled\n",
+          master->name, slave->name);
+    }
   }
 
   LCEC_PIN_U32_SET(hal_data->operation_mode, operationmode);
@@ -723,9 +846,64 @@ static void lcec_deasda_read_homing(lcec_deasda_data_t *hal_data, uint8_t *pd, u
   }
 
   // done, release the request
+  hal_data->referenced = 1;
   LCEC_PIN_BIT_SET(hal_data->home, 0);
   hal_data->home_seen_unhomed = 0;
   hal_data->home_done_time = 0;
+}
+
+/// @brief There is no alarm to show: clear the alarm code pins.
+///
+/// Requests that are still on their way belong to an alarm that is gone.  They can't be taken back, so
+/// they are marked as stale; their results are dropped, also when another alarm has come up by then.
+static void lcec_deasda_clear_alarm(lcec_deasda_data_t *hal_data) {
+  LCEC_PIN_U32_SET(hal_data->error_code, 0);
+  LCEC_PIN_U32_SET(hal_data->alarm_code, 0);
+  if (hal_data->alarm_read_pending) hal_data->alarm_read_stale = 1;
+  // read at once when the next alarm shows up
+  hal_data->alarm_refresh_time = 0;
+}
+
+/// @brief Read the alarm codes of the drive through SDO requests.
+///
+/// @param active The drive reports a fault or a warning.
+static void lcec_deasda_read_alarm(lcec_deasda_data_t *hal_data, int active, long period) {
+  ec_request_state_t error_state, alarm_state;
+
+  if (hal_data->error_code_sdo == NULL || hal_data->alarm_code_sdo == NULL) return;
+
+  if (!active) lcec_deasda_clear_alarm(hal_data);
+
+  if (hal_data->alarm_read_pending) {
+    // wait for both reads to finish, the requests can't be used again before that
+    error_state = ecrt_sdo_request_state(hal_data->error_code_sdo);
+    alarm_state = ecrt_sdo_request_state(hal_data->alarm_code_sdo);
+    if (error_state == EC_REQUEST_BUSY || alarm_state == EC_REQUEST_BUSY) return;
+    hal_data->alarm_read_pending = 0;
+
+    if (hal_data->alarm_read_stale) {
+      // sent for an alarm that is gone: drop the results, and read again below if there is a new alarm
+      hal_data->alarm_read_stale = 0;
+    } else {
+      if (error_state == EC_REQUEST_SUCCESS) {
+        LCEC_PIN_U32_SET(hal_data->error_code, EC_READ_U16(ecrt_sdo_request_data(hal_data->error_code_sdo)));
+      }
+      if (alarm_state == EC_REQUEST_SUCCESS) {
+        LCEC_PIN_U32_SET(hal_data->alarm_code, EC_READ_U16(ecrt_sdo_request_data(hal_data->alarm_code_sdo)));
+      }
+    }
+  }
+
+  if (!active) return;
+
+  // read at the start of an alarm, and again from time to time, as the alarm can change
+  hal_data->alarm_refresh_time -= period;
+  if (hal_data->alarm_refresh_time > 0) return;
+  hal_data->alarm_refresh_time = DEASDA_ALARM_REFRESH_NS;
+
+  ecrt_sdo_request_read(hal_data->error_code_sdo);
+  ecrt_sdo_request_read(hal_data->alarm_code_sdo);
+  hal_data->alarm_read_pending = 1;
 }
 
 static void lcec_deasda_read(lcec_slave_t *slave, long period) {
@@ -750,9 +928,16 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
     LCEC_PIN_BIT_SET(hal_data->at_speed, 0);
     LCEC_PIN_BIT_SET(hal_data->limit_active, 0);
     LCEC_PIN_BIT_SET(hal_data->zero_speed, 0);
+    // the alarm codes can't be read now, and the last ones say nothing about a drive that is gone
+    lcec_deasda_clear_alarm(hal_data);
     if (hal_data->hm_enabled) {
       LCEC_PIN_BIT_SET(hal_data->homing, 0);
       LCEC_PIN_BIT_SET(hal_data->homing_error, 0);
+      // the drive may have been power cycled, so it has to be homed again: srv-homed would keep its last
+      // value otherwise, and the limits are only armed again after the next homing run
+      LCEC_PIN_BIT_SET(hal_data->homed, 0);
+      hal_data->referenced = 0;
+      LCEC_PIN_BIT_SET(hal_data->sw_limit_armed, 0);
     }
     return;
   }
@@ -772,10 +957,18 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
   LCEC_PIN_BIT_SET(hal_data->warning, (status >> 7) & 0x01);
   LCEC_PIN_BIT_SET(hal_data->remote, (status >> 9) & 0x01);
   LCEC_PIN_BIT_SET(hal_data->at_speed, (status >> 10) & 0x01);
-  LCEC_PIN_BIT_SET(hal_data->limit_active, (status >> 11) & 0x01);
-  LCEC_PIN_BIT_SET(hal_data->zero_speed, (status >> 12) & 0x01);
+  // Bit 11 is "internal limit active" in CiA 402.  The x3 drives don't use it (reserved), they report the
+  // positive and negative limit in bits 14 and 15.  The A2 supports neither.
+  if (hal_data->limit_bits) {
+    LCEC_PIN_BIT_SET(hal_data->limit_active, (status & ((1 << 11) | (1 << 14) | (1 << 15))) != 0);
+  } else {
+    LCEC_PIN_BIT_SET(hal_data->limit_active, (status >> 11) & 0x01);
+  }
 
   if (hal_data->hm_enabled) lcec_deasda_read_homing(hal_data, pd, status, period);
+
+  // read the alarm codes while the drive reports a fault or a warning
+  lcec_deasda_read_alarm(hal_data, (status & ((1 << 3) | (1 << 7))) != 0, period);
 
   // clear pending fault reset if no fault
   if (!hal_data->internal_fault) hal_data->fault_reset_retry = 0;
@@ -798,6 +991,9 @@ static void lcec_deasda_read(lcec_slave_t *slave, long period) {
 
   // read current speed
   speed_raw = EC_READ_S32(&pd[hal_data->currvel_pdo_os]);
+  // Statusword bit 12 is only "zero speed" in profile velocity mode; in CSP and CSV it is "mode is in
+  // effect".  So compare the actual speed with the zero speed detection level of the drive instead.
+  LCEC_PIN_BIT_SET(hal_data->zero_speed, llabs((long long)speed_raw) < hal_data->zero_speed_level);
   rpm = (double)speed_raw * DEASDA_RPM_FACTOR;
   LCEC_PIN_FLOAT_SET(hal_data->vel_fb_rpm, rpm);
   LCEC_PIN_FLOAT_SET(hal_data->vel_fb_rpm_abs, fabs(rpm));
@@ -879,6 +1075,83 @@ static int lcec_deasda_sdo_update(lcec_deasda_sdo_setting_t *setting, int32_t va
   return 0;
 }
 
+/// @brief Convert a joint position to the position of the drive in PUU.
+///
+/// The result is not limited to the 32 bit range of the drive, that is up to the caller.
+static double lcec_deasda_joint_to_puu(lcec_deasda_data_t *hal_data, double pos) {
+  return (pos - LCEC_PARAM_FLOAT_GET(hal_data->sw_limit_offset)) * LCEC_PARAM_U32_GET(hal_data->pprev) /
+         LCEC_PARAM_FLOAT_GET(hal_data->pos_scale);
+}
+
+/// @brief Keep the software limits of the drive (0x607D) in line with srv-sw-limit-min / srv-sw-limit-max.
+///
+/// The limits are only armed while the drive is homed: before that its position has no relation to the
+/// machine.  In any other case the drive gets its full range, which turns the limits off.
+///
+/// Limits that are not inside of the 32 bit position range of the drive are never armed.  The position
+/// of the drive wraps at the ends of that range, so it can't get beyond a limit that sits there or
+/// further out: such a limit would look armed without ever stopping the axis.
+///
+/// @return true if the limits are off in the drive, so it is safe to start homing.
+static int lcec_deasda_write_sw_limits(lcec_slave_t *slave, lcec_deasda_data_t *hal_data) {
+  double min = LCEC_PARAM_FLOAT_GET(hal_data->sw_limit_min);
+  double max = LCEC_PARAM_FLOAT_GET(hal_data->sw_limit_max);
+  double margin = LCEC_PARAM_FLOAT_GET(hal_data->sw_limit_margin);
+  int32_t lo = INT32_MIN, hi = INT32_MAX;
+  int configured, in_range = 0, arm, ok;
+
+  if (!hal_data->sw_limits_available) return 1;
+
+  // min == max (the default, both 0) means that no limits are configured
+  configured = max > min;
+  if (configured) {
+    double lo_puu, hi_puu;
+
+    if (margin < 0.0) margin = 0.0;
+    lo_puu = lcec_deasda_joint_to_puu(hal_data, min - margin);
+    hi_puu = lcec_deasda_joint_to_puu(hal_data, max + margin);
+    // a negative scale reverses the direction
+    if (lo_puu > hi_puu) {
+      double tmp = lo_puu;
+      lo_puu = hi_puu;
+      hi_puu = tmp;
+    }
+
+    // written like this, the check also fails for a result that is not a number (scale of 0)
+    in_range = lo_puu > (double)INT32_MIN && hi_puu < (double)INT32_MAX;
+    if (in_range) {
+      lo = (int32_t)lo_puu;
+      hi = (int32_t)hi_puu;
+    }
+  }
+
+  // report it once, also before the drive is homed, and again after the limits have been valid in between
+  if (configured && !in_range) {
+    if (!hal_data->sw_limit_range_error) {
+      rtapi_print_msg(RTAPI_MSG_ERR,
+          LCEC_MSG_PFX "slave %s.%s: the software limits don't fit into the 32 bit position range of the drive and are NOT armed; "
+                       "shorten srv-sw-limit-min/-max or use an E-Gear ratio with less pulses per revolution\n",
+          slave->master->name, slave->name);
+    }
+    hal_data->sw_limit_range_error = 1;
+  } else {
+    hal_data->sw_limit_range_error = 0;
+  }
+
+  // without valid limits lo and hi are still the full range, which turns the limits off
+  arm = hal_data->referenced && configured && in_range;
+  if (!arm) {
+    lo = INT32_MIN;
+    hi = INT32_MAX;
+  }
+
+  ok = lcec_deasda_sdo_update(&hal_data->sw_limit_min_set, lo);
+  ok &= lcec_deasda_sdo_update(&hal_data->sw_limit_max_set, hi);
+
+  LCEC_PIN_BIT_SET(hal_data->sw_limit_armed, arm && ok);
+  return !arm && ok;
+}
+
 /// @brief Write everything that is common to CSV and CSP: digital outputs, controlword and (with homing
 /// enabled) the mode of operation.
 ///
@@ -926,6 +1199,7 @@ static int lcec_deasda_write_control(lcec_slave_t *slave, lcec_deasda_data_t *ha
     int8_t opmode = hal_data->opmode_cyclic;
     int32_t method = LCEC_PIN_S32_GET(hal_data->home_method);
     int settings_ok;
+    int limits_cleared;
 
     // Bring the drive in line with the homing setting pins.  0x6098 is an INTEGER8: a method that doesn't
     // fit is not sent, as the drive would get a different method than the pin shows.  Homing only starts
@@ -945,12 +1219,17 @@ static int lcec_deasda_write_control(lcec_slave_t *slave, lcec_deasda_data_t *ha
       hal_data->home_aborted = 1;
     }
 
+    // Homing defines a new position system, and it may have to move beyond the limits (i.e. onto a hard
+    // stop), so the software limits are taken out before homing starts and put back when it is done.
+    if (home) hal_data->referenced = 0;
+    limits_cleared = lcec_deasda_write_sw_limits(slave, hal_data);
+
     // Request homing mode first, and only set the (rising-edge triggered) start bit once the drive reports
     // homing mode with the servo on; an edge that arrives together with the mode change could get lost.
     hal_data->home_start_sent = 0;
     if (home && !hal_data->home_aborted) {
       opmode = DEASDA_OPMODE_HM;
-      if (settings_ok && hal_data->opmode_current == DEASDA_OPMODE_HM && LCEC_PIN_BIT_GET(hal_data->oper_enabled) &&
+      if (settings_ok && limits_cleared && hal_data->opmode_current == DEASDA_OPMODE_HM && LCEC_PIN_BIT_GET(hal_data->oper_enabled) &&
           (control & (1 << 3))) {
         control |= DEASDA_CONTROL_HOMING_START;
         hal_data->home_start_sent = 1;
@@ -1002,7 +1281,11 @@ static void lcec_deasda_write_csp(lcec_slave_t *slave, long period) {
   // ASDA Drives expect target Position in PUU (Pulse per User Unit)
   // See https://www.deltaww.com/en-US/FAQ/228
   // Calculation accordingly based on pprev and pos_scale (i.e. pitch of ball screw)
-  pos_puu = (int32_t)(LCEC_PIN_FLOAT_GET(hal_data->cmd_value) * LCEC_PARAM_U32_GET(hal_data->pprev) / LCEC_PARAM_FLOAT_GET(hal_data->pos_scale));
+  // The position of the drive is a 32 bit value that wraps, and the encoder class extends the feedback to
+  // 64 bit.  So let the command wrap the same way; casting a double that doesn't fit straight to int32_t
+  // is undefined.
+  pos_puu = (int32_t)(uint32_t)(int64_t)(
+      LCEC_PIN_FLOAT_GET(hal_data->cmd_value) * LCEC_PARAM_U32_GET(hal_data->pprev) / LCEC_PARAM_FLOAT_GET(hal_data->pos_scale));
   // Homing redefines the position of the drive, and the drive moves on its own while it is homing.  Keep
   // the target on the actual position until CSP is active again, so there is no jump when it takes over.
   if (hold) pos_puu = EC_READ_S32(&pd[hal_data->currpos_pdo_os]);

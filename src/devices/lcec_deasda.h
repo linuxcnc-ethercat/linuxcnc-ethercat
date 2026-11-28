@@ -50,6 +50,13 @@ Pins:
   BIT OUT srv-fault
     fault status flag from motor driver
 
+  U32 OUT srv-error-code
+    CiA 402 error code of the current alarm (0x603F), 0 without alarm
+
+  U32 OUT srv-alarm-code
+    alarm code as shown on the display of the drive (P0-01), 0 without
+    alarm and while the drive is not operational
+
   BIT OUT srv-volt-enabled
     voltage-enabled status flag from motor driver
 
@@ -69,10 +76,12 @@ Pins:
     motor has reached requested velocity
 
   BIT OUT srv-limit-active
-    motor driver has reached some limit.
+    motor driver has reached some limit (statusword bit 11; on A3 and B3
+    also the positive and negative limit in statusword bits 14 and 15).
 
   BIT OUT srv-zero-speed
-    motor has stopped
+    motor has stopped: the actual speed is below the zero speed detection
+    level of the drive (0x606F, drive parameter P1.038, default 10 rpm)
 
   S32 OUT srv-enc-raw
     raw value from motor encoder without offset calculation. This
@@ -132,7 +141,8 @@ Pins with <modParam name="enableHM" value="true"/>:
     the pin on. Could be connected to joint.N.index-enable.
 
   BIT OUT srv-homed
-    Drive reports that homing is complete.
+    Drive reports that homing is complete. Off again once the drive has
+    dropped off the bus, as it may have lost its position.
 
   BIT OUT srv-homing
     Homing is running.
@@ -164,6 +174,24 @@ Pins with <modParam name="enableHM" value="true"/>:
 
   U32 IN srv-home-accel
     Homing acceleration (0x609A).
+
+  BIT OUT srv-sw-limit-armed
+    The software limits of the drive (0x607D) are set from
+    srv-sw-limit-min / srv-sw-limit-max. Only while the drive is homed,
+    and only if the limits fit into its 32 bit position range.
+
+Parameters with <modParam name="enableHM" value="true"/>:
+  RW FLOAT srv-sw-limit-min
+  RW FLOAT srv-sw-limit-max
+    Limits of the joint, in joint coordinates ([JOINT_n]MIN_LIMIT /
+    MAX_LIMIT). The software limits of the drive are not used while both
+    are equal.
+
+  RW FLOAT srv-sw-limit-offset
+    Joint position of the zero of the drive ([JOINT_n]HOME_OFFSET).
+
+  RW FLOAT srv-sw-limit-margin
+    How far the limits of the drive are outside of the limits of the joint.
 
 Parameters:
   RW FLOAT srv-pos-scale

@@ -1,8 +1,8 @@
-# Driver for Delta ASDA-Ax-E Series Servos (A2 and A3-E)
+# Driver for Delta ASDA-Ax-E Series Servos (A2-E, A3-E and B3-E)
 
 The [`lcec_deasda`](../src/devices/lcec_deasda.c) driver supports Delta Automation ASDA-Ax-E series drives. 
 
-It currently supports 2 basic families of devices:
+It currently supports 3 families of devices:
 
 - ASDA-A2-E series drives (type "DeASDA")
 - ASDA-A3-E series of drives (type "DeASDA3")
@@ -31,6 +31,17 @@ Example for A3 series:
     <slave idx="1" type="DeASDA3" name="A3"/>
 ```
 
+The drives run synchronized to the distributed clock of the EtherCAT bus. The driver sets this up
+with the values from the ESI file of the drives (assignActivate 0x300, SYNC0 once per cycle of the Sync Unit
+of the slave, which is the bus cycle unless the slave is in a slower Sync Unit), so no `<dcConf>` is
+needed. Add one to the slave to use other values, for example a SYNC0 shift:
+
+```xml
+    <slave idx="1" type="DeASDA3" name="A3">
+      <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="-25000"/>
+    </slave>
+```
+
 To ensure that a change in operational mode does not occur during the linuxcnc runtime, mode setting is done using modParam in the configuration file. This setting is optional. The default mode is CSV (Cyclic Synchronous Velocity).
 
 ```xml
@@ -45,10 +56,17 @@ The following `<modParam>` settings are available:
   Supported modes are:
   - `CSV`: Cyclic Synchronous Velocity mode (Value for 0x6060: 9) DEFAULT when modParam not used.
   - `CSP`: Cyclic Synchronous Position mode (Value for 0x6060: 8)
+
+  `lcec_configgen` writes `<modParam name="opmode" value="CSP"/>` into the configurations it generates, so new
+  configurations run in CSP. CSV is only what the driver falls back to when a configuration has no `opmode`
+  modParam, which keeps older handwritten configurations working.
 - `enableDigitalOutput`: `true`/`false`, maps the digital outputs (A2 and A3 only, default `true`).
 - `enableHM`: `true`/`false`, enables drive-internal homing (default `false`). See [Homing Mode](#homing-mode).
 - `homeMethod`: homing method, written to Object 6098h at startup. See [Homing Mode](#homing-mode).
 - `homeOffset`: home offset in PUU, written to Object 607Ch at startup. See [Homing Mode](#homing-mode).
+- `homeVelocityFast`, `homeVelocitySlow`: homing speeds in 0.1 rpm, written to Object 6099h sub 1 and 2 at
+  startup. See [Homing Mode](#homing-mode).
+- `homeAccel`: homing acceleration, written to Object 609Ah at startup. See [Homing Mode](#homing-mode).
 - `homeTorqueLevel_pct`: A3 and B3 only. Torque level in % for homing on a hard stop (1 to 300), written to
   drive parameter P1.087 at startup. See [Homing Mode](#homing-mode).
 - `homeTorqueTime_ms`: A3 and B3 only. Time in ms the torque has to stay above the level (2 to 2000), written
@@ -61,13 +79,13 @@ The `opmode` values are case insensitive.
 
 ### Motor Encoder resolution - Different between ASDA-A2 and ASDA-A3/B3 series - 
 
-The standard motors that come with either series of drives differ slightly. A2 drives will have a default encoder resolution of 1,280,000, whereas A3 and B3 series (henceforth X3) motors have a resolution of 16,777,216. Note that X3 drives support both x2 and x3 series motors. The default value in this deasda driver is that of ASDA A2 series motors.
+The standard motors that come with either series of drives differ slightly. A2 drives will have a default encoder resolution of 1,280,000, whereas A3 and B3 series (henceforth X3) motors have a resolution of 16,777,216. Note that X3 drives support both x2 and x3 series motors.
 
-To set the encoder resolution use hal pin: %s.%s.%s.srv-pulses-per-rev (also know as pprev).
-Example for A3:
+The driver sets the default of the HAL parameter %s.%s.%s.srv-pulses-per-rev (also known as pprev) to match the drive type: 1,280,000 for `DeASDA` and 16,777,216 for `DeASDA3` and `DeASDB3`. It only needs to be set if the motor has a different resolution than the default for its drive series, for example an x2 series motor on an X3 drive:
 ```
-lcec.0.A3.srv-pulses-per-rev 16777216
+setp lcec.0.A3.srv-pulses-per-rev 1280000
 ```
+If the `eGearRatio` modParam is used, the driver scales this default accordingly, see below.
 
 ### Setting Pulses per Revolution with Scale
 
@@ -150,6 +168,9 @@ limit switches, the encoder Z pulse or a hard stop. Add `enableHM` to enable thi
       <modParam name="enableHM" value="true"/>
       <modParam name="homeMethod" value="1"/>
       <modParam name="homeOffset" value="0"/>
+      <modParam name="homeVelocityFast" value="1000"/>
+      <modParam name="homeVelocitySlow" value="200"/>
+      <modParam name="homeAccel" value="100"/>
     </slave>
 ```
 
@@ -162,6 +183,7 @@ bit   I/O lcec.0.A3.srv-home               | Start homing. The driver clears it 
 bit   OUT lcec.0.A3.srv-homed              | Drive reports "homing is complete" (statusword bit 12 in homing mode)
 bit   OUT lcec.0.A3.srv-homing             | Homing is running
 bit   OUT lcec.0.A3.srv-homing-error       | Drive reports a homing error (statusword bit 13 in homing mode)
+bit   OUT lcec.0.A3.srv-sw-limit-armed     | The software limits of the drive are active, see below
 s32   OUT lcec.0.A3.srv-opmode-display     | Active mode of the drive (6061h): 6 = homing, 8 = CSP, 9 = CSV
 float OUT lcec.0.A3.srv-pos-fb             | Position feedback for joint.N.motor-pos-fb, see below
 float IN  lcec.0.A3.srv-pos-cmd            | CSV only: position command of the joint, see below
@@ -172,21 +194,28 @@ u32   IN  lcec.0.A3.srv-home-accel         | Homing acceleration (609Ah)
 ```
 
 The four `srv-home-*` setting pins start out with the values that are set in the drive (after
-`homeMethod` has been applied). Changing a pin writes the new value to the drive. Don't change
+`homeMethod`, `homeVelocityFast`, `homeVelocitySlow` and `homeAccel` have been applied; without
+these modParams the drive keeps the values it has). Changing a pin writes the new value to the drive. Don't change
 them while homing is running.
 
 Homing only starts once the drive has all four values of the pins. If the drive does not accept a
 value, the driver keeps trying and homing does not start. `srv-home-method` has to be between -128
 and 127; other values are not sent to the drive, and homing does not start with them either.
 
+The drive limits the speeds and the acceleration to its range without reporting an error: a
+speed of 6000 on a B3 is used as 5000. A modParam with such a value stops the configuration from
+loading, with a message that tells which value the drive would use. A pin is not checked this way;
+there the drive runs with the limited value.
+
 Units and values, see the description of the objects in the EtherCAT chapter of the drive manual:
 - `homeMethod` / `srv-home-method`: 1 to 35 are the CiA 402 methods (15, 16, 31 and 32 are
   reserved), 35 defines the current position as the origin. A3 and B3 also accept -1 to -4 for
-  homing on a hard stop. The drive default is 0, so a method has to be set before homing.
+  homing on a hard stop; the A2 has no hard stop methods. The drive default is 0, so a method has
+  to be set before homing.
 - `homeOffset`: PUU.
-- `srv-home-velocity-fast` / `srv-home-velocity-slow`: 0.1 rpm by default (range 1 to 20000 and 1
-  to 5000 on A3/B3).
-- `srv-home-accel`: by default the time in ms to accelerate from 0 to 3000 rpm.
+- `homeVelocityFast` / `srv-home-velocity-fast` and `homeVelocitySlow` / `srv-home-velocity-slow`:
+  0.1 rpm by default (range 1 to 20000 and 1 to 5000 on A3/B3, 1 to 2000 and 1 to 500 on A2).
+- `homeAccel` / `srv-home-accel`: by default the time in ms to accelerate from 0 to 3000 rpm.
 
 ### Homing sequence
 
@@ -197,6 +226,9 @@ Units and values, see the description of the objects in the EtherCAT chapter of 
    while the drive is not in CSP/CSV mode.
 4. When the drive reports that homing is complete, the driver sets `srv-homed`, clears `srv-home`
    and switches back to CSP/CSV.
+
+`srv-homed` stays on after that, until the next homing run starts or the drive drops off the bus
+(it may have been power cycled and lost its position then).
 
 The driver only clears `srv-home` when homing is complete. If the drive reports a fault during
 homing, the run is aborted and `srv-home` stays on; the driver does not start another run until
@@ -251,6 +283,58 @@ is back in CSV mode. In CSV mode `srv-pos-cmd` is not sent to the drive, it is o
 `srv-pos-fb`.
 
 After homing, the joint position is the position of the drive plus `HOME_OFFSET`.
+
+### Software limits of the drive
+
+The drive has its own software position limits (Object 607Dh). With drive-internal homing the
+driver can set them from the limits of the machine, as a backstop behind LinuxCNC's own limits: the
+drive then stops the axis by itself if anything on the controller side (HAL wiring, scaling, a
+position loop in CSV mode) sends it out of its travel.
+
+`enableHM` adds four parameters for this, in joint coordinates. Set them from the INI file:
+
+```
+setp lcec.0.A3.srv-sw-limit-min    [JOINT_0]MIN_LIMIT
+setp lcec.0.A3.srv-sw-limit-max    [JOINT_0]MAX_LIMIT
+setp lcec.0.A3.srv-sw-limit-offset [JOINT_0]HOME_OFFSET
+setp lcec.0.A3.srv-sw-limit-margin 1
+```
+
+- `srv-sw-limit-min` / `srv-sw-limit-max`: the limits of the joint. The feature is off while both
+  are equal (the default, 0).
+- `srv-sw-limit-offset`: the joint position of the drive's zero, which is `HOME_OFFSET` of the joint.
+- `srv-sw-limit-margin`: how far the limits of the drive are outside of the limits of the joint.
+  It has to be greater than 0: LinuxCNC should stop at its own limits first, and with the same
+  values the drive could stop a normal move to the end of the travel.
+
+The driver converts these to PUU with `pos-scale` and `srv-pulses-per-rev` and writes them to the
+drive. `srv-sw-limit-armed` shows that the drive has them.
+
+The limits have to be inside of the 32 bit position range of the drive (-2147483648 to 2147483647
+PUU). The position of the drive wraps at the ends of that range, so a limit that is further out
+could never stop the axis. With the full resolution of a 24 bit encoder the range is only +/-128
+motor revolutions, which is +/-640 mm with 5 mm per revolution. If the limits don't fit, the driver
+reports an error, does not arm them and `srv-sw-limit-armed` stays off. Use an
+[E-Gear ratio](#setting-pulses-per-rev-with-egear) with less pulses per revolution then: 500000 pulses per revolution give
++/-4294 revolutions.
+
+The limits are only armed while the drive is homed, because the position of the drive has no
+relation to the machine before that:
+- After startup, and after the drive has dropped off the bus, the limits are off until homing is
+  done.
+- When homing starts, the driver takes the limits out first, as homing may have to move beyond
+  them (i.e. onto a hard stop), and arms them again when homing is complete.
+
+An axis that is not homed is not protected, and neither is one that was homed to the wrong
+position.
+
+At a limit the drive stops the axis and shows AL283 (positive) or AL285 (negative). This is a
+warning, not a fault: the servo stays on, `srv-warning` is set and `srv-alarm-code` reads 0x0283 or
+0x0285. LinuxCNC keeps commanding, so it stops with a following error and switches the machine off.
+To recover, switch the machine on and home the axis again; homing takes the limits out, so the axis
+can move.
+
+The home position has to be inside the limits, or the drive stops as soon as homing is done.
 
 Homing on a hard stop (methods -1 to -4, A3 and B3) also needs the drive parameters P1.087 and
 P1.088. The drive takes the stop as reached when the motor torque has been above the level of
@@ -314,9 +398,11 @@ bit   OUT lcec.0.A3.slave-state-safeop
 ```
 _Drive Status and Control_
 ```
+u32   OUT lcec.0.A3.srv-alarm-code
 bit   OUT lcec.0.A3.srv-at-speed
 bit   IN  lcec.0.A3.srv-enable 
 bit   IN  lcec.0.A3.srv-enable-volt
+u32   OUT lcec.0.A3.srv-error-code
 bit   OUT lcec.0.A3.srv-fault
 bit   IN  lcec.0.A3.srv-fault-reset 
 bit   IN  lcec.0.A3.srv-halt
@@ -340,6 +426,22 @@ bit   OUT lcec.0.A3.srv-volt-enabled
 bit   OUT lcec.0.A3.srv-warning
 bit   OUT lcec.0.A3.srv-zero-speed
 ```
+Notes:
+- `srv-error-code` and `srv-alarm-code` tell which alarm the drive has while it reports a fault or
+  a warning, and are 0 otherwise. `srv-alarm-code` is the alarm as shown on the display of the
+  drive (drive parameter P0-01): 0x0009 is AL009, 0x0180 is AL180. `srv-error-code` is the CiA 402
+  error code (Object 603Fh); the alarm list in the EtherCAT chapter of the drive manual has both.
+  The codes are read from the drive when the alarm shows up and every 0.5 s after that, so they
+  lag `srv-fault` by a few cycles. They are also 0 while the drive is not operational on the bus.
+- `srv-zero-speed` is true while the actual speed is below the zero speed detection level of the
+  drive (Object 606Fh, drive parameter P1.038, default 10 rpm). The level is read from the drive at
+  startup.
+- `srv-limit-active` is statusword bit 11 (internal limit active). On A3 and B3 it is also true
+  while the drive reports the positive or negative limit (statusword bits 14 and 15). The A2 does
+  not support this status bit, so the pin stays false there; use `din-neg-lim` and `din-pos-lim`.
+- On the A2, `din-1` to `din-7` only follow the digital inputs if drive parameter P3-18 U is set to
+  1 or 2.
+
 _Digital Inputs and Outputs at CN1_
 ```
 bit   OUT lcec.0.A3.din-1
@@ -382,6 +484,10 @@ float IN     lcec.0.A3.srv-pos-cmd| Connect to position command from either join
 
 Note: 
 - x.x.x.srv-operation-mode is set to 8 by the driver 
+- The position of the drive is a 32 bit value in PUU. With the default E-Gear ratio of 1:1 and a
+  24 bit encoder that is only +/-128 motor revolutions. Beyond that the position wraps around; the
+  driver lets the command wrap the same way and extends the feedback (`enc-pos`, `enc-pos-abs`,
+  `srv-pos-fb`) to 64 bit. For long axes, consider a lower resolution with `eGearRatio`.
 
 ## How to file a bug
 
